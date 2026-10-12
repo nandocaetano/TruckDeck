@@ -48,7 +48,8 @@
   let dragState = null;
   let runtimeBackgrounds = {};
   let customAssets = [];
-  let state = loadState();
+  let state = initialState();
+  let needsSeedPush = false;
 
   function hasSlots(asset) { return asset === 'btn-3x1-metal.png'; }
   function normalizeSlots(slots) {
@@ -96,32 +97,109 @@
     return { id, type, label: DASHBOARDS[type].label, x, y, width, height, zIndex: 1 };
   }
 
-  function loadState() {
-    const fresh = initialState();
+  // ---- Server persistence --------------------------------------------------------------
+  // The Editor is the project's one source of truth for a Modern-panel layout: whatever is
+  // mapped here has to reach every device, not just the browser/profile it was drawn in. The
+  // board therefore lives in data/atomic-layout.json on the PC bridge; localStorage is kept
+  // only as an instant local cache and an offline fallback (see bridge/server.js's
+  // GET/PUT /api/atomic-layout).
+  function resolvePin() {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      if (!saved || saved.schema !== fresh.schema) return fresh;
-      customAssets = Array.isArray(saved.customAssets)
-        ? saved.customAssets.filter((item) => item && typeof item.id === 'string' && typeof item.src === 'string').map((item) => ({
-          id: item.id,
-          label: String(item.label || 'Personalizado'),
-          src: item.src,
-          defaultSize: Array.isArray(item.defaultSize) && item.defaultSize.length === 2 ? item.defaultSize : [8, 8]
-        }))
-        : [];
-      ['landscape', 'portrait'].forEach((mode) => {
-        const source = saved.orientations && saved.orientations[mode];
-        if (!source) return;
-        fresh.orientations[mode].buttons = Array.isArray(source.buttons) ? source.buttons.map(normalizeButton) : [];
-        fresh.orientations[mode].zones = Array.isArray(source.zones) ? source.zones.map(normalizeZone) : [];
-      });
-      fresh.gridStep = clamp(Number(saved.gridStep) || 1, .25, 10);
-      fresh.snap = saved.snap !== false;
-      fresh.guides = saved.guides !== false;
-      return fresh;
-    } catch (error) {
-      return fresh;
-    }
+      const url = new URL(window.location.href);
+      const fromQuery = url.searchParams.get('pin');
+      if (fromQuery) { localStorage.setItem('truckdeck.pin', fromQuery); return fromQuery; }
+    } catch (error) { /* ignore */ }
+    try { return localStorage.getItem('truckdeck.pin') || ''; } catch (error) { return ''; }
+  }
+
+  function hasAnyButtons(payload) {
+    if (!payload || !payload.orientations) return false;
+    return ['landscape', 'portrait'].some((mode) => {
+      const o = payload.orientations[mode];
+      return o && Array.isArray(o.buttons) && o.buttons.length > 0;
+    });
+  }
+
+  function loadLocalPayload() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (error) { return null; }
+  }
+
+  async function loadServerPayload() {
+    try {
+      const res = await fetch('/api/atomic-layout', { headers: { 'X-Pin': resolvePin() } });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (error) { return null; } // bridge offline: the caller falls back to localStorage
+  }
+
+  function applyPayload(saved) {
+    const fresh = initialState();
+    if (!saved || saved.schema !== fresh.schema) return fresh;
+    customAssets = Array.isArray(saved.customAssets)
+      ? saved.customAssets.filter((item) => item && typeof item.id === 'string' && typeof item.src === 'string').map((item) => ({
+        id: item.id,
+        label: String(item.label || 'Personalizado'),
+        src: item.src,
+        defaultSize: Array.isArray(item.defaultSize) && item.defaultSize.length === 2 ? item.defaultSize : [8, 8]
+      }))
+      : [];
+    ['landscape', 'portrait'].forEach((mode) => {
+      const source = saved.orientations && saved.orientations[mode];
+      if (!source) return;
+      fresh.orientations[mode].buttons = Array.isArray(source.buttons) ? source.buttons.map(normalizeButton) : [];
+      fresh.orientations[mode].zones = Array.isArray(source.zones) ? source.zones.map(normalizeZone) : [];
+    });
+    fresh.gridStep = clamp(Number(saved.gridStep) || 1, .25, 10);
+    fresh.snap = saved.snap !== false;
+    fresh.guides = saved.guides !== false;
+    return fresh;
+  }
+
+  // Server first (it is the authority once any device has synced); if it has no board yet but
+  // THIS browser's localStorage does, that board is a PC that mapped its layout before this
+  // feature existed — seed the server from it instead of discarding it (persist() below pushes
+  // it up right after boot).
+  async function loadState() {
+    const serverPayload = await loadServerPayload();
+    const localPayload = loadLocalPayload();
+    const seedFromLocal = !hasAnyButtons(serverPayload) && hasAnyButtons(localPayload);
+    if (seedFromLocal) needsSeedPush = true;
+    return applyPayload(seedFromLocal ? localPayload : (serverPayload || localPayload));
+  }
+
+  let pushTimer = null;
+  function schedulePush() {
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushToServer, 600);
+  }
+  function pushToServer() {
+    const text = JSON.stringify({ ...state, customAssets });
+    fetch('/api/atomic-layout', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Pin': resolvePin() },
+      body: text
+    }).catch(() => { /* offline: localStorage cache keeps the board, next persist() retries */ });
+  }
+
+  // Default pictogram box: centered, at 55% of the button's own size — legible over a physical
+  // asset photo (e.g. the black rocker key) without covering its edges or printed markings.
+  function defaultPictogram() { return { width: 55, height: 55, offsetX: 22.5, offsetY: 22.5, opacity: 0.92 }; }
+  const numOr = (value, fallback) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
+  function normalizePictogram(raw) {
+    const base = defaultPictogram();
+    if (!raw || typeof raw !== 'object') return base;
+    return {
+      width: clamp(numOr(raw.width, base.width), 5, 150),
+      height: clamp(numOr(raw.height, base.height), 5, 150),
+      offsetX: clamp(numOr(raw.offsetX, base.offsetX), -50, 150),
+      offsetY: clamp(numOr(raw.offsetY, base.offsetY), -50, 150),
+      opacity: clamp(numOr(raw.opacity, base.opacity), 0, 1)
+    };
+  }
+  // The catalog function this button performs, or null for a custom/blank id (see catalog.js's
+  // FUNCTIONS, the same source presets and the key-setup screen already read).
+  function fnOf(item) {
+    return (item && item.functionId && typeof FUNCTIONS !== 'undefined' && FUNCTIONS[item.functionId]) || null;
   }
 
   function normalizeButton(item) {
@@ -133,6 +211,7 @@
       asset,
       label: String(item.label || def.label),
       functionId: String(item.functionId || ''),
+      pictogram: normalizePictogram(item.pictogram),
       slots: hasSlots(asset) ? normalizeSlots(item.slots) : undefined,
       x: clamp(Number(item.x) || 10, 0, 99),
       y: clamp(Number(item.y) || 10, 0, 99),
@@ -162,6 +241,7 @@
 
   function persist() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, customAssets })); } catch (error) { /* private browsing */ }
+    schedulePush();
   }
 
   function currentBoard() { return state.orientations[orientation]; }
@@ -199,7 +279,11 @@
     $('#exportButton').addEventListener('click', exportAll);
     $('#importButton').addEventListener('click', () => $('#importInput').click());
     $('#importInput').addEventListener('change', importReport);
-    ['selectedId', 'selectedFunctionId', 'selectedLabel', 'selectedSlot1', 'selectedSlot2', 'selectedSlot3'].forEach((id) => $('#' + id).addEventListener('input', updateSelectedMetadata));
+    $('#selectedFunctionId').innerHTML = buildFunctionOptionsHtml();
+    ['selectedId', 'selectedLabel', 'selectedSlot1', 'selectedSlot2', 'selectedSlot3'].forEach((id) => $('#' + id).addEventListener('input', updateSelectedMetadata));
+    $('#selectedFunctionId').addEventListener('change', () => { updateSelectedMetadata(); renderPictogramFields(primarySelected() && primarySelected().item); renderStage(); });
+    ['selectedPictoW', 'selectedPictoH', 'selectedPictoX', 'selectedPictoY', 'selectedPictoOpacity'].forEach((id) => $('#' + id).addEventListener('change', updateSelectedPictogram));
+    $('#resetPictogramButton').addEventListener('click', resetPictogram);
     ['selectedX', 'selectedY', 'selectedW', 'selectedH'].forEach((id) => $('#' + id).addEventListener('change', updateSelectedCoordinates));
     $('#selectedUnit').addEventListener('change', renderInspector);
     const stage = $('#stage');
@@ -320,6 +404,19 @@
         img.src = assetImageSrc(item.asset);
         img.alt = item.label || item.asset;
         node.appendChild(img);
+        const f = fnOf(item);
+        if (f) {
+          const picto = item.pictogram || defaultPictogram();
+          const overlay = document.createElement('span');
+          overlay.className = 'pictogram-overlay';
+          overlay.style.left = picto.offsetX + '%';
+          overlay.style.top = picto.offsetY + '%';
+          overlay.style.width = picto.width + '%';
+          overlay.style.height = picto.height + '%';
+          overlay.style.opacity = String(picto.opacity);
+          overlay.innerHTML = iconSvg(f.icon);
+          node.appendChild(overlay);
+        }
       } else {
         node.textContent = item.label;
       }
@@ -525,6 +622,7 @@
     $('#selectedFunctionId').value = item.functionId || '';
     $('#selectedFunctionId').disabled = kind !== 'button';
     $('#selectedLabel').value = item.label || '';
+    renderPictogramFields(kind === 'button' ? item : null);
     $('#selectedUnit').value = $('#selectedUnit').value || 'percent';
     const unit = $('#selectedUnit').value;
     const dimensions = displayValues(item, unit);
@@ -533,6 +631,57 @@
     $('#selectedW').value = dimensions.width;
     $('#selectedH').value = dimensions.height;
     $('#positionNote').textContent = unit === 'percent' ? 'Valores relativos ao fundo; o CSS exportado usa %.': 'Campos em px; serão convertidos para % no relatório e no CSS.';
+  }
+
+  // Builds the catalog <select> once: one <optgroup> per family (Motor, Iluminação, etc.),
+  // reading the same FUNCTION_LIST/CATEGORIES data presets and the key-setup screen use, so the
+  // Editor can never drift out of sync with what a function actually does in the app.
+  function buildFunctionOptionsHtml() {
+    if (typeof FUNCTION_LIST === 'undefined') return '<option value="">— função —</option>';
+    const byCat = {};
+    FUNCTION_LIST.forEach((f) => { (byCat[f.cat] = byCat[f.cat] || []).push(f); });
+    const groups = (typeof CATEGORIES !== 'undefined' ? CATEGORIES : Object.keys(byCat).map((id) => ({ id, name: id })))
+      .filter((cat) => byCat[cat.id] && byCat[cat.id].length);
+    let html = '<option value="">— personalizado / nenhum —</option>';
+    groups.forEach((cat) => {
+      html += '<optgroup label="' + escapeHtml(cat.name) + '">';
+      byCat[cat.id].forEach((f) => { html += '<option value="' + escapeHtml(f.id) + '">' + escapeHtml(f.name) + '</option>'; });
+      html += '</optgroup>';
+    });
+    return html;
+  }
+
+  function renderPictogramFields(item) {
+    const fieldset = $('#pictogramFields');
+    const f = fnOf(item);
+    if (!item || !f) { fieldset.hidden = true; return; }
+    fieldset.hidden = false;
+    const picto = item.pictogram || defaultPictogram();
+    $('#selectedPictoW').value = picto.width;
+    $('#selectedPictoH').value = picto.height;
+    $('#selectedPictoX').value = picto.offsetX;
+    $('#selectedPictoY').value = picto.offsetY;
+    $('#selectedPictoOpacity').value = picto.opacity;
+  }
+
+  function updateSelectedPictogram() {
+    const primary = primarySelected();
+    if (!primary || primary.kind !== 'button' || !fnOf(primary.item)) return;
+    primary.item.pictogram = normalizePictogram({
+      width: $('#selectedPictoW').value,
+      height: $('#selectedPictoH').value,
+      offsetX: $('#selectedPictoX').value,
+      offsetY: $('#selectedPictoY').value,
+      opacity: $('#selectedPictoOpacity').value
+    });
+    persist(); renderStage();
+  }
+
+  function resetPictogram() {
+    const primary = primarySelected();
+    if (!primary || primary.kind !== 'button' || !fnOf(primary.item)) return;
+    primary.item.pictogram = defaultPictogram();
+    persist(); render();
   }
 
   function displayValues(item, unit) {
@@ -709,7 +858,7 @@
   function exportElement(item, kind, mode) {
     const bg = OFFICIAL[mode];
     const result = { id: item.id, type: kind, label: item.label, position: { unit: 'percent', x: round(item.x), y: round(item.y), width: round(item.width), height: round(item.height) }, pixels: { x: round(item.x / 100 * bg.width, 2), y: round(item.y / 100 * bg.height, 2), width: round(item.width / 100 * bg.width, 2), height: round(item.height / 100 * bg.height, 2) }, zIndex: item.zIndex || 1 };
-    if (kind === 'button') Object.assign(result, { asset: item.asset, functionId: item.functionId || '', slots: Array.isArray(item.slots) ? item.slots : undefined });
+    if (kind === 'button') Object.assign(result, { asset: item.asset, functionId: item.functionId || '', pictogram: item.pictogram || defaultPictogram(), slots: Array.isArray(item.slots) ? item.slots : undefined });
     else result.dashboard = item.type;
     return result;
   }
@@ -774,7 +923,7 @@
           const source = report.orientations && report.orientations[mode];
           if (!source) return;
           state.orientations[mode] = {
-            buttons: (source.buttons || []).map((item) => normalizeButton({ id: item.id, asset: item.asset, label: item.label, functionId: item.functionId, slots: item.slots, ...(item.position || {}) })),
+            buttons: (source.buttons || []).map((item) => normalizeButton({ id: item.id, asset: item.asset, label: item.label, functionId: item.functionId, pictogram: item.pictogram, slots: item.slots, ...(item.position || {}) })),
             zones: (source.zones || []).map((item) => normalizeZone({ id: item.id, type: item.dashboard || item.type, label: item.label, ...(item.position || {}) }))
           };
         });
@@ -787,5 +936,11 @@
 
   function announce(message) { $('#statusMessage').textContent = message; }
 
-  init();
+  async function bootstrap() {
+    state = await loadState();
+    init();
+    if (needsSeedPush) { needsSeedPush = false; schedulePush(); }
+  }
+
+  bootstrap();
 }());

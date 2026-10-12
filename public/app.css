@@ -737,6 +737,24 @@ button { cursor: pointer; }
   display: none;
 }
 
+/* Editor-assigned function pictogram, auto-overlaid on top of the asset photo. Its own layer
+   (not .ico/.lbl, hidden above) so the Editor's size/position/opacity stay independent of the
+   physical asset image. */
+.k-kbd.has-asset .atomic-picto {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+}
+.k-kbd.has-asset .atomic-picto svg {
+  width: 100%;
+  height: 100%;
+  color: #fff;
+  filter: drop-shadow(0 0 2px rgba(0,0,0,.85)) drop-shadow(0 0 5px rgba(0,0,0,.55));
+}
+
 /* ---- Hazard: the one red key on the dash ----------------------------------------------- */
 .hazard .tri { width: 62%; height: 62%; display: block; }
 .hazard .tri path:first-child { fill: #b3140f; stroke: #5d0a07; stroke-width: 2; stroke-linejoin: round; }

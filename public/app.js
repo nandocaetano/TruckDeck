@@ -224,32 +224,52 @@
 
   // Reads the editor's free-position buttons for one cut, normalized to the shape widgetsOf()
   // can drop straight into a widget list (same w.r free-position rect the dash zones use).
+  // The Editor auto-overlays a function's official pictogram on top of the physical asset photo
+  // (e.g. the icon on the black rocker key); size/position/opacity are the Editor's own, stored
+  // per button and independent of the asset image. 'custom'/blank functionId -> no overlay.
+  function atomicButtonPicto(fnId, raw) {
+    const f = FUNCTIONS[fnId];
+    if (!f || fnId === 'custom' || !raw) return null;
+    return {
+      icon: f.icon,
+      w: Number(raw.width) || 55, h: Number(raw.height) || 55,
+      ox: Number(raw.offsetX) || 0, oy: Number(raw.offsetY) || 0,
+      op: Math.max(0, Math.min(1, Number(raw.opacity)))
+    };
+  }
   function atomicDashButtons(cut) {
     const board = atomicBoard();
     const mode = cut === 'P' ? 'portrait' : 'landscape';
     const o = board && board.orientations && board.orientations[mode];
     if (!o || !Array.isArray(o.buttons)) return [];
-    return o.buttons.filter((b) => b && !b.hidden).map((b) => ({
-      id: 'atomic-' + b.id,
-      t: 'kbd',
-      fn: resolveFn(b.functionId),
-      r: [Number(b.x) || 0, Number(b.y) || 0, Number(b.width) || 1, Number(b.height) || 1],
-      zIndex: Number(b.zIndex) || 10,
-      asset: resolveAtomicAsset(board, b.asset)
-    }));
+    return o.buttons.filter((b) => b && !b.hidden).map((b) => {
+      const resolved = resolveFn(b.functionId);
+      return {
+        id: 'atomic-' + b.id,
+        t: 'kbd',
+        fn: resolved,
+        r: [Number(b.x) || 0, Number(b.y) || 0, Number(b.width) || 1, Number(b.height) || 1],
+        zIndex: Number(b.zIndex) || 10,
+        asset: resolveAtomicAsset(board, b.asset),
+        picto: atomicButtonPicto(resolved, b.pictogram)
+      };
+    });
   }
   // Cheap fingerprint for the memo key in widgetsOf(): id/functionId/asset-key/zIndex plus
-  // geometry (x,y,width,height) so drag/resize in the editor invalidates the cache. Never the
-  // resolved asset src -- that can be a multi-MB base64 data URI.
+  // geometry (x,y,width,height) and the pictogram's own box, so drag/resize in the editor and
+  // pictogram edits both invalidate the cache. Never the resolved asset src -- that can be a
+  // multi-MB base64 data URI.
   function atomicDashButtonsSig(cut) {
     const board = atomicBoard();
     const mode = cut === 'P' ? 'portrait' : 'landscape';
     const o = board && board.orientations && board.orientations[mode];
     if (!o || !Array.isArray(o.buttons)) return '';
-    return o.buttons.filter((b) => b && !b.hidden).map((b) =>
-      b.id + ':' + (b.functionId || '') + ':' + (b.asset || '') + ':' + (b.zIndex || '')
+    return o.buttons.filter((b) => b && !b.hidden).map((b) => {
+      const p = b.pictogram || {};
+      return b.id + ':' + (b.functionId || '') + ':' + (b.asset || '') + ':' + (b.zIndex || '')
         + ':' + (b.x || 0) + ',' + (b.y || 0) + ',' + (b.width || 0) + ',' + (b.height || 0)
-    ).join('|');
+        + ':' + (p.width || 0) + ',' + (p.height || 0) + ',' + (p.offsetX || 0) + ',' + (p.offsetY || 0) + ',' + (p.opacity || 0);
+    }).join('|');
   }
 
   let saveTimer = null;
@@ -646,11 +666,29 @@
       }
       checkVersion();
       stage = 'api/layouts';
-      return fetchJson('api/layouts', { headers: { 'X-Pin': S.pin } });
-    }).then((res) => {
+      // Fetched alongside the layout store, not after it: the Layout Editor is the source of
+      // truth for the Modern board, so a tablet that never opened the editor still needs the
+      // PC's saved buttons/zones on every (re)connect, not just on its own first boot.
+      return Promise.all([
+        fetchJson('api/layouts', { headers: { 'X-Pin': S.pin } }),
+        fetchJson('api/atomic-layout', { headers: { 'X-Pin': S.pin } }).catch(() => null),
+      ]);
+    }).then(([res, atomicRes]) => {
       if (res.status === 401) { setBridge('pin'); return; }
       stage = 'store';
       S.bridge = 'ok';
+      // A failed fetch, a 401, or an empty/invalid body must leave the existing localStorage
+      // board alone - this only ever replaces it with a validly-schemed payload from the PC.
+      let atomicChanged = false;
+      if (atomicRes && atomicRes.status === 200 && atomicRes.body
+        && atomicRes.body.schema === 'desktruck.atomic-layout/v1') {
+        const text = JSON.stringify(atomicRes.body);
+        if (text !== lsGet(ATOMIC_LAYOUT_KEY)) {
+          lsSet(ATOMIC_LAYOUT_KEY, text);
+          atomicRaw = null; // force atomicBoard() to re-parse instead of serving its old cache
+          atomicChanged = true;
+        }
+      }
       if (validStore(res.body)) {
         // The PC copy wins: it is what every device shares.
         S.store = res.body;
@@ -668,6 +706,7 @@
         if (upgraded) { save(); toast('Your panels were replaced by the ten art panels'); }
       } else {
         preferAtomicModern();
+        if (atomicChanged) renderAll();
         save(); // first run: seed the PC with this device's panels
       }
       stage = 'events';
@@ -1235,6 +1274,10 @@
       if (w.asset) node.style.setProperty('--asset', cssUrl(w.asset));
       if (w.zIndex) node.style.zIndex = w.zIndex;
       node.innerHTML = widgetHtml({ id: w.id, t: w.k || 'rocker', fn: w.fn });
+      if (w.asset && w.picto) {
+        node.innerHTML += '<span class="atomic-picto" style="left:' + w.picto.ox + '%;top:' + w.picto.oy
+          + '%;width:' + w.picto.w + '%;height:' + w.picto.h + '%;opacity:' + w.picto.op + '">' + iconSvg(w.picto.icon) + '</span>';
+      }
       return node;
     }
     // readouts are written in the colours sampled from the art under them

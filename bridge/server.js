@@ -25,6 +25,8 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 const DATA_DIR = path.join(ROOT, 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const LAYOUTS_FILE = path.join(DATA_DIR, 'layouts.json');
+const ATOMIC_LAYOUT_FILE = path.join(DATA_DIR, 'atomic-layout.json');
+const ATOMIC_LAYOUT_SCHEMA = 'desktruck.atomic-layout/v1';
 
 // How long a tapped key stays down. Games poll input once per frame, so anything shorter
 // than ~2 frames at low fps can be missed.
@@ -377,6 +379,10 @@ const server = http.createServer(async (req, res) => {
     json(res, 200, readJson(LAYOUTS_FILE, null));
     return;
   }
+  if (isLoopback && route === '/api/atomic-layout' && req.method === 'GET') {
+    json(res, 200, readJson(ATOMIC_LAYOUT_FILE, null));
+    return;
+  }
 
   // The PIN travels in a custom header. Browsers refuse to send custom headers cross-site
   // without a CORS preflight (which this server never approves), so a malicious web page
@@ -472,6 +478,53 @@ const server = http.createServer(async (req, res) => {
       // write-then-rename so a crash mid-write cannot corrupt the saved panels
       fs.writeFileSync(LAYOUTS_FILE + '.tmp', text);
       fs.renameSync(LAYOUTS_FILE + '.tmp', LAYOUTS_FILE);
+      json(res, 200, { ok: true });
+      return;
+    }
+
+    if (route === '/api/atomic-layout' && req.method === 'GET') {
+      json(res, 200, readJson(ATOMIC_LAYOUT_FILE, null));
+      return;
+    }
+
+    if (route === '/api/atomic-layout' && req.method === 'PUT') {
+      // The Editor is the source of truth for every Modern-skin layout (button and dashboard
+      // placement, backgrounds, custom assets as base64). Those assets inflate the payload
+      // well past the 2 MB layouts.json limit, hence the larger cap here.
+      const text = await readBody(req, 16 * 1024 * 1024);
+      const incoming = JSON.parse(text); // reject garbage before it replaces a good file
+      if (!incoming || incoming.schema !== ATOMIC_LAYOUT_SCHEMA) {
+        json(res, 400, { error: 'bad schema' });
+        return;
+      }
+
+      // Same anti-wipe guard as layouts.json: a save with zero buttons in both orientations,
+      // replacing a file that had buttons, is kept as a .bak.json instead of silently applied.
+      const prev = readJson(ATOMIC_LAYOUT_FILE, null);
+      if (prev) {
+        const buttonCount = (o) => {
+          if (!o || !o.orientations) return 0;
+          let n = 0;
+          for (const mode of ['landscape', 'portrait']) {
+            const list = o.orientations[mode] && o.orientations[mode].buttons;
+            if (Array.isArray(list)) n += list.length;
+          }
+          return n;
+        };
+        const before = buttonCount(prev), after = buttonCount(incoming);
+        if (before > 0 && after === 0) {
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          const keep = ATOMIC_LAYOUT_FILE.replace(/\.json$/, '') + '.' + stamp + '.bak.json';
+          try {
+            fs.copyFileSync(ATOMIC_LAYOUT_FILE, keep);
+            console.log('[atomic-layout] Incoming save has 0 buttons but the saved file had '
+              + before + '. Previous file kept as ' + path.basename(keep) + '.');
+          } catch (e) { console.log('[atomic-layout] Could not keep a backup: ' + e.message); }
+        }
+      }
+
+      fs.writeFileSync(ATOMIC_LAYOUT_FILE + '.tmp', text);
+      fs.renameSync(ATOMIC_LAYOUT_FILE + '.tmp', ATOMIC_LAYOUT_FILE);
       json(res, 200, { ok: true });
       return;
     }

@@ -169,7 +169,7 @@
         <fieldset>
           <legend>Identidade / função</legend>
           <label class="field"><span>ID do layout</span><input id="selectedId" type="text" spellcheck="false" autocomplete="off"></label>
-          <label class="field" id="functionField"><span>ID de função lógica</span><input id="selectedFunctionId" type="text" placeholder="ex.: beam_high" spellcheck="false" autocomplete="off"></label>
+          <label class="field" id="functionField"><span>Função (catálogo)</span><select id="selectedFunctionId"></select></label>
           <div id="slotFields" class="slot-fields" hidden>
             <span class="field-label">Metal 3 × 1 — função de cada interruptor</span>
             <label class="field"><span>Slot 1 (esquerda)</span><input id="selectedSlot1" type="text" placeholder="ex.: beam_high" spellcheck="false" autocomplete="off"></label>
@@ -189,6 +189,18 @@
           </div>
           <p class="field-note" id="positionNote">Valores exportados em percentagem relativa ao fundo.</p>
         </fieldset>
+        <fieldset id="pictogramFields" hidden>
+          <legend>Pictograma automático</legend>
+          <p class="field-note">Ao escolher uma função, o pictograma oficial é sobreposto ao asset físico. Posição, tamanho e opacidade são independentes da imagem de fundo.</p>
+          <div class="coordinate-grid">
+            <label class="field"><span>Largura (%)</span><input id="selectedPictoW" type="number" min="5" max="150" step="1"></label>
+            <label class="field"><span>Altura (%)</span><input id="selectedPictoH" type="number" min="5" max="150" step="1"></label>
+            <label class="field"><span>Deslocamento X (%)</span><input id="selectedPictoX" type="number" min="-50" max="150" step="1"></label>
+            <label class="field"><span>Deslocamento Y (%)</span><input id="selectedPictoY" type="number" min="-50" max="150" step="1"></label>
+          </div>
+          <label class="field"><span>Opacidade</span><input id="selectedPictoOpacity" type="number" min="0" max="1" step="0.05"></label>
+          <button type="button" class="button button-small" id="resetPictogramButton">Centrar pictograma</button>
+        </fieldset>
         <div class="size-actions">
           <button type="button" class="button button-small" id="copySizeButton">Copiar tamanho</button>
           <button type="button" class="button button-small button-accent" id="applySizeButton">Aplicar tamanho</button>
@@ -198,6 +210,7 @@
     </aside>
   </main>
   <footer class="app-footer"><span>Schema <code>desktruck.atomic-layout/v1</code></span><span>Zonas e botões aplicados em tempo real no app</span></footer>
+  <script src="catalog.js"></script>
   <script src="editor.js"></script>
 </body>
 </html>
