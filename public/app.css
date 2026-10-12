@@ -255,16 +255,17 @@
   left: 82%; top: 1%; width: 16%; height: 4.3%;
   z-index: 6;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-upper.landscape { left: 3%; top: 29%; width: 94%; height: 25%; }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-upper.landscape {
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-template-rows: 1fr;
-  height: 22%;
+  left: 3%; top: 29%; width: 94%; height: 22%;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: row;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-brakes.landscape,
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-utility.landscape {
-  grid-template-columns: repeat(9, minmax(0, 1fr));
-  grid-template-rows: 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: row;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-brakes.landscape { left: 3%; top: 56%; width: 94%; height: 17%; }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-utility.landscape { left: 3%; top: 77%; width: 94%; height: 17%; }
@@ -283,23 +284,29 @@
   inset: 0;
   border: 0;
   border-radius: 8%;
-  background-image: url("skins/modern/button-3x1-metal.jpg");
+  background-image: url("skins/modern/btn-3x1-metal.png");
   background-position: center;
-  background-size: 100% 100%;
+  background-size: contain;
   background-repeat: no-repeat;
   box-shadow: 0 .12em .3em rgba(0,0,0,.8);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  transform-origin: center;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid.portrait > .w.sk.k-modern.k-kbd .cap,
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-system > .w.sk.k-modern.k-kbd .cap {
-  background-image: url("skins/modern/button-portrait-square.jpg");
+  background-image: url("skins/modern/btn-square.png");
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-brakes.portrait > .w.sk.k-modern.k-kbd .cap,
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-utility.portrait > .w.sk.k-modern.k-kbd .cap {
-  background-image: url("skins/modern/button-portrait-vertical.jpg");
+  background-image: url("skins/modern/btn-rocker-v.png");
   background-size: contain;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid.landscape > .w.sk.k-modern.k-kbd .cap {
-  background-image: url("skins/modern/button-horizontal.jpg");
+  background-image: url("skins/modern/btn-rocker-h.png");
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd:active .cap,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd.active .cap {
+  transform: scale(.96);
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd .cap::before,
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd .cap::after { display: none; }
