@@ -3077,9 +3077,6 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 #panel.skin .k-scania-palette .sc25-palette-current { width:100%; height:100%; pointer-events:auto !important; }
 #panel.skin .k-scania-palette .sc25-palette-current i { width:min(100%,16px); }
 #panel.skin .k-scania-palette .sc25-palette-list { top:calc(100% + 4px); }
-/* Shared top actions: consistent icon scale, touch target and dark glass cap on every frame panel. */
-#panel.skin .k-kbd.mini .ico { width:calc(var(--k) * .72) !important; height:calc(var(--k) * .72) !important; }
-#panel.skin .k-kbd.mini .cap { border:1px solid rgba(205,221,230,.17); border-radius:22%; background:linear-gradient(180deg,rgba(38,46,52,.9),rgba(9,12,15,.94)); box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 2px 5px rgba(0,0,0,.48); }
 #panel.scania-sr.cabin-dark .k-kbd:not(.on) .cap { filter:brightness(calc(1 - .28 * var(--cabin,0))); transition:filter .35s ease; }
 #panel.scania-sr.cabin-dark::before { opacity:calc(.42 - .18 * var(--cabin,0)); }
 /* Complete reusable colour-picker skin for S/R; the list stays cascaded until tapped. */
@@ -3090,7 +3087,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 #panel.skin .k-sc25palette .sc25-palette-option { width:27px; height:27px; border-radius:50%; pointer-events:auto !important; }
 #panel.skin .k-sc25palette .sc25-palette-option i { display:block; width:19px; height:19px; border-radius:50%; background:var(--swatch); border:1px solid rgba(240,249,251,.48); box-shadow:0 1px 3px #000,inset 0 1px 2px rgba(255,255,255,.5); transition:transform 100ms ease,box-shadow 100ms ease; }
 #panel.skin .k-sc25palette .sc25-palette-option.selected i { transform:scale(1.12); box-shadow:0 0 0 2px #061014,0 0 0 3px var(--swatch),0 0 9px var(--swatch); }
-/* Semantic shared component hook for Save, Map and Confirm mini-actions. */
+/* Single global hook for Save / Map / Enter: same icon scale and dark-glass cap on every skin. */
 #panel.skin .k-kbd.mandatory-action .ico { width:calc(var(--k) * .72) !important; height:calc(var(--k) * .72) !important; }
 #panel.skin .k-kbd.mandatory-action .cap { border:1px solid rgba(205,221,230,.17); border-radius:22%; background:linear-gradient(180deg,rgba(38,46,52,.9),rgba(9,12,15,.94)); box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 2px 5px rgba(0,0,0,.48); }
 
