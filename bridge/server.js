@@ -360,7 +360,23 @@ const server = http.createServer(async (req, res) => {
 
   // Unauthenticated on purpose: lets the app tell "bridge reachable, PIN wrong" apart
   // from "no bridge at all" (demo mode).
-  if (route === '/api/info') { json(res, 200, { app: 'truckdeck', version: 1 }); return; }
+  if (route === '/api/info') {
+    const peer = req.socket.remoteAddress || '';
+    const isLoopback = peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1';
+    const body = { app: 'truckdeck', version: 1 };
+    if (isLoopback) body.pin = config.pin;
+    json(res, 200, body);
+    return;
+  }
+
+  // Dev convenience: local browser can read layouts without PIN.
+  // Writes, key presses, SSE and frames still require PIN.
+  const peer = req.socket.remoteAddress || '';
+  const isLoopback = peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1';
+  if (isLoopback && route === '/api/layouts' && req.method === 'GET') {
+    json(res, 200, readJson(LAYOUTS_FILE, null));
+    return;
+  }
 
   // The PIN travels in a custom header. Browsers refuse to send custom headers cross-site
   // without a CORS preflight (which this server never approves), so a malicious web page

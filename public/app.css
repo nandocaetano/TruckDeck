@@ -712,11 +712,30 @@ button { cursor: pointer; }
 /* The editor's asset already shows the pictogram/label baked into the art, so it replaces the
    drawn cap wholesale instead of sitting behind the usual icon + text legend. */
 .k-kbd.has-asset .cap {
-  background: var(--asset) center / cover no-repeat;
+  background: var(--asset) center / contain no-repeat;
   box-shadow: none;
 }
 .k-kbd.has-asset .cap::before { display: none; }
 .k-kbd.has-asset .ico, .k-kbd.has-asset .lbl { display: none; }
+
+/* Modern chrome (eu_frame) beats the generic .has-asset rule above — kill bezel/border and
+   show the editor PNG cleanly. Prefer contain so rockers/circles are not cropped. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-kbd.has-asset .cap {
+  background: var(--asset) center / contain no-repeat;
+  background-color: transparent;
+  box-shadow: none;
+  border: 0;
+  border-radius: 0;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-kbd.has-asset .cap::before,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-kbd.has-asset .cap::after {
+  display: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-kbd.has-asset .ico,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-kbd.has-asset .lbl,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-kbd.has-asset .led {
+  display: none;
+}
 
 /* ---- Hazard: the one red key on the dash ----------------------------------------------- */
 .hazard .tri { width: 62%; height: 62%; display: block; }

@@ -137,6 +137,26 @@
     }
     return atomicCache;
   }
+  function hasAtomicButtons() {
+    const board = atomicBoard();
+    if (!board || !board.orientations) return false;
+    for (const mode of ['landscape', 'portrait']) {
+      const o = board.orientations[mode];
+      if (o && Array.isArray(o.buttons) && o.buttons.length) return true;
+    }
+    return false;
+  }
+  // If the Layout Editor saved buttons, open Modern (eu_frame) so widgetsOf() paints them.
+  // Call again after connect() sync — the PC store can overwrite activeId.
+  function preferAtomicModern() {
+    if (!hasAtomicButtons() || !S.store || !Array.isArray(S.store.layouts)) return false;
+    const modern = S.store.layouts.find((l) => l.preset === 'eu_frame'
+      || (l.pages || []).some((pg) => pg && pg.skin === 'eu_frame'));
+    if (!modern || S.store.activeId === modern.id) return false;
+    S.store.activeId = modern.id;
+    S.page = 0;
+    return true;
+  }
   // Only the two dashboard zone types are read here; the editor's buttons are bridged
   // separately by atomicDashButtons()/atomicDashButtonsSig() below.
   function atomicDashZones(cut) {
@@ -619,6 +639,11 @@
     let stage = 'api/info';
     return fetchJson('api/info').then((info) => {
       if (!info.body || info.body.app !== 'truckdeck') throw new Error('not a bridge');
+      // Loopback /api/info may include pin so local SSE/key work without ?pin=
+      if (!S.pin && info.body.pin) {
+        S.pin = String(info.body.pin);
+        lsSet('truckdeck.pin', S.pin);
+      }
       checkVersion();
       stage = 'api/layouts';
       return fetchJson('api/layouts', { headers: { 'X-Pin': S.pin } });
@@ -633,6 +658,8 @@
         const upgraded = upgradeStore();
         const injected = ensureShippedPanels();
         const migrated = ensurePrefs();
+        // PC store may point at a non-Modern panel; re-prefer atomic board after sync.
+        preferAtomicModern();
         lsSet('truckdeck.store', JSON.stringify(S.store));
         if (injected || migrated) save();
         S.sel = null;
@@ -640,6 +667,7 @@
         renderAll();
         if (upgraded) { save(); toast('Your panels were replaced by the ten art panels'); }
       } else {
+        preferAtomicModern();
         save(); // first run: seed the PC with this device's panels
       }
       stage = 'events';
@@ -4153,6 +4181,7 @@
       const srPreview = S.store.layouts.find((l) => l.preset === 'scania_frame');
       if (srPreview) { S.store.activeId = srPreview.id; S.page = 0; }
     }
+    preferAtomicModern();
     lsSet('truckdeck.store', JSON.stringify(S.store));
     renderAll();
     connect();
