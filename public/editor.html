@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Desktruck · Layout Editor atómico</title>
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="eyebrow">DESKTRUCK / MODERN</span>
+      <h1>Layout Editor <span>atómico</span></h1>
+    </div>
+    <div class="topbar-actions">
+      <div class="orientation-switch" role="group" aria-label="Orientação">
+        <button type="button" class="orientation-button is-active" data-orientation="landscape">Landscape</button>
+        <button type="button" class="orientation-button" data-orientation="portrait">Portrait</button>
+      </div>
+      <button type="button" class="button button-ghost" id="importButton">Importar JSON</button>
+      <button type="button" class="button button-primary" id="exportButton">Exportar JSON + CSS</button>
+      <input id="importInput" type="file" accept="application/json,.json" hidden>
+    </div>
+  </header>
+
+  <main class="editor-layout">
+    <aside class="toolbox panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">01 / RECURSOS</span>
+          <h2>Paleta</h2>
+        </div>
+        <span class="pill">drag &amp; drop</span>
+      </div>
+
+      <section class="tool-section">
+        <div class="section-title"><span>Fundo oficial</span><span class="section-kicker" id="backgroundMode">LANDSCAPE</span></div>
+        <div class="background-card">
+          <div class="background-swatch" id="backgroundSwatch" aria-hidden="true"></div>
+          <div class="background-copy">
+            <strong id="backgroundName">bg-landscape.jpg</strong>
+            <small id="backgroundPath">skins/modern/bg-landscape.jpg</small>
+          </div>
+        </div>
+        <label class="file-button">
+          <span>Carregar imagem local</span>
+          <input id="backgroundInput" type="file" accept="image/png,image/jpeg,image/webp">
+        </label>
+        <button type="button" class="text-button" id="resetBackgroundButton">Usar fundo oficial</button>
+      </section>
+
+      <section class="tool-section">
+        <div class="section-title"><span>Botões individuais</span><span class="section-kicker">ATIVOS</span></div>
+        <div class="asset-list" id="assetList">
+          <button type="button" class="asset-tool" draggable="true" data-asset="btn-rocker-v.png" data-label="Rocker vertical">
+            <span class="asset-preview"><img src="skins/modern/btn-rocker-v.png" alt=""></span><span><strong>Rocker V</strong><small>btn-rocker-v.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="btn-rocker-h.png" data-label="Rocker horizontal">
+            <span class="asset-preview"><img src="skins/modern/btn-rocker-h.png" alt=""></span><span><strong>Rocker H</strong><small>btn-rocker-h.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="btn-square.png" data-label="Botão quadrado">
+            <span class="asset-preview"><img src="skins/modern/btn-square.png" alt=""></span><span><strong>Square</strong><small>btn-square.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="btn-3x1-metal.png" data-label="Metal 3 × 1">
+            <span class="asset-preview asset-preview-wide"><img src="skins/modern/btn-3x1-metal.png" alt=""></span><span><strong>Metal 3 × 1</strong><small>btn-3x1-metal.png · 3 funções</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="engine_cir.png" data-label="Motor circular">
+            <span class="asset-preview"><img src="skins/modern/engine_cir.png" alt=""></span><span><strong>Motor circular</strong><small>engine_cir.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="engine_cr_vt.png" data-label="Motor cromado VT">
+            <span class="asset-preview"><img src="skins/modern/engine_cr_vt.png" alt=""></span><span><strong>Motor cromado VT</strong><small>engine_cr_vt.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="engine_cromo.png" data-label="Motor cromado">
+            <span class="asset-preview"><img src="skins/modern/engine_cromo.png" alt=""></span><span><strong>Motor cromado</strong><small>engine_cromo.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="engine_old.png" data-label="Motor clássico">
+            <span class="asset-preview"><img src="skins/modern/engine_old.png" alt=""></span><span><strong>Motor clássico</strong><small>engine_old.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="engine_red.png" data-label="Motor vermelho">
+            <span class="asset-preview"><img src="skins/modern/engine_red.png" alt=""></span><span><strong>Motor vermelho</strong><small>engine_red.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="hazard_black.png" data-label="Alerta preto">
+            <span class="asset-preview"><img src="skins/modern/hazard_black.png" alt=""></span><span><strong>Alerta preto</strong><small>hazard_black.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="hazard_sq_blk.png" data-label="Alerta quadrado">
+            <span class="asset-preview"><img src="skins/modern/hazard_sq_blk.png" alt=""></span><span><strong>Alerta quadrado</strong><small>hazard_sq_blk.png</small></span>
+          </button>
+          <button type="button" class="asset-tool" draggable="true" data-asset="parking.png" data-label="Estacionamento">
+            <span class="asset-preview"><img src="skins/modern/parking.png" alt=""></span><span><strong>Estacionamento</strong><small>parking.png</small></span>
+          </button>
+        </div>
+        <label class="file-button custom-asset-button">
+          <span>Carregar botão personalizado</span>
+          <input id="customAssetInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+        </label>
+        <p class="helper-text">A imagem fica disponível na paleta (guardada no navegador) e pode ser arrastada como qualquer outro botão.</p>
+      </section>
+
+      <section class="tool-section">
+        <div class="section-title"><span>Zonas globais</span><span class="section-kicker">DASHBOARD</span></div>
+        <p class="helper-text">Somente telas obrigatórias podem ocupar uma zona. Botões continuam sempre atómicos.</p>
+        <div class="dashboard-tools">
+          <button type="button" class="dashboard-tool" draggable="true" data-dashboard="obd" data-label="Tela OBD"><span class="dashboard-icon">OBD</span><span><strong>Tela OBD</strong><small>telemetria</small></span></button>
+          <button type="button" class="dashboard-tool" draggable="true" data-dashboard="tachometer" data-label="Conta-giros"><span class="dashboard-icon">RPM</span><span><strong>Conta-giros</strong><small>telemetria</small></span></button>
+        </div>
+      </section>
+
+      <section class="tool-section toolbox-footer">
+        <p class="helper-text">Clique num ativo para o adicionar ao centro. Arraste-o para posicionar. Ctrl/⌘ + clique seleciona vários botões (grupo) — arraste para mover o grupo todo. Ctrl/⌘+C copia o grupo selecionado, Ctrl/⌘+V cola-o deslocado para reposicionar.</p>
+        <button type="button" class="text-button danger" id="clearButton">Limpar orientação atual</button>
+      </section>
+    </aside>
+
+    <section class="workspace panel">
+      <div class="workspace-toolbar">
+        <div>
+          <span class="eyebrow">02 / PRANCHETA</span>
+          <h2 id="workspaceTitle">Landscape <span>· 2752 × 1536</span></h2>
+        </div>
+        <div class="toolbar-controls">
+          <label class="toggle-control"><input id="snapToggle" type="checkbox" checked><span class="toggle"></span><span>Snap</span></label>
+          <label class="compact-field"><span>Grelha</span><input id="gridStep" type="number" min="0.25" max="10" step="0.25" value="1"><span>%</span></label>
+          <label class="toggle-control"><input id="guidesToggle" type="checkbox" checked><span class="toggle"></span><span>Guias</span></label>
+          <button type="button" class="button button-small" id="copyGroupButton" title="Copiar seleção (Ctrl/⌘+C)">Copiar grupo</button>
+          <button type="button" class="button button-small" id="pasteGroupButton" title="Colar grupo (Ctrl/⌘+V)">Colar grupo</button>
+          <button type="button" class="button button-small" id="fitButton">Ajustar</button>
+        </div>
+      </div>
+      <div class="canvas-scroll">
+        <div class="stage-wrap">
+          <div id="stage" class="stage" data-orientation="landscape" tabindex="0" aria-label="Prancheta de layout">
+            <div id="gridOverlay" class="grid-overlay" aria-hidden="true"></div>
+            <div id="guideOverlay" class="guide-overlay" aria-hidden="true"></div>
+            <div id="stageItems" class="stage-items"></div>
+            <div id="dropHint" class="drop-hint"><span>Solte um ativo aqui</span><small>ou clique num ativo da paleta</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="workspace-status"><span id="statusMessage">Pronto para posicionar ativos.</span><span id="selectionSummary">0 selecionados</span></div>
+    </section>
+
+    <aside class="inspector panel">
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">03 / PROPRIEDADES</span>
+          <h2>Inspector</h2>
+        </div>
+        <span class="selection-count" id="inspectorCount">0</span>
+      </div>
+      <div id="emptyInspector" class="empty-inspector">
+        <div class="empty-icon">＋</div>
+        <strong>Selecione um elemento</strong>
+        <p>As dimensões, coordenadas e identidade aparecerão aqui.</p>
+      </div>
+      <form id="inspectorForm" class="inspector-form" hidden>
+        <div class="selected-preview-row">
+          <div class="selected-preview" id="selectedPreview"></div>
+          <div><span class="field-label">Tipo</span><strong id="selectedType">Botão</strong><small id="selectedAsset">—</small></div>
+        </div>
+        <fieldset>
+          <legend>Identidade / função</legend>
+          <label class="field"><span>ID do layout</span><input id="selectedId" type="text" spellcheck="false" autocomplete="off"></label>
+          <label class="field" id="functionField"><span>ID de função lógica</span><input id="selectedFunctionId" type="text" placeholder="ex.: beam_high" spellcheck="false" autocomplete="off"></label>
+          <div id="slotFields" class="slot-fields" hidden>
+            <span class="field-label">Metal 3 × 1 — função de cada interruptor</span>
+            <label class="field"><span>Slot 1 (esquerda)</span><input id="selectedSlot1" type="text" placeholder="ex.: beam_high" spellcheck="false" autocomplete="off"></label>
+            <label class="field"><span>Slot 2 (centro)</span><input id="selectedSlot2" type="text" placeholder="ex.: hazard" spellcheck="false" autocomplete="off"></label>
+            <label class="field"><span>Slot 3 (direita)</span><input id="selectedSlot3" type="text" placeholder="ex.: fog_light" spellcheck="false" autocomplete="off"></label>
+          </div>
+          <label class="field"><span>Rótulo</span><input id="selectedLabel" type="text" placeholder="Nome visível"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Posição atómica</legend>
+          <div class="unit-row"><span class="field-label">Unidade dos campos</span><select id="selectedUnit"><option value="percent">Percentagem (%)</option><option value="px">Pixels (px)</option></select></div>
+          <div class="coordinate-grid">
+            <label class="field"><span>X</span><input id="selectedX" type="number" step="0.01"></label>
+            <label class="field"><span>Y</span><input id="selectedY" type="number" step="0.01"></label>
+            <label class="field"><span>Largura</span><input id="selectedW" type="number" min="0.2" step="0.01"></label>
+            <label class="field"><span>Altura</span><input id="selectedH" type="number" min="0.2" step="0.01"></label>
+          </div>
+          <p class="field-note" id="positionNote">Valores exportados em percentagem relativa ao fundo.</p>
+        </fieldset>
+        <div class="size-actions">
+          <button type="button" class="button button-small" id="copySizeButton">Copiar tamanho</button>
+          <button type="button" class="button button-small button-accent" id="applySizeButton">Aplicar tamanho</button>
+        </div>
+        <div class="inspector-actions"><button type="button" class="text-button danger" id="deleteButton">Remover selecionado</button><span class="field-note">Duplo clique copia as dimensões.</span></div>
+      </form>
+    </aside>
+  </main>
+  <footer class="app-footer"><span>Schema <code>desktruck.atomic-layout/v1</code></span><span>Exportação visual · sem alteração automática no app.js</span></footer>
+  <script src="editor.js"></script>
+</body>
+</html>
