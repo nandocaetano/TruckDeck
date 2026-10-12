@@ -218,15 +218,18 @@
       asset: resolveAtomicAsset(board, b.asset)
     }));
   }
-  // Cheap fingerprint for the memo key in widgetsOf(): the raw id/functionId/asset-key triplet
-  // (short strings), never the resolved asset src -- that can be a multi-MB base64 data URI, and
-  // stringifying one per button on every render would be the actual cost, not the lookup itself.
+  // Cheap fingerprint for the memo key in widgetsOf(): id/functionId/asset-key/zIndex plus
+  // geometry (x,y,width,height) so drag/resize in the editor invalidates the cache. Never the
+  // resolved asset src -- that can be a multi-MB base64 data URI.
   function atomicDashButtonsSig(cut) {
     const board = atomicBoard();
     const mode = cut === 'P' ? 'portrait' : 'landscape';
     const o = board && board.orientations && board.orientations[mode];
     if (!o || !Array.isArray(o.buttons)) return '';
-    return o.buttons.filter((b) => b && !b.hidden).map((b) => b.id + ':' + (b.functionId || '') + ':' + (b.asset || '') + ':' + (b.zIndex || '')).join('|');
+    return o.buttons.filter((b) => b && !b.hidden).map((b) =>
+      b.id + ':' + (b.functionId || '') + ':' + (b.asset || '') + ':' + (b.zIndex || '')
+        + ':' + (b.x || 0) + ',' + (b.y || 0) + ',' + (b.width || 0) + ',' + (b.height || 0)
+    ).join('|');
   }
 
   let saveTimer = null;
