@@ -22,8 +22,8 @@
     'parking.png': { label: 'Estacionamento', defaultSize: [8, 8] }
   };
   const DASHBOARDS = {
-    obd: { label: 'Tela OBD', defaultSize: [38, 15] },
-    tachometer: { label: 'Conta-giros', defaultSize: [22, 15] }
+    'dash-obd': { label: 'Tela OBD', defaultSize: [38, 15] },
+    'dash-speedometer': { label: 'Velocímetro', defaultSize: [22, 15] }
   };
 
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -82,13 +82,13 @@
   function defaultZones(mode) {
     if (mode === 'portrait') {
       return [
-        makeZone('obd', 'obd-1', 18, 8, 64, 15),
-        makeZone('tachometer', 'tachometer-1', 18, 27, 64, 12)
+        makeZone('dash-obd', 'dash-obd-1', 18, 8, 64, 15),
+        makeZone('dash-speedometer', 'dash-speedometer-1', 18, 27, 64, 12)
       ];
     }
     return [
-      makeZone('obd', 'obd-1', 29, 8, 42, 15),
-      makeZone('tachometer', 'tachometer-1', 75, 8, 20, 15)
+      makeZone('dash-obd', 'dash-obd-1', 29, 8, 42, 15),
+      makeZone('dash-speedometer', 'dash-speedometer-1', 75, 8, 20, 15)
     ];
   }
 
@@ -138,12 +138,15 @@
       y: clamp(Number(item.y) || 10, 0, 99),
       width: clamp(Number(item.width) || def.defaultSize[0], .2, 100),
       height: clamp(Number(item.height) || def.defaultSize[1], .2, 100),
-      zIndex: Number(item.zIndex) || 10
+      zIndex: Number(item.zIndex) || 10,
+      hidden: Boolean(item.hidden)
     };
   }
 
+  const LEGACY_DASHBOARD_TYPES = { obd: 'dash-obd', tachometer: 'dash-speedometer' };
   function normalizeZone(item) {
-    const type = DASHBOARDS[item.type] ? item.type : 'obd';
+    const migratedType = LEGACY_DASHBOARD_TYPES[item.type] || item.type;
+    const type = DASHBOARDS[migratedType] ? migratedType : 'dash-obd';
     return {
       id: String(item.id || uid(type)),
       type,
@@ -152,7 +155,8 @@
       y: clamp(Number(item.y) || 10, 0, 99),
       width: clamp(Number(item.width) || DASHBOARDS[type].defaultSize[0], .2, 100),
       height: clamp(Number(item.height) || DASHBOARDS[type].defaultSize[1], .2, 100),
-      zIndex: Number(item.zIndex) || 1
+      zIndex: Number(item.zIndex) || 1,
+      hidden: Boolean(item.hidden)
     };
   }
 
@@ -293,6 +297,7 @@
     $('#gridOverlay').style.backgroundSize = state.gridStep + '% ' + state.gridStep + '%';
     renderStage();
     renderInspector();
+    renderLayers();
     $('#selectionSummary').textContent = selection.length + ' selecionado' + (selection.length === 1 ? '' : 's');
   }
 
@@ -302,7 +307,7 @@
     const ordered = allElements().sort((a, b) => (a.item.zIndex || 0) - (b.item.zIndex || 0));
     ordered.forEach(({ kind, item }) => {
       const node = document.createElement('div');
-      node.className = 'layout-element ' + (kind === 'button' ? 'button-element' : 'zone-element') + (isSelected(kind, item.id) ? ' is-selected' : '');
+      node.className = 'layout-element ' + (kind === 'button' ? 'button-element' : 'zone-element') + (isSelected(kind, item.id) ? ' is-selected' : '') + (item.hidden ? ' is-layer-hidden' : '');
       node.dataset.kind = kind;
       node.dataset.id = item.id;
       node.style.left = item.x + '%';
@@ -333,6 +338,56 @@
       root.appendChild(node);
     });
     renderGuides([]);
+  }
+
+  function renderLayers() {
+    const root = $('#layersList');
+    root.innerHTML = '';
+    const ordered = allElements().slice().sort((a, b) => (b.item.zIndex || 0) - (a.item.zIndex || 0));
+    $('#layersCount').textContent = ordered.length;
+    if (!ordered.length) {
+      const empty = document.createElement('div');
+      empty.className = 'layers-empty';
+      empty.textContent = 'Nenhum elemento nesta orientação.';
+      root.appendChild(empty);
+      return;
+    }
+    ordered.forEach(({ kind, item }) => {
+      const row = document.createElement('div');
+      row.className = 'layer-row' + (isSelected(kind, item.id) ? ' is-selected' : '') + (item.hidden ? ' is-hidden' : '');
+      const badge = document.createElement('span');
+      badge.className = 'layer-badge';
+      badge.textContent = kind === 'button' ? 'BTN' : (item.type === 'dash-obd' ? 'OBD' : 'SPD');
+      const info = document.createElement('span');
+      info.className = 'layer-info';
+      const name = document.createElement('span');
+      name.className = 'layer-name';
+      name.textContent = item.label || item.id;
+      const idTag = document.createElement('small');
+      idTag.className = 'layer-id';
+      idTag.textContent = item.id;
+      info.appendChild(name); info.appendChild(idTag);
+      const visButton = document.createElement('button');
+      visButton.type = 'button';
+      visButton.className = 'layer-vis';
+      visButton.title = item.hidden ? 'Mostrar na prancheta' : 'Ocultar na prancheta';
+      visButton.textContent = item.hidden ? '◌' : '●';
+      visButton.addEventListener('click', (event) => { event.stopPropagation(); toggleHidden(kind, item.id); });
+      row.appendChild(badge); row.appendChild(info); row.appendChild(visButton);
+      row.addEventListener('click', (event) => {
+        const multi = event.ctrlKey || event.metaKey || event.shiftKey;
+        if (multi) toggleSelection({ kind, id: item.id }); else selectOnly({ kind, id: item.id });
+      });
+      root.appendChild(row);
+    });
+  }
+
+  function toggleHidden(kind, id) {
+    const entry = findElement(kind, id);
+    if (!entry) return;
+    entry.item.hidden = !entry.item.hidden;
+    persist(); render();
+    announce((entry.item.hidden ? 'Ocultado na prancheta: ' : 'Visível na prancheta: ') + (entry.item.label || entry.item.id));
   }
 
   function renderGuides(guides) {
@@ -465,7 +520,7 @@
     const preview = $('#selectedPreview');
     preview.innerHTML = '';
     preview.classList.toggle('zone-preview', kind === 'zone');
-    if (kind === 'button') { const img = document.createElement('img'); img.src = assetImageSrc(item.asset); img.alt = ''; preview.appendChild(img); } else preview.textContent = item.type === 'obd' ? 'OBD' : 'RPM';
+    if (kind === 'button') { const img = document.createElement('img'); img.src = assetImageSrc(item.asset); img.alt = ''; preview.appendChild(img); } else preview.textContent = item.type === 'dash-obd' ? 'OBD' : 'SPD';
     $('#selectedId').value = item.id;
     $('#selectedFunctionId').value = item.functionId || '';
     $('#selectedFunctionId').disabled = kind !== 'button';

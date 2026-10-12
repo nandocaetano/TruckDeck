@@ -100,8 +100,8 @@
         <div class="section-title"><span>Zonas globais</span><span class="section-kicker">DASHBOARD</span></div>
         <p class="helper-text">Somente telas obrigatórias podem ocupar uma zona. Botões continuam sempre atómicos.</p>
         <div class="dashboard-tools">
-          <button type="button" class="dashboard-tool" draggable="true" data-dashboard="obd" data-label="Tela OBD"><span class="dashboard-icon">OBD</span><span><strong>Tela OBD</strong><small>telemetria</small></span></button>
-          <button type="button" class="dashboard-tool" draggable="true" data-dashboard="tachometer" data-label="Conta-giros"><span class="dashboard-icon">RPM</span><span><strong>Conta-giros</strong><small>telemetria</small></span></button>
+          <button type="button" class="dashboard-tool" draggable="true" data-dashboard="dash-obd" data-label="Tela OBD"><span class="dashboard-icon">OBD</span><span><strong>Tela OBD</strong><small>telemetria</small></span></button>
+          <button type="button" class="dashboard-tool" draggable="true" data-dashboard="dash-speedometer" data-label="Velocímetro"><span class="dashboard-icon">SPD</span><span><strong>Velocímetro</strong><small>telemetria</small></span></button>
         </div>
       </section>
 
@@ -142,7 +142,16 @@
     <aside class="inspector panel">
       <div class="panel-heading">
         <div>
-          <span class="eyebrow">03 / PROPRIEDADES</span>
+          <span class="eyebrow">03 / CAMADAS</span>
+          <h2>Layers</h2>
+        </div>
+        <span class="pill" id="layersCount">0</span>
+      </div>
+      <div class="layers-list" id="layersList"></div>
+
+      <div class="panel-heading">
+        <div>
+          <span class="eyebrow">04 / PROPRIEDADES</span>
           <h2>Inspector</h2>
         </div>
         <span class="selection-count" id="inspectorCount">0</span>
@@ -188,7 +197,7 @@
       </form>
     </aside>
   </main>
-  <footer class="app-footer"><span>Schema <code>desktruck.atomic-layout/v1</code></span><span>Exportação visual · sem alteração automática no app.js</span></footer>
+  <footer class="app-footer"><span>Schema <code>desktruck.atomic-layout/v1</code></span><span>Alterações aplicadas em tempo real no app</span></footer>
   <script src="editor.js"></script>
 </body>
 </html>

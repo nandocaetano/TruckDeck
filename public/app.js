@@ -123,6 +123,30 @@
   function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function lsSet(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* in-memory only */ } }
 
+  // ---- Layout Editor bridge ---------------------------------------------------------------
+  // The atomic Layout Editor (editor.html) saves its own board under this key, independent of
+  // the layout store above. The Modern panel (eu_frame) picks up its dash-obd/dash-speedometer
+  // zones from there, live, so a player's Layers edits apply without a separate publish step.
+  const ATOMIC_LAYOUT_KEY = 'desktruck.atomic-layout.v1';
+  let atomicRaw = null, atomicCache = null;
+  function atomicBoard() {
+    const raw = lsGet(ATOMIC_LAYOUT_KEY);
+    if (raw !== atomicRaw) {
+      atomicRaw = raw;
+      try { atomicCache = JSON.parse(raw || 'null'); } catch (e) { atomicCache = null; }
+    }
+    return atomicCache;
+  }
+  // Only the two dashboard zone types are read here; the editor's buttons are a separate
+  // concern (regular key layout, already covered by the existing widget system).
+  function atomicDashZones(cut) {
+    const board = atomicBoard();
+    const mode = cut === 'P' ? 'portrait' : 'landscape';
+    const o = board && board.orientations && board.orientations[mode];
+    if (!o || !Array.isArray(o.zones)) return [];
+    return o.zones.filter((z) => z && !z.hidden && (z.type === 'dash-obd' || z.type === 'dash-speedometer'));
+  }
+
   let saveTimer = null;
   function save() {
     applyPrefs();
@@ -234,14 +258,27 @@
   };
   const skinCut = (pg) => (pg.size === 'phone' ? 'P' : 'T');
   const skinOf = (pg) => (pg.skin && SKINS[pg.skin] ? SKINS[pg.skin][skinCut(pg)] : null);
+  // A saved Layout Editor zone becomes the same widget shape frames.js already ships for
+  // eu_frame's fixed dash-speedometer (gps/hero) and dash-obd (rtext/two/utility) slots, just
+  // positioned by the zone's own r instead of the preset's.
+  function dashWidgetFromZone(z) {
+    return z.type === 'dash-speedometer'
+      ? { t: 'gps', hero: 1, r: [z.x, z.y, z.width, z.height], id: z.id }
+      : { t: 'rtext', two: true, utility: 1, r: [z.x, z.y, z.width, z.height], id: z.id, bg: '#010203', ink: '#d9f4ff' };
+  }
   let skinMemo = { key: '', list: [] };
   function widgetsOf(pg) {
     const skin = skinOf(pg);
     if (!skin) return pg.widgets || [];
     const cut = skinCut(pg);
-    const key = pg.id + cut + JSON.stringify(pg.over || {});
+    const zones = pg.skin === 'eu_frame' ? atomicDashZones(cut) : [];
+    const key = pg.id + cut + JSON.stringify(pg.over || {}) + JSON.stringify(zones);
     if (skinMemo.key !== key) {
-      skinMemo = { key, list: skin.w.map((w) => Object.assign({ sk: true }, w, (pg.over || {})[cut + ':' + w.id])) };
+      // Zones from the editor replace the preset's fixed w_drive/w_media slots wholesale; the
+      // rocker keys around them stay the preset's own, untouched by the Layout Editor.
+      const base = zones.length ? skin.w.filter((w) => w.id !== 'w_drive' && w.id !== 'w_media') : skin.w;
+      const list = base.concat(zones.map(dashWidgetFromZone));
+      skinMemo = { key, list: list.map((w) => Object.assign({ sk: true }, w, (pg.over || {})[cut + ':' + w.id])) };
     }
     return skinMemo.list;
   }

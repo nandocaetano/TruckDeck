@@ -113,6 +113,19 @@ button { color: inherit; }
 .drop-hint small { font-size: 9px; }
 .stage.has-elements .drop-hint { opacity: 0; }
 .workspace-status { min-height: 31px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+.layers-list { max-height: 190px; overflow-y: auto; border-bottom: 1px solid var(--line); }
+.layer-row { display: flex; align-items: center; gap: 8px; padding: 7px 14px; cursor: pointer; border-bottom: 1px solid rgba(201,220,232,.06); }
+.layer-row:hover { background: rgba(228,174,87,.06); }
+.layer-row.is-selected { background: rgba(228,174,87,.14); }
+.layer-row.is-hidden { opacity: .45; }
+.layer-badge { flex: 0 0 auto; width: 30px; height: 20px; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--accent-2); font-size: 8px; font-weight: 800; letter-spacing: .05em; }
+.layer-info { min-width: 0; flex: 1; display: grid; gap: 1px; }
+.layer-name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layer-id { color: var(--muted); font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layer-vis { flex: 0 0 auto; width: 20px; height: 20px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--accent-2); cursor: pointer; font-size: 11px; }
+.layer-vis:hover { background: rgba(117,199,192,.14); }
+.layers-empty { padding: 14px; color: var(--muted); font-size: 10px; text-align: center; }
+.layout-element.is-layer-hidden { opacity: .25; pointer-events: none; }
 .inspector { min-height: 0; }
 .empty-inspector { display: grid; justify-items: center; align-content: center; flex: 1; padding: 24px; color: var(--muted); text-align: center; }
 .empty-inspector strong { margin-top: 12px; color: var(--text); font-size: 12px; }
