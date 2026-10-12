@@ -137,8 +137,8 @@
     }
     return atomicCache;
   }
-  // Only the two dashboard zone types are read here; the editor's buttons are a separate
-  // concern (regular key layout, already covered by the existing widget system).
+  // Only the two dashboard zone types are read here; the editor's buttons are bridged
+  // separately by atomicDashButtons()/atomicDashButtonsSig() below.
   function atomicDashZones(cut) {
     const board = atomicBoard();
     const mode = cut === 'P' ? 'portrait' : 'landscape';
@@ -196,6 +196,11 @@
     if (custom) return custom.src || null;
     return SKIN_PATH + 'modern/' + key;
   }
+  // Editor-authored asset keys/filenames end up concatenated into a CSS url("...") below; escape
+  // backslashes and quotes so a stray " in a player-typed filename can't break out of the string.
+  function cssUrl(src) {
+    return 'url("' + String(src).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
+  }
 
   // Reads the editor's free-position buttons for one cut, normalized to the shape widgetsOf()
   // can drop straight into a widget list (same w.r free-position rect the dash zones use).
@@ -212,6 +217,16 @@
       zIndex: Number(b.zIndex) || 10,
       asset: resolveAtomicAsset(board, b.asset)
     }));
+  }
+  // Cheap fingerprint for the memo key in widgetsOf(): the raw id/functionId/asset-key triplet
+  // (short strings), never the resolved asset src -- that can be a multi-MB base64 data URI, and
+  // stringifying one per button on every render would be the actual cost, not the lookup itself.
+  function atomicDashButtonsSig(cut) {
+    const board = atomicBoard();
+    const mode = cut === 'P' ? 'portrait' : 'landscape';
+    const o = board && board.orientations && board.orientations[mode];
+    if (!o || !Array.isArray(o.buttons)) return '';
+    return o.buttons.filter((b) => b && !b.hidden).map((b) => b.id + ':' + (b.functionId || '') + ':' + (b.asset || '') + ':' + (b.zIndex || '')).join('|');
   }
 
   let saveTimer = null;
@@ -340,7 +355,8 @@
     const cut = skinCut(pg);
     const zones = pg.skin === 'eu_frame' ? atomicDashZones(cut) : [];
     const buttons = pg.skin === 'eu_frame' ? atomicDashButtons(cut) : [];
-    const key = pg.id + cut + JSON.stringify(pg.over || {}) + JSON.stringify(zones) + JSON.stringify(buttons);
+    const buttonsSig = pg.skin === 'eu_frame' ? atomicDashButtonsSig(cut) : '';
+    const key = pg.id + cut + JSON.stringify(pg.over || {}) + JSON.stringify(zones) + buttonsSig;
     if (skinMemo.key !== key) {
       // Zones from the editor replace the preset's fixed w_drive/w_media slots wholesale; a
       // saved set of buttons replaces the preset's whole fixed key grid (the upper/brakes/
@@ -1185,7 +1201,7 @@
       // editor's own stacking order; it paints over the drawn rocker cap instead of sitting
       // behind the usual icon + label (.has-asset in app.css), and keeps the layer order the
       // player set for overlapping free-position buttons.
-      if (w.asset) node.style.setProperty('--asset', 'url("' + w.asset + '")');
+      if (w.asset) node.style.setProperty('--asset', cssUrl(w.asset));
       if (w.zIndex) node.style.zIndex = w.zIndex;
       node.innerHTML = widgetHtml({ id: w.id, t: w.k || 'rocker', fn: w.fn });
       return node;
