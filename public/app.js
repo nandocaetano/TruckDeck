@@ -214,17 +214,23 @@
   // (`over`), so a corrected map reaches panels that were saved before the correction.
   const SKIN_PATH = 'skins/';
   // Picture shown for a panel in the gallery and in the lists. Painted panels are their own
-  // picture. Frame panels (empty plate + keys drawn by the app) would show an empty plate, so
-  // they ship a capture of the finished panel: skins/<id>-<cut>v.jpg, listed here with its
-  // aspect ratio. A cut with no capture borrows the landscape one rather than the bare frame.
-  const PREVIEWS = { eu_frame: { T: 1.703 }, sov_frame: { T: 1.703 }, scania25_frame: { T: 1.792 } };
+  // picture. Frame panels (empty plate + keys drawn by the app) normally ship a capture of the
+  // finished panel: skins/<id>-<cut>v.jpg, listed here with its aspect ratio. Modern uses its
+  // canonical background pair instead; a cut with no capture borrows the landscape one.
+  const PREVIEWS = { eu_frame: { T: 2752 / 1536, P: 1152 / 1728 }, sov_frame: { T: 1.703 }, scania25_frame: { T: 1.792 } };
+  const panelAsset = (skinId, cut, hideNames) => {
+    if (skinId === 'eu_frame') {
+      return SKIN_PATH + 'modern/' + (cut === 'P' ? 'bg-portrait.jpg' : 'bg-landscape.jpg');
+    }
+    return SKIN_PATH + skinId + '-' + cut + (hideNames ? 'n' : '') + '.jpg';
+  };
   const previewOf = (skinId, cut) => {
     const pv = PREVIEWS[skinId];
     if (pv) {
       const c = pv[cut] ? cut : 'T';
-      return { src: SKIN_PATH + skinId + '-' + c + 'v.jpg', ar: pv[c] };
+      return { src: skinId === 'eu_frame' ? panelAsset(skinId, c, false) : SKIN_PATH + skinId + '-' + c + 'v.jpg', ar: pv[c] };
     }
-    return { src: SKIN_PATH + skinId + '-' + cut + '.jpg', ar: SKINS[skinId][cut].ar };
+    return { src: panelAsset(skinId, cut, false), ar: SKINS[skinId][cut].ar };
   };
   const skinCut = (pg) => (pg.size === 'phone' ? 'P' : 'T');
   const skinOf = (pg) => (pg.skin && SKINS[pg.skin] ? SKINS[pg.skin][skinCut(pg)] : null);
@@ -2284,7 +2290,7 @@
       panel.style.height = h + 'px';
       layoutExtras(0, 0);
       // soft, out-of-focus copy of the panel behind everything: the screen never shows a bare gap
-      stage.style.setProperty('--amb', 'url("' + SKIN_PATH + p.skin + '-' + skinCut(p) + '.jpg")');
+      stage.style.setProperty('--amb', 'url("' + panelAsset(p.skin, skinCut(p), false) + '")');
       S.u = Math.max(20, w / 12);
       panel.style.setProperty('--u', S.u + 'px');
       return;
@@ -2332,7 +2338,7 @@
     panel.classList.toggle('sc25-box', !!skin && p.skin === 'scania25_frame' && p.size === 'phone');
     // "n" pictures are the same panels with the key names cleared
     panel.style.backgroundImage = skin
-      ? 'url("' + SKIN_PATH + p.skin + '-' + skinCut(p) + (layout().names === 'hide' && !skin.frame ? 'n' : '') + '.jpg")'
+      ? 'url("' + panelAsset(p.skin, skinCut(p), layout().names === 'hide' && !skin.frame) + '")'
       : '';
     panel.style.setProperty('--skin', panel.style.backgroundImage || 'none');   // the key caps are cut from the same picture
     panel.classList.toggle('classic', !!skin && !!STYLE_DEFS[p.skin] && STYLE_DEFS[p.skin].classic);
