@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The PC bridge is plain HTTP on the home network (a LAN address cannot hold a TLS
+     certificate), so cleartext has to be allowed. The app never talks to the internet. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Truck Deck - Truck Sim Button Box</title>
+<style>
+  /* Mad Frog opening: a small logo clip plays once (muted, ~3s) centered on the brand
+     background, then MainActivity moves on. The clip's own background (~rgb(211,211,211))
+     is matched here so the edges blend and it reads as the logo "appearing", not a video
+     rectangle. The poster is the clip's own last frame, so a slow decode never shows black. */
+  html, body { height: 100%; margin: 0; background: rgb(211, 211, 211); overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  #intro {
+    width: min(58vw, 380px);
+    height: auto;
+    aspect-ratio: 1280 / 720;
+    object-fit: contain;
+    background: rgb(211, 211, 211);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #intro { display: none; }
+    body { background: rgb(211, 211, 211) url("poster.jpg") center / min(58vw, 380px) no-repeat; }
+  }
+</style>
+</head>
+<body>
+<video id="intro" src="intro.mp4" poster="poster.jpg" muted autoplay playsinline preload="auto" disablepictureinpicture></video>
+<script>
+  // Nudge autoplay on the odd WebView build that still ignores the attribute.
+  var v = document.getElementById('intro');
+  if (v) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+</script>
+</body>
+</html>

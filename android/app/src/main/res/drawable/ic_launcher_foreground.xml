@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round dashboard push button with a power mark, inside the 66dp safe zone of the 108dp canvas -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- metal ring -->
+    <path android:fillColor="#C9CED3" android:pathData="M54,54m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0" />
+    <!-- button face -->
+    <path android:fillColor="#24272B" android:pathData="M54,54m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0" />
+    <!-- power mark, amber -->
+    <path android:strokeColor="#F2A23A" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M54,41v12" />
+    <path android:strokeColor="#F2A23A" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M46.5,45.5a11,11 0,1 0,15 0" />
+</vector>

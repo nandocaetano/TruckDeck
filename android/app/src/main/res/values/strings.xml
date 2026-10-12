@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher label: short, the full name is on the store page -->
+    <string name="app_name">Truck Deck</string>
+</resources>

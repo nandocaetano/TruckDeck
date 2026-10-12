@@ -1,0 +1,22 @@
+# generated build output — regenerate with: node tools/build.js
+dist/
+
+# runtime data: PIN secret, logs, user-saved layouts (created on first run, not source)
+data/
+
+# large non-source archive
+_update.zip
+
+# manual backup folders/files predating git (kept on disk, not tracked)
+_backup_*
+*.bak
+*.*.bak
+public/*Copia*
+
+# python bytecode cache
+__pycache__/
+
+# Android build artifacts (also covered by android/.gitignore, kept here for root-level clarity)
+android/.gradle/
+android/app/build/
+android/local.properties

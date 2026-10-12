@@ -1,0 +1,374 @@
+Você vai assumir integralmente, a partir de agora, a manutenção e a correção do projeto TruckDeck. Trabalhe diretamente no projeto existente. Não crie uma demonstração paralela, não recomece o aplicativo do zero e não substitua a arquitetura atual por outro framework.
+
+LOCALIZAÇÃO DO PROJETO
+
+C:\Users\caeta\Desktop\TruckDeck
+
+Antes de fazer qualquer alteração, abra e leia integralmente:
+
+C:\Users\caeta\Desktop\TruckDeck\AI_GUIDELINES.md
+
+Esse arquivo é a fonte de verdade do projeto. As regras descritas nele vieram de falhas reais e são obrigatórias. Se este prompt e o código divergirem, investigue o código e o AI_GUIDELINES.md antes de decidir. Não improvise contratos, telemetria, teclas ou estados.
+
+SUA PRIMEIRA TAREFA OBRIGATÓRIA: AUDITORIA COMPLETA DO LAYOUT DESIGNER
+
+Antes de tentar melhorar o visual do skin modern, faça uma varredura completa e sistemática no Layout Designer e em todos os elementos relacionados. Essa auditoria deve abranger todos os skins, todos os presets e as duas orientações, horizontal e vertical.
+
+Você deve localizar, comparar e corrigir:
+
+1. Todos os botões que não aparecem no painel ou no Layout Designer.
+2. Botões visíveis no painel, mas ausentes, duplicados ou incorretos no editor.
+3. IDs duplicados ou inconsistentes.
+4. Mapeamentos incorretos entre o botão visual, o campo `fn`, o catálogo e a tecla realmente enviada ao jogo.
+5. Botões com nome, ícone, rótulo ou função que não correspondem à ação executada.
+6. Funções apontando para teclas erradas.
+7. Teclas atribuídas à função errada.
+8. Funções existentes no catálogo que não podem ser escolhidas no Layout Designer.
+9. Funções utilizadas por layouts que não existem no catálogo.
+10. Ações obrigatórias ausentes: Save, Map e Enter.
+11. Diferenças indevidas entre o mapeamento horizontal e vertical de um mesmo skin.
+12. Widgets ou botões órfãos depois de alterações anteriores.
+13. Regras CSS, classes ou consultas DOM que escondem botões ou impedem sua montagem.
+14. Drag, seleção, redimensionamento, salvamento e recarregamento de posições no Layout Designer.
+15. Persistência dos layouts pelo endpoint existente, incluindo restauração após recarregar.
+16. Conflitos entre presets embarcados, layouts salvos e layouts gerados dinamicamente.
+17. Compatibilidade de todos os tipos de widget com `renderPanel()`, `updateStates()` e `updateSkinNode()`.
+18. Botões com estados visuais incorretos, incluindo toggle, pressionado, ativo e momentâneo.
+19. Layouts que funcionam em uma orientação e quebram na outra.
+20. Vazamento de CSS de um skin para outro.
+
+Faça um inventário real baseado no código, começando por:
+
+- `public/catalog.js`
+- `public/presets.js`
+- `public/frames.js`
+- `public/frames_sov.js`
+- `public/frames_scania.js`
+- `public/frames_scania25.js`
+- `public/skins.js`
+- `public/app.js`
+- `public/app.css`
+- `data/config.json`
+- `bridge/server.js`
+
+Cruze cada botão declarado nos layouts com o catálogo e com o código que envia a tecla. Não presuma que o texto ou o ícone estão corretos. A fonte de verdade deve ser a função realmente executada. Corrija o problema em sua origem, evitando exceções CSS frágeis ou duplicações de lógica.
+
+Depois da auditoria, implemente as correções encontradas. Não pare apenas no relatório. Preserve as funções válidas existentes e não invente telemetria, estados ou ações para preencher espaços. Se houver uma ambiguidade que não possa ser resolvida pelo código ou pelos requisitos abaixo, registre-a claramente, implemente tudo que for independente dela e deixe o ponto isolado para decisão.
+
+ARQUITETURA REAL DO PROJETO
+
+O TruckDeck usa HTML, CSS e JavaScript simples, sem React, Vue, JSX ou bundler. Os widgets são objetos dentro de arrays de layout e são transformados em `<div>` posicionadas no painel.
+
+Estrutura principal:
+
+- `public/`: front-end servido ao WebView.
+- `public/app.js`: estado, renderização, telemetria, menus e Layout Designer.
+- `public/app.css`: estilos e skins.
+- `public/catalog.js`: catálogo real das funções dos botões.
+- `public/skins.js`: registro compartilhado de skins.
+- `public/frames.js`: skin `eu_frame`, apresentado ao usuário como modern.
+- `public/frames_sov.js`: skin SOV.
+- `public/frames_scania.js`: skin Scania S/R 2016.
+- `public/frames_scania25.js`: skin Digital 2025.
+- `public/presets.js`: presets distribuídos.
+- `public/body.html`: esqueleto do DOM.
+- `bridge/server.js`: servidor HTTP, SSE, envio de teclas e persistência.
+- `tools/build.js`: gera os arquivos finais.
+- `data/config.json`: PIN e configurações.
+- `art/`: arte original.
+- `public/skins/`: recursos servidos.
+- `dist/preview.html`: prévia final gerada.
+
+Não há `.git` neste diretório. Existem vários diretórios `_backup_*` na raiz. Use-os apenas para comparação e recuperação seletiva. Não restaure um backup inteiro sem entender o que ele contém.
+
+COMUNICAÇÃO COM O JOGO
+
+A telemetria usa Server-Sent Events com `EventSource`. Não converta para WebSocket.
+
+Endpoints existentes:
+
+- `GET /api/info`
+- `GET /api/events`
+- `GET /api/frame`
+- `POST /api/key`
+- `GET/PUT /api/layouts`
+
+O cliente possui quatro estados de bridge: `demo`, `ok`, `pin` e `lost`. Preserve os quatro.
+
+Há dois caminhos diferentes de atualização:
+
+- `renderPanel()` reconstrói o DOM e só deve ser usado quando a estrutura muda.
+- `updateStates()` é executado em cada frame de telemetria e deve atualizar apenas texto e classes.
+
+Nunca reconstrua o DOM durante atualizações rápidas. Isso interrompe toques e pressões. Todo tipo novo de widget precisa ser tratado adequadamente por `updateSkinNode()` ou ser explicitamente estático.
+
+Não substitua `public/app.js` inteiro. Faça alterações cirúrgicas.
+
+BUILD OBRIGATÓRIO
+
+Depois de qualquer alteração dentro de `public/`, execute:
+
+node tools/build.js
+
+O build gera `public/index.html` e `dist/preview.html`. Nunca edite esses dois arquivos gerados manualmente. Ao concluir cada etapa relevante, verifique os arquivos gerados e teste as duas orientações.
+
+ESTADO ATUAL DO SKIN MODERN
+
+O skin em questão é `eu_frame`, mostrado ao usuário como `modern`. A implementação visual atual foi rejeitada pelo usuário com a avaliação “ficou muito ruim”. Trate o layout atual como provisório e não tente obter aprovação apenas ajustando alguns pixels.
+
+Arquivos atuais envolvidos:
+
+- `public/frames.js`
+- `public/app.js`
+- `public/app.css`
+- `public/skins/modern/`
+
+Foram criados grupos dinâmicos por `mountModernGrids(p)`:
+
+- `upper`
+- `brakes`
+- `utility`
+- `system`
+
+Houve anteriormente um defeito em que a renderização redefinia `node.className` e removia `k-modern`. Como consequência, a montagem não encontrava os botões e o modern aparecia sem nenhum botão. A correção atual preserva `k-modern` para widgets `kbd` quando `page().skin === 'eu_frame'`. Não remova essa correção sem substituir o mecanismo de montagem por uma solução melhor e comprovada.
+
+Todos os estilos específicos do modern devem permanecer escopados por seletores que incluam `.w.sk.k-modern`, preferencialmente sob:
+
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern
+
+Não deixe CSS do modern afetar outros skins.
+
+O layout atual usa os arrays abaixo em `public/frames.js`:
+
+- `upperFns`
+- `brakeFns`
+- `utilityFns`
+- `modernSystem()`
+
+Confira cada uma dessas funções no catálogo durante a auditoria. Não aceite o array apenas porque ele existe.
+
+REQUISITOS VISUAIS DO MODERN
+
+O objetivo é simular uma tela OLED premium integrada a um painel de caminhão com couro e plástico moldado fotorealista. O resultado deve parecer equipamento físico fotografado em uma cabine escura, e não uma interface web plana ou um painel gamer.
+
+Use profundidade, molduras, luz superior, oclusão inferior e sombras de contato. O Start/Stop precisa ter uma moldura metálica claramente mais proeminente que os demais botões.
+
+Use `text-shadow` para simular emissão luminosa dos pixels OLED. Não use `filter: drop-shadow` em velocidade, RPM ou qualquer elemento atualizado rapidamente, pois isso causa problemas de desempenho no WebView.
+
+Não invente campos de telemetria nem estados locais. Use apenas campos confirmados no contrato e já recebidos pelo cliente.
+
+LAYOUT HORIZONTAL DO MODERN
+
+Referência do fundo original:
+
+C:\Users\caeta\Downloads\scania_2025_digital\edited-image (6).jpg
+
+Recurso servido atual:
+
+public\skins\modern\bg-landscape.jpg
+
+O fundo possui duas telas/recessos na parte superior e uma grande área de couro abaixo.
+
+Tela esquerda, Driving/OBD:
+
+- velocidade grande e persistente;
+- marcha grande e persistente;
+- RPM digital horizontal;
+- odômetro;
+- combustível, ar, temperaturas e demais telemetrias críticas existentes;
+- sem repetir a mesma informação em mais de um lugar.
+
+Tela direita, Utility/Media:
+
+- música e mídia;
+- mensagens recebidas, caso já exista campo/contrato para isso;
+- temperatura ambiente, caso exista;
+- relógio;
+- fundo preto profundo, sem borda visual interna, encaixado no bezel físico.
+
+Área inferior:
+
+- distribuir famílias de botões com lógica clara;
+- manter Lights agrupado;
+- manter Cruise agrupado;
+- manter freio-motor e retarder agrupados;
+- Save, Map e Enter sempre ancorados no canto superior direito;
+- preservar tamanho de toque adequado;
+- não colocar doze botões estreitos e deformados em uma única fileira.
+
+O usuário determinou que todos os botões horizontais usem o modelo visual:
+
+C:\Users\caeta\Pictures\ETS@\Botoes\image.jpg
+
+Cópia atual:
+
+public\skins\modern\button-horizontal.jpg
+
+A imagem contém uma área quadriculada que não deve aparecer no produto. Recorte o botão corretamente e remova o fundo, gerando um recurso com transparência real. Não estique o JPG inteiro com `background-size: 100% 100%`.
+
+LAYOUT VERTICAL DO MODERN
+
+Referência do fundo original:
+
+C:\Users\caeta\Downloads\scania_2025_digital\image (1).jpg
+
+Recurso servido atual:
+
+public\skins\modern\bg-portrait.jpg
+
+Tela OLED principal:
+
+- usar toda a área disponível;
+- velocidade e marcha no centro, grandes e persistentes;
+- barra digital de RPM imediatamente abaixo;
+- telemetria OBD e informações de viagem organizadas ao redor;
+- evitar qualquer redundância.
+
+O pequeno recesso diretamente abaixo da tela principal deve permanecer completamente vazio. Não colocar botões, texto, indicadores ou decoração funcional dentro dele.
+
+Bloco superior de botões:
+
+Linha 1:
+
+1. Start/Stop
+2. Parking Brake
+3. Hazard/Alert
+4. Lights
+5. High Beam
+6. Beacon
+
+Linha 2:
+
+1. Wipers
+2. Wipers Off
+3. Lane Assist
+4. Toggle Lane Assist
+5. Emergency Brake
+
+O requisito original chamou esse bloco de “12 botões”, mas enumerou 11. A implementação provisória adicionou `light_horn` e `horn`, o que pode estar errado. Durante a auditoria, confronte os nomes solicitados com as funções reais disponíveis. Não invente uma função para completar a grade. Ajuste a geometria ao número real de ações ou identifique de maneira explícita a lacuna.
+
+Bloco inferior esquerdo, estrutura 3 x 3:
+
+Linha 1: Engine Brake (-), Engine Brake Toggle, Engine Brake (+).
+Linha 2: Retarder (-), Retarder Toggle/Auto, Retarder (+).
+Linha 3: Trailer, Trailer Brake, Differential Lock.
+
+Bloco inferior direito, estrutura 3 x 3:
+
+Linha 1: Cruise -, Cruise/Set, Cruise Resume.
+Linha 2: Front Cab Up, Rear Cab Up, Reset Trailer.
+Linha 3: Front Cab Down, Rear Cab Down, Mirrors.
+
+As três funções obrigatórias de sistema são:
+
+- `quick_save`
+- `world_map`
+- `activate`
+
+Elas devem permanecer no canto superior direito. Confirme no catálogo se os rótulos e ícones correspondem a Save, Map e Enter.
+
+O usuário forneceu dois modelos visuais para o vertical:
+
+Botão quadrado:
+
+C:\Users\caeta\Pictures\ETS@\Botoes\image (2).jpg
+
+Botão vertical:
+
+C:\Users\caeta\Pictures\ETS@\Botoes\image (7).jpg
+
+Cópias atuais:
+
+- `public/skins/modern/button-portrait-square.jpg`
+- `public/skins/modern/button-portrait-vertical.jpg`
+
+Essas imagens também contêm fundo quadriculado. Recorte a peça física e produza transparência real. Use o botão quadrado em células realmente quadradas e o vertical em células realmente verticais. Não distorça uma forma para preencher outra.
+
+REFERÊNCIAS ADICIONAIS DE BOTÕES
+
+Diretório completo fornecido pelo usuário:
+
+C:\Users\caeta\Pictures\ETS@\Botoes\
+
+Há modelos quadrados, verticais e horizontais adicionais. Inspecione-os visualmente e selecione somente os que ajudam a respeitar a geometria solicitada. Não use o tabuleiro quadriculado como se fosse transparência.
+
+CAPTURAS DO PROBLEMA ANTERIOR
+
+- `C:\Users\caeta\AppData\Local\Temp\codex-clipboard-a3bc3aaa-88ca-4d3d-bc6e-588de9f0e206.png`
+- `C:\Users\caeta\AppData\Local\Temp\codex-clipboard-1898485b-5ffe-4a79-9ba1-adffbf6fd4a4.png`
+
+Essas imagens mostram o momento em que os botões não apareciam. Use-as como evidência do defeito, não como meta visual.
+
+CAUSAS PROVÁVEIS DO RESULTADO REJEITADO
+
+1. Uso do JPG inteiro com o fundo quadriculado.
+2. Distorção causada por `background-size: 100% 100%`.
+3. Densidade excessiva de botões.
+4. Doze botões colocados em uma única linha horizontal.
+5. Formatos de botão incompatíveis com a proporção real das células.
+6. Ícones e rótulos pequenos demais.
+7. Falta de integração entre os botões e os recessos da arte de fundo.
+8. Alterações visuais feitas antes de validar o mapeamento funcional completo.
+
+ORDEM DE EXECUÇÃO OBRIGATÓRIA
+
+Fase 1 — Auditoria funcional completa:
+
+- mapear todos os skins, presets, widgets, botões, funções e teclas;
+- corrigir mapeamentos, nomes, ícones e funções erradas;
+- corrigir botões ausentes e duplicados;
+- verificar Layout Designer, persistência, orientação e estados;
+- garantir que nenhuma correção vaze para outros skins.
+
+Fase 2 — Normalização dos recursos visuais:
+
+- recortar as imagens dos botões;
+- remover o fundo quadriculado;
+- gerar transparência real;
+- padronizar margens, proporções e resolução;
+- preservar arquivos originais e criar derivados claros em `public/skins/modern/`.
+
+Fase 3 — Reconstrução do modern:
+
+- reconstruir a composição horizontal respeitando as duas telas e a área inferior;
+- reconstruir a composição vertical respeitando a tela, o recesso vazio e os três blocos;
+- usar CSS Grid onde apropriado;
+- não deformar texturas;
+- manter Speed/Gear persistentes;
+- remover redundâncias;
+- manter Save/Map/Enter no canto superior direito;
+- manter a moldura metálica especial do Start/Stop.
+
+Fase 4 — Verificação:
+
+- executar verificações sintáticas em JavaScript;
+- executar `node tools/build.js`;
+- abrir e inspecionar `dist/preview.html` em horizontal e vertical;
+- testar o Layout Designer em todos os skins;
+- testar ações e estados dos botões;
+- confirmar que os recursos finais carregam e não mostram fundo quadriculado;
+- confirmar que outros skins não foram afetados.
+
+CRITÉRIOS DE CONCLUSÃO
+
+O trabalho não está concluído apenas porque o build passou. Considere concluído somente quando:
+
+1. A auditoria do Layout Designer foi realizada em todos os skins e orientações.
+2. Cada botão executa a função e a tecla corretas.
+3. Não há botões ausentes, duplicados ou órfãos.
+4. Nomes, ícones, estados e ações correspondem.
+5. Layouts editados persistem e recarregam corretamente.
+6. Os botões aparecem corretamente no modern horizontal e vertical.
+7. Nenhuma imagem mostra o fundo quadriculado.
+8. Nenhum botão está distorcido.
+9. Os grupos encaixam nos recessos físicos.
+10. Speed e Gear permanecem sempre visíveis.
+11. A telemetria não está duplicada.
+12. Save, Map e Enter ficam no canto superior direito.
+13. O pequeno recesso vertical permanece vazio.
+14. O Start/Stop tem moldura metálica destacada.
+15. O CSS do modern não interfere nos demais skins.
+16. `node tools/build.js` termina com sucesso.
+17. `dist/preview.html` foi verificado visualmente nas duas orientações.
+
+Ao começar, não faça uma alteração visual imediata. Primeiro informe, de forma curta, quais arquivos compõem o Layout Designer e qual será o método usado para cruzar layout, catálogo, tecla e ação. Em seguida faça a auditoria e prossiga para as correções sem interromper o trabalho para pedir confirmações rotineiras.

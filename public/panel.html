@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Truck Panel Themes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+/* ===================== 1. BUTTON COMPONENT ===================== */
+:root {
+  --btn-bg: #1b1e22;
+  --btn-bg-down: #14161a;
+  --btn-edge: #343a42;
+  --btn-ink: #d9dde2;
+  --btn-radius: 14px;
+  --btn-pad: clamp(4px, 7cqmin, 12px);   /* padding scales with the button */
+  --btn-gap: clamp(2px, 5cqmin, 8px);    /* icon <-> label spacing */
+}
+
+/* ---------- Button component ---------- */
+.button {
+  /* each button is its own container so children size from IT, not the viewport */
+  container-type: size;
+  position: relative;
+  min-width: 0; min-height: 0;
+  padding: 0; border: 1px solid var(--btn-edge); border-radius: var(--btn-radius);
+  background: linear-gradient(#23272c, var(--btn-bg));
+  color: var(--btn-ink);
+  font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none;
+}
+/* Inner wrapper does the flex layout (a <button> with container-type:size
+   cannot lay out its own children reliably in every engine). */
+.button-body {
+  box-sizing: border-box; width: 100cqw; height: 100cqh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: var(--btn-gap);
+  padding: var(--btn-pad);
+}
+.button-icon {
+  flex: 0 1 auto; min-height: 0;
+  width: clamp(18px, 38cqmin, 44px); height: clamp(18px, 38cqmin, 44px);
+  fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+.button-label {
+  flex: 0 1 auto; min-width: 0; max-width: 100%;
+  text-align: center;
+  line-height: 1.05;
+  font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
+  /* font shrinks with the button; JS (fitLabels) shrinks further for long text */
+  font-size: calc(clamp(9px, 15cqmin, 17px) * var(--fit, 1));
+  /* wrap, never clip: break at spaces first; shrink font if a word is too wide;
+     break inside a word only as a last resort (.is-broken, set by fitLabels) */
+  white-space: normal; overflow-wrap: normal; hyphens: manual;
+}
+
+/* ---------- LED (colour comes from the `color` prop) ---------- */
+.button::before {
+  content: ""; position: absolute; top: 8%; right: 8%;
+  width: clamp(5px, 8cqmin, 9px); height: clamp(5px, 8cqmin, 9px); border-radius: 50%;
+  background: color-mix(in srgb, var(--led) 18%, #000);
+  transition: background .12s, box-shadow .12s;
+}
+.button[aria-pressed="true"]::before { background: var(--led); box-shadow: 0 0 8px 1px var(--led); }
+.button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--led) 55%, var(--btn-edge)); }
+.button.is-down { background: var(--btn-bg-down); transform: translateY(1px); }
+
+/* long-press progress bar */
+.button[data-type="longpress"]::after {
+  content: ""; position: absolute; left: 10%; bottom: 6%; height: 3px; width: 0; border-radius: 2px;
+  background: var(--led);
+}
+.button.is-holding::after { width: 80%; transition: width var(--hold-ms, 1000ms) linear; }
+
+/* last-resort break */
+.button-label.is-broken { word-wrap: break-word; overflow-wrap: anywhere; }
+
+/* ---------- Global label switch: one class on the panel ---------- */
+.hide-labels .button-label { display: none; }
+/* Icon is already centred by the flex column (justify-content:center); with the
+   label gone it becomes the only child, and we let it grow a bit. */
+.hide-labels .button-icon { width: clamp(22px, 52cqmin, 60px); height: clamp(22px, 52cqmin, 60px); }
+
+
+/* ===================== 2. RADIO COMPONENT ===================== */
+/* =========================================================
+   RADIO MODULE — classic 1-DIN head unit with OEL-style display
+   Everything scales from the radio's own width (container query units),
+   so it can be dropped into any grid cell without media queries.
+   ========================================================= */
+.radio {
+  --oel: #19e6ff;                       /* bright cyan pixels */
+  --oel-dim: color-mix(in srgb, var(--oel) 22%, #000);
+  --plastic: #17191c;
+  --plastic-hi: #26292e;
+  --edge: #0a0b0d;
+  --key: #202328;
+
+  container-type: inline-size;
+  width: 100%; max-width: 760px;
+  aspect-ratio: 3.9 / 1;                /* 1-DIN body + preset strip */
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 21% 1fr 21%;   /* left controls | screen | right controls */
+  grid-template-rows: 1fr 19%;          /* main area | preset row */
+  gap: 1.6cqw 1.8cqw;
+  padding: 2.2cqw 2.6cqw;
+  border-radius: 1.8cqw;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.06), transparent 30%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px), /* matte grain */
+    var(--plastic);
+  box-shadow: inset 0 0 0 1px #2c3036, inset 0 -2px 6px #000, 0 6px 18px rgba(0,0,0,.6);
+  color: #aab2bb;
+  font-family: system-ui, sans-serif;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+
+/* ---------- Generic physical button ---------- */
+.radio button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.r-btn {
+  border: 0; padding: 0; min-width: 0; min-height: 0;
+  border-radius: .9cqw;
+  background: linear-gradient(var(--plastic-hi), var(--key));
+  box-shadow: 0 1px 0 #3a3f46 inset, 0 2px 3px #000, 0 0 0 1px var(--edge);
+  font-size: clamp(7px, 1.7cqw, 13px); font-weight: 700; letter-spacing: .06em;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+}
+.r-btn:active, .r-btn.is-down { transform: translateY(1px); background: linear-gradient(#1a1d21, #14161a); box-shadow: 0 2px 4px #000 inset, 0 0 0 1px var(--edge); }
+
+/* ---------- Left: SRC/OFF + rotary knob ---------- */
+.r-left { grid-row: 1; display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 1.2cqw; min-height: 0; }
+.r-src { height: 24%; }
+.r-src.is-on { color: var(--oel); text-shadow: 0 0 6px var(--oel); }
+
+.r-knob-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.r-knob {
+  height: 100%; aspect-ratio: 1; border-radius: 50%; position: relative; touch-action: none; cursor: grab;
+  /* brushed-metal look: conic highlights + fine ridges */
+  background:
+    repeating-conic-gradient(from 0deg, #3a3e45 0 4deg, #22252a 4deg 8deg),
+    radial-gradient(circle, #555b64, #1b1d21);
+  background-blend-mode: overlay;
+  box-shadow: 0 0 0 .5cqw #0b0c0e, 0 .8cqw 1.6cqw #000, inset 0 0 1.2cqw rgba(255,255,255,.12);
+}
+.r-knob::after {                         /* centre cap */
+  content: ""; position: absolute; inset: 22%; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6a7079, #23262b 70%);
+  box-shadow: inset 0 0 .8cqw #000;
+}
+.r-knob-dot {                            /* position indicator, rotated by JS via --angle */
+  position: absolute; inset: 0; transform: rotate(var(--angle, 0deg));
+}
+.r-knob-dot::before {
+  content: ""; position: absolute; top: 7%; left: 50%; width: 7%; height: 14%;
+  transform: translateX(-50%); border-radius: 2px; background: var(--oel); box-shadow: 0 0 5px var(--oel);
+}
+.radio:not(.is-on) .r-knob-dot::before { background: #555; box-shadow: none; }
+
+/* ---------- Centre: OEL display ---------- */
+.r-screen {
+  grid-row: 1; position: relative; overflow: hidden; min-height: 0;
+  container-type: size;                  /* screen text scales with the screen */
+  border-radius: .8cqw;
+  background: #000;
+  box-shadow: 0 0 0 .5cqw #08090b, 0 0 0 .7cqw #2a2e34, inset 0 0 2cqw rgba(25,230,255,.06);
+  font-family: 'VT323', ui-monospace, 'Courier New', monospace;
+  color: var(--oel);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--oel) 80%, transparent);
+}
+/* pixel grid overlay: sells the "OEL dot matrix" look */
+.r-screen::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(rgba(0,0,0,.35) 1px, transparent 1px) 0 0 / 100% 3px,
+    linear-gradient(90deg, rgba(0,0,0,.35) 1px, transparent 1px) 0 0 / 3px 100%;
+  mix-blend-mode: multiply;
+}
+.r-view { position: absolute; inset: 0; padding: 6cqh 5cqw; display: none; }
+.radio[data-state="booting"] .r-view--boot,
+.radio[data-state="on"] .r-view--main { display: flex; }
+
+/* BOOT: text slides right -> left (marquee), then JS switches to "on" */
+.r-view--boot { align-items: center; overflow: hidden; }
+.r-boot-text {
+  white-space: nowrap; font-size: 34cqh; letter-spacing: .08em;
+  animation: boot-marquee var(--boot-ms, 3200ms) linear forwards;
+}
+@keyframes boot-marquee { from { transform: translateX(105cqw); } to { transform: translateX(-100%); } }
+
+/* MAIN: top row (source, clock) / station name / bottom row (EQ, status) */
+.r-view--main { flex-direction: column; justify-content: space-between; animation: screen-in .35s steps(5) both; }
+@keyframes screen-in { from { opacity: 0; } to { opacity: 1; } }
+.r-top, .r-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 20cqh; line-height: 1; }
+.r-clock .colon { animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.r-station {
+  text-align: center; font-size: 36cqh; line-height: 1; letter-spacing: .06em;
+  white-space: nowrap; overflow: hidden; text-overflow: clip;   /* station names are short; JS trims >14 chars */
+}
+.r-info, .r-clock { opacity: .85; white-space: nowrap; }
+
+/* Transient overlay (VOL / EQ mode) replaces the station line for a moment */
+.r-osd { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: #000; font-size: 42cqh; z-index: 2; }
+.r-osd.is-visible { display: flex; }
+
+/* ---------- EQ bars: pure CSS, randomised per bar ---------- */
+.r-eq { display: flex; align-items: flex-end; gap: 1.6cqw; height: 28cqh; }
+.r-eq i {
+  display: block; width: 2.6cqw; height: 100%;
+  transform-origin: bottom; transform: scaleY(.12);
+  /* segmented "pixel" look: stack of 2px-gap blocks */
+  background: repeating-linear-gradient(to top, var(--oel) 0 3px, transparent 3px 5px);
+  box-shadow: 0 0 5px var(--oel);
+  animation: eq-bounce var(--dur, 700ms) ease-in-out var(--delay, 0ms) infinite alternate paused;
+}
+.radio[data-state="on"] .r-eq i { animation-play-state: running; }
+.radio[data-paused="true"] .r-eq i { animation-play-state: paused; transform: scaleY(.12); }
+/* heights are randomised per bar through --h1..--h4 (set once by JS) */
+@keyframes eq-bounce {
+  0%   { transform: scaleY(var(--h1, .2)); }
+  35%  { transform: scaleY(var(--h2, .9)); }
+  70%  { transform: scaleY(var(--h3, .4)); }
+  100% { transform: scaleY(var(--h4, 1)); }
+}
+
+/* ---------- Right: D-pad + AUDIO ---------- */
+.r-right { grid-row: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 1.2cqw; min-height: 0; }
+.r-dpad {
+  flex: 1; min-height: 0; aspect-ratio: 1; align-self: center;
+  display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); gap: .5cqw;
+}
+.r-dpad .r-btn { font-size: clamp(8px, 2cqw, 15px); }
+.r-dpad [data-act="up"]    { grid-area: 1 / 2; }
+.r-dpad [data-act="left"]  { grid-area: 2 / 1; }
+.r-dpad [data-act="right"] { grid-area: 2 / 3; }
+.r-dpad [data-act="down"]  { grid-area: 3 / 2; }
+.r-dpad .r-mid { grid-area: 2 / 2; border-radius: 50%; background: #0f1114; box-shadow: inset 0 0 .6cqw #000; }
+.r-audio { height: 24%; }
+
+/* ---------- Base: presets 1–6, equal columns => perfectly aligned ---------- */
+.r-presets { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.4cqw; min-height: 0; }
+.r-presets .r-btn { font-size: clamp(9px, 2.1cqw, 16px); }
+.r-presets .r-btn.is-active { color: var(--oel); text-shadow: 0 0 6px var(--oel); }
+
+/* Off state: dead glass, dim keys */
+.radio:not(.is-on) .r-screen { text-shadow: none; }
+
+
+
+/* ===================== 3. PANEL SHELL ===================== */
+html, body { height: 100%; margin: 0; background: #0c0d0f; overflow: hidden; }
+body { display: flex; flex-direction: column; }
+.devbar { flex: none; display: flex; gap: 8px; padding: 6px 10px; background: #111; font: 12px system-ui; color: #aaa; }
+.devbar button { padding: 4px 10px; border-radius: 6px; border: 1px solid #444; background: #1b1e22; color: #ddd; cursor: pointer; }
+
+.panel {
+  flex: 1; min-height: 0; box-sizing: border-box;
+  display: grid; gap: 1.6vmin; padding: 2.2vmin;
+  /* LANDSCAPE: 3 thumb columns. Radio sits on top of the (wider) centre column. */
+  grid-template-columns: 1fr 1.75fr 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "lights radio cab"
+    "lights mech  sys";
+}
+/* PORTRAIT: top half = radio + system/cab keys, bottom half = driving keys. */
+@media (orientation: portrait) {
+  .panel {
+    grid-template-columns: 3fr 4fr;
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-areas:
+      "radio  radio"
+      "sys    cab"
+      "lights lights"
+      "mech   mech";
+  }
+  .panel .radio { aspect-ratio: 2.7 / 1; }   /* taller radio => bigger knob and D-pad targets */
+}
+
+/* ---------- Zones (a plate = a group of keys) ---------- */
+.zone { position: relative; isolation: isolate; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 1vmin; padding: 1.6vmin; }
+.zone-title { flex: none; font: 700 clamp(8px, 1.5vmin, 12px)/1 system-ui; letter-spacing: .2em; text-transform: uppercase; text-align: center; }
+.zone-grid {
+  flex: 1; min-height: 0; display: grid; gap: 1.2vmin;
+  grid-template-columns: repeat(var(--cols, 2), 1fr);
+  grid-auto-rows: 1fr;                    /* equal-height rows => aligned keys */
+}
+.zone--lights { grid-area: lights; --cols: 1; }
+.zone--mech   { grid-area: mech;   --cols: 4; }
+.zone--cab    { grid-area: cab;    --cols: 2; }
+.zone--sys    { grid-area: sys;    --cols: 1; }
+.slot-radio   { grid-area: radio; min-width: 0; }
+@media (orientation: portrait) {
+  .zone--lights { --cols: 5; }
+  .zone--cab { --cols: 2; }
+  .zone--sys { --cols: 3; }
+}
+
+/* ===================== 4. THEME: OLD SCHOOL (wood · bakelite · chrome) ===================== */
+.panel[data-theme="oldschool"] {
+  --btn-bg: #1a1410; --btn-bg-down: #0d0907; --btn-edge: #8a7a62; --btn-ink: #efe2c4; --btn-radius: 11px;
+  /* wood: grain streaks + fine noise over a warm gradient */
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.012 .55' numOctaves='3' seed='4'/><feColorMatrix values='0 0 0 0 .1  0 0 0 0 .05  0 0 0 0 0  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    repeating-linear-gradient(90deg, transparent 0 11px, rgba(255,215,160,.05) 11px 14px, transparent 14px 29px),
+    linear-gradient(180deg, #7d5230, #5a3819 55%, #6b4323);
+}
+/* bakelite plate with a chrome rim (pseudo-element) and 4 slotted screws */
+.panel[data-theme="oldschool"] .zone {
+  border-radius: 16px; color: #d9c9a5;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><circle cx='7' cy='7' r='6' fill='%23b9bcc0' stroke='%23555' stroke-width='1'/><circle cx='5.5' cy='5.5' r='3' fill='%23e4e6e8' opacity='.6'/><path d='M3.2 10.8 10.8 3.2' stroke='%23333' stroke-width='1.6'/></svg>") 7px 7px / 14px no-repeat,
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><circle cx='7' cy='7' r='6' fill='%23b9bcc0' stroke='%23555' stroke-width='1'/><circle cx='5.5' cy='5.5' r='3' fill='%23e4e6e8' opacity='.6'/><path d='M3 7h8' stroke='%23333' stroke-width='1.6'/></svg>") right 7px top 7px / 14px no-repeat,
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><circle cx='7' cy='7' r='6' fill='%23b9bcc0' stroke='%23555' stroke-width='1'/><circle cx='5.5' cy='5.5' r='3' fill='%23e4e6e8' opacity='.6'/><path d='M7 3v8' stroke='%23333' stroke-width='1.6'/></svg>") left 7px bottom 7px / 14px no-repeat,
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><circle cx='7' cy='7' r='6' fill='%23b9bcc0' stroke='%23555' stroke-width='1'/><circle cx='5.5' cy='5.5' r='3' fill='%23e4e6e8' opacity='.6'/><path d='M3.2 3.2 10.8 10.8' stroke='%23333' stroke-width='1.6'/></svg>") right 7px bottom 7px / 14px no-repeat,
+    linear-gradient(145deg, #2c231c, #120d09),
+    linear-gradient(135deg, #f4f6f8, #8c9196 30%, #e9ecee 50%, #7b8085 75%, #d5d8db);
+  border: 3px solid transparent;
+  background-clip: padding-box, padding-box, padding-box, padding-box, padding-box, border-box;  /* plate inside, chrome rim on the border */
+  box-shadow: 0 5px 14px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08);
+  padding-top: 2.4vmin; padding-bottom: 2.4vmin;
+}
+
+.panel[data-theme="oldschool"] .zone-title { color: #cdb98f; text-shadow: 0 1px 0 #000; }
+
+/* keys: bakelite caps in a chrome bezel, jewel-lamp LED */
+.panel[data-theme="oldschool"] .button {
+  border: 0; box-shadow: 0 0 0 2px #b8bcc0, 0 0 0 3px #4a4d50, 0 3px 6px rgba(0,0,0,.7);
+  background: linear-gradient(160deg, #2e251d, #14100c);
+}
+.panel[data-theme="oldschool"] .button.is-down { box-shadow: 0 0 0 2px #9a9ea2, 0 0 0 3px #3a3d40, inset 0 2px 6px #000; }
+.panel[data-theme="oldschool"] .button::before {            /* jewel lamp */
+  top: 9%; right: 9%; width: clamp(7px, 11cqmin, 12px); height: clamp(7px, 11cqmin, 12px);
+  box-shadow: 0 0 0 1.5px #8c9196, inset 0 1px 1px rgba(255,255,255,.35);
+}
+.panel[data-theme="oldschool"] .button[aria-pressed="true"]::before { box-shadow: 0 0 0 1.5px #8c9196, 0 0 10px 2px var(--led); }
+.panel[data-theme="oldschool"] .button-icon { stroke: #efe2c4; }
+
+/* radio gets a chrome bezel in the Old School family */
+.panel[data-theme="oldschool"] .slot-radio {
+  padding: 5px; border-radius: 18px; align-self: start;
+  background: linear-gradient(135deg, #f4f6f8, #8c9196 30%, #e9ecee 50%, #7b8085 75%, #d5d8db);
+  box-shadow: 0 5px 14px rgba(0,0,0,.55);
+}
+.panel .radio { max-width: none; aspect-ratio: 2.7 / 1; }
+/* radio text fixes for narrow screens: station name fits the width, EQ bars slimmer */
+.panel .r-station { font-size: min(36cqh, 10.5cqw); }
+.panel .r-eq { gap: 1.2cqw; }
+.panel .r-eq i { width: 1.8cqw; }
+
+
+
+/* ===================== 5. THEME: MODERN (carbon · flat · acrylic glass) ===================== */
+/* --- Grid override: infotainment takes the whole top row; sys keys dock under it --- */
+.panel[data-theme="modern"] {
+  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-areas:
+    "media media media"
+    "lights mech cab";
+}
+.panel[data-theme="modern"] .zone--lights { --cols: 2; }
+.panel[data-theme="modern"] .zone--lights .button:first-child { grid-column: 1 / -1; }  /* landscape: HAZARD gets a full-width key */
+.panel[data-theme="modern"] .zone--cab { --cols: 2; }
+@media (orientation: portrait) {
+  .panel[data-theme="modern"] .zone--lights .button:first-child { grid-column: auto; }
+  .panel[data-theme="modern"] {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1.5fr) minmax(0, .55fr) minmax(0, .7fr) minmax(0, 1.25fr);
+    grid-template-areas: "media" "cab" "lights" "mech";
+  }
+  .panel[data-theme="modern"] .zone--cab { --cols: 4; }
+  .panel[data-theme="modern"] .zone--lights { --cols: 5; }
+}
+
+/* media-stack = infotainment + the 3 System keys docked underneath (keeps all 20 commands on screen) */
+.media-stack { container: stack / inline-size; grid-area: media; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 1.4vmin; }
+.media-stack .zone--sys { flex: none; grid-area: auto; --cols: 3; height: clamp(64px, 13vmin, 110px); padding: 1vmin; }
+.media-stack .zone--sys .zone-title { display: none; }
+
+/* --- Tokens: flat + dark --- */
+.panel[data-theme="modern"] {
+  --btn-bg: rgba(255,255,255,.06); --btn-bg-down: rgba(255,255,255,.12);
+  --btn-edge: rgba(255,255,255,.12); --btn-ink: #e6ebf0; --btn-radius: 6px;
+  /* carbon-fibre weave (SVG tile) over a soft vignette */
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(60,70,85,.18), transparent 70%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><rect width='8' height='8' fill='%230f1012'/><path d='M0 0h4v4H0zM4 4h4v4H4z' fill='%23191b1e'/><path d='M0 0l4 4M4 4l4 4M0 4l4 4M4 0l4 4' stroke='%23ffffff' stroke-opacity='.035'/></svg>"),
+    #0f1012;
+}
+/* acrylic plates: no chrome, no screws */
+.panel[data-theme="modern"] .zone {
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.panel[data-theme="modern"] .zone-title { color: #8b95a1; font-weight: 600; }
+/* flat rectangular keys; LED = thin emissive line on top edge + glowing icon */
+.panel[data-theme="modern"] .button {
+  background: var(--btn-bg); border: 1px solid var(--btn-edge); border-radius: var(--btn-radius); overflow: hidden;
+  box-shadow: none; transition: background .12s, border-color .12s;
+}
+.panel[data-theme="modern"] .button.is-down { background: var(--btn-bg-down); transform: none; }
+.panel[data-theme="modern"] .button::before {
+  top: 0; left: 14%; right: 14%; width: auto; height: 2px; border-radius: 0 0 2px 2px;
+  background: color-mix(in srgb, var(--led) 22%, transparent); box-shadow: none;
+}
+.panel[data-theme="modern"] .button[aria-pressed="true"]::before { background: var(--led); box-shadow: 0 0 10px 1px var(--led); }
+.panel[data-theme="modern"] .button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--led) 45%, transparent); background: color-mix(in srgb, var(--led) 9%, rgba(255,255,255,.05)); }
+.panel[data-theme="modern"] .button[aria-pressed="true"] .button-icon { stroke: var(--led); filter: drop-shadow(0 0 4px var(--led)); }
+.panel[data-theme="modern"] .button[data-type="longpress"]::after { left: 14%; bottom: 0; height: 2px; }
+
+/* ===================== ROCKER (two momentary halves, e.g. window up / down) ===================== */
+.rocker { display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 0; }
+.rocker .button { flex: 1 1 0; min-height: 0; }
+.rocker .button:first-child { border-bottom-left-radius: 3px; border-bottom-right-radius: 3px; }
+.rocker .button:last-child  { border-top-left-radius: 3px; border-top-right-radius: 3px; }
+.rocker .button-body { flex-direction: row; gap: clamp(3px, 4cqmin, 8px); }       /* half-height keys: icon beside label */
+
+/* ===================== BRIDGE STATUS ===================== */
+.bridge-dot { position: fixed; top: 8px; right: 10px; z-index: 50; display: flex; align-items: center; gap: 6px; font: 600 11px system-ui; color: #aab2bb; pointer-events: none; }
+.bridge-dot i { width: 12px; height: 12px; border-radius: 50%; background: #ff4d4d; box-shadow: 0 0 8px #ff4d4d; }
+.bridge-dot[data-s="online"] i { background: #3ddc84; box-shadow: 0 0 8px #3ddc84; }
+.bridge-dot[data-s="connecting"] i { background: #ffb020; box-shadow: 0 0 8px #ffb020; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.devbar input { flex: 1; min-width: 0; max-width: 260px; padding: 4px 8px; border-radius: 6px; border: 1px solid #444; background: #0c0d0f; color: #ddd; }
+
+/* ===================== 6. INFOTAINMENT (Android-style head unit) ===================== */
+.infotainment {
+  flex: 1; min-height: 0; container-type: size; box-sizing: border-box;
+  display: grid; gap: 1.4cqmin; padding: 1.8cqmin;
+  grid-template-columns: 1fr 1.25fr 1.1fr; grid-template-areas: "tele trip media";
+  background: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+  border: 1px solid rgba(255,255,255,.1); border-radius: 12px;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  color: #e6ebf0; font-family: system-ui, 'Segoe UI', Roboto, sans-serif; font-variant-numeric: tabular-nums;
+}
+@container stack (max-width: 820px) {      /* portrait / narrow: telemetry + trip on top, player below */
+  .infotainment { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; grid-template-areas: "tele trip" "media media"; }
+}
+.w { min-width: 0; min-height: 0; border-radius: 8px; padding: 2.2cqmin; box-sizing: border-box;
+     background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.07); display: flex; flex-direction: column; gap: 1.2cqmin; }
+[hidden] { display: none !important; }
+.w-title { flex: none; font-size: clamp(8px, 2.6cqmin, 12px); letter-spacing: .16em; text-transform: uppercase; color: #7e8996; }
+.w--tele { grid-area: tele; } .w--trip { grid-area: trip; } .w--media { grid-area: media; }
+
+/* telemetry */
+.tele-main { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: space-between; gap: 2cqmin; }
+.gear { display: flex; flex-direction: column; align-items: center; }
+.gear b { font-size: clamp(28px, 17cqmin, 84px); line-height: 1; color: #4da3ff; font-weight: 600; }
+.gear small, .speed small { font-size: clamp(8px, 2.6cqmin, 12px); letter-spacing: .14em; color: #7e8996; text-transform: uppercase; }
+.speed { display: flex; flex-direction: column; align-items: flex-end; }
+.speed b { font-size: clamp(34px, 22cqmin, 108px); line-height: .95; font-weight: 600; letter-spacing: -.02em; }
+.fuel { flex: none; display: flex; flex-direction: column; gap: .8cqmin; }
+.fuel-row { display: flex; justify-content: space-between; font-size: clamp(9px, 3cqmin, 14px); color: #9aa5b1; }
+.bar { height: clamp(5px, 1.8cqmin, 9px); border-radius: 99px; background: rgba(255,255,255,.1); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: var(--v, 50%); border-radius: inherit; background: #3ddc84; transition: width .6s; }
+.bar.is-low > i { background: #ffb020; }
+
+/* trip computer / route advisor */
+.trip-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 1.4cqmin; }
+.m { min-width: 0; display: flex; align-items: center; gap: 1.6cqmin; }
+.m-val { display: flex; flex-direction: column; min-width: 0; }
+.m-val b { font-size: clamp(16px, 9cqmin, 40px); line-height: 1.05; font-weight: 600; white-space: nowrap; }
+.m-val small { font-size: clamp(8px, 2.5cqmin, 12px); color: #7e8996; letter-spacing: .1em; text-transform: uppercase; }
+.limit {                                         /* speed-limit road sign badge */
+  flex: none; aspect-ratio: 1; height: min(100%, 15cqmin); border-radius: 50%;
+  display: grid; place-items: center; background: #fff; color: #111; border: clamp(3px, 1.2cqmin, 6px) solid #e5302a;
+  font-weight: 800; font-size: clamp(11px, 5cqmin, 24px);
+}
+.cruise-on { color: #3ddc84; }
+
+/* media player card */
+.w--media { gap: 1.6cqmin; }
+.mp { flex: 1; min-height: 0; display: flex; gap: 2cqmin; align-items: center; }
+.art {
+  flex: none; height: 100%; max-height: 34cqmin; aspect-ratio: 1; border-radius: 8px;
+  background: linear-gradient(135deg, #3a4a63, #1d2533); display: grid; place-items: center; color: rgba(255,255,255,.5);
+  box-shadow: 0 4px 14px rgba(0,0,0,.4);                     /* album-art placeholder */
+}
+.art svg { width: 45%; height: 45%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.mp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .6cqmin; }
+.mp-track { font-size: clamp(12px, 4.4cqmin, 22px); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-artist { font-size: clamp(10px, 3.2cqmin, 15px); color: #8b95a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-prog.bar > i { width: 0; }
+.mp-prog { margin-top: .8cqmin; } .mp-prog .bar > i { background: #e6ebf0; transition: width .25s linear; }
+.mp-ctl { flex: none; display: flex; justify-content: center; gap: 2cqmin; }
+.mp-ctl button {
+  width: clamp(34px, 9cqmin, 54px); height: clamp(34px, 9cqmin, 54px); border-radius: 50%; border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.07); color: #e6ebf0; display: grid; place-items: center; padding: 0; cursor: pointer;
+}
+.mp-ctl button:active { background: rgba(255,255,255,.16); }
+.mp-ctl svg { width: 50%; height: 50%; fill: currentColor; }
+.mp-ctl .play { background: #e6ebf0; color: #111; }
+
+/* typography: sans for Modern, serif engraving for Old School */
+body { font-family: system-ui, 'Segoe UI', Roboto, sans-serif; }
+.panel[data-theme="oldschool"] .button-label { font-family: Georgia, 'Times New Roman', serif; }
+</style>
+</head>
+<body>
+
+<div class="devbar">
+  <button id="t-theme">Theme: Old School</button>
+  <button id="t-labels">Toggle .hide-labels</button>
+  <input id="bridge-url" placeholder="http://PC-IP:8765" spellcheck="false">
+  <button id="t-conn">Connect</button>
+</div>
+<div class="bridge-dot" id="bridge-dot" data-s="offline"><i></i><span>OFFLINE</span></div>
+<main class="panel" id="panel" data-theme="oldschool"></main>
+
+<script src="ETS2Bridge.js"></script>
+<script>
+/* ===================== BUTTON COMPONENT ===================== */
+/* ---------- Icons: tiny inline SVG path strings (24x24 grid) ---------- */
+const ICONS = {
+  power:  '<path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0"/>',
+  park:   '<circle cx="12" cy="12" r="8"/><path d="M10 16V8h3a2.5 2.5 0 0 1 0 5h-3"/>',
+  hazard: '<path d="M12 4 3 20h18L12 4z"/><path d="M12 10v5M12 17.5v.1"/>',
+  low:    '<path d="M5 8c5 0 7 2 7 4s-2 4-7 4zM15 9l5 1M15 12l5 1M15 15l5 1"/>',
+  high:   '<path d="M5 8c5 0 7 2 7 4s-2 4-7 4zM15 8h5M15 12h5M15 16h5"/>',
+  beacon: '<path d="M7 18h10v-4a5 5 0 0 0-10 0zM4 9 2 8M20 9l2-1M12 4V2"/>',
+  wiper:  '<path d="M3 18a10 10 0 0 1 18 0M12 18 7 8"/>',
+  cruise: '<path d="M4 17a8 8 0 1 1 16 0M12 17l4-5"/>',
+  ebrake: '<circle cx="12" cy="12" r="6"/><path d="M4 8v8M20 8v8"/>',
+  plus:   '<path d="M12 6v12M6 12h12"/>',
+  minus:  '<path d="M6 12h12"/>',
+  diff:   '<circle cx="12" cy="12" r="3"/><path d="M3 12h6M15 12h6M12 3v4M12 17v4"/>',
+  axle:   '<path d="M12 19V6M7 10l5-5 5 5M4 19h16"/>',
+  hitch:  '<circle cx="12" cy="8" r="3"/><path d="M12 11v9M8 17h8"/>',
+  airhorn:'<path d="M4 10v4h3l6 4V6L7 10zM16 9a4 4 0 0 1 0 6"/>',
+  horn:   '<path d="M5 15v-3a7 7 0 0 1 14 0v3M5 15h14v3H5z"/>',
+  dash:   '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 14l3-3 3 2 4-4"/>',
+  map:    '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/>',
+  window: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M12 8v8M9 13l3 3 3-3"/>',
+  assist: '<circle cx="12" cy="12" r="8"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.1"/>'
+};
+
+/* ---------- Component factory ----------
+   props: icon (key of ICONS), label (string),
+          type ('momentary' | 'toggle' | 'longpress'),
+          color (any CSS colour, used for the LED).
+   Returns an HTML string, so it works as a template literal in any framework. */
+function Button({ id = '', icon, label, type = 'momentary', color = '#3ddc84' }) {
+  const pressed = type === 'toggle' ? ' aria-pressed="false"' : '';
+  return `
+    <button class="button" data-id="${id}" data-type="${type}" style="--led:${color}"${pressed} aria-label="${label}">
+      <span class="button-body">
+        <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">${ICONS[icon] || ''}</svg>
+        <span class="button-label">${label}</span>
+      </span>
+    </button>`;
+}
+
+/* ---------- Behaviour (event delegation: one listener per panel, not per button) ---------- */
+const HOLD_MS = 1000;
+function bindPanel(panel, onCommand, { isLive = () => false } = {}) {
+  // onCommand(id, 'down' | 'up' | 'tap'). isLive(id) = "the game reports this state", so the LED
+  // must come from telemetry and the local click must NOT flip it.
+  let holdTimer = null, active = null;
+
+  panel.addEventListener('pointerdown', e => {
+    const b = e.target.closest('.button'); if (!b) return;
+    active = b; b.classList.add('is-down');
+    if (b.dataset.type === 'longpress') {
+      b.style.setProperty('--hold-ms', HOLD_MS + 'ms');
+      b.classList.add('is-holding');
+      holdTimer = setTimeout(() => { holdTimer = null; b.classList.remove('is-holding'); onCommand(b.dataset.id, 'tap'); }, HOLD_MS);
+    } else if (b.dataset.type === 'momentary') {
+      onCommand(b.dataset.id, 'down');              // key stays pressed while the finger is down
+    }
+  });
+
+  const release = e => {
+    const b = e.target.closest('.button');
+    if (!b || b !== active) return;                // ignore pointers that never pressed this button
+    active = null; b.classList.remove('is-down');
+    if (b.dataset.type === 'longpress') { clearTimeout(holdTimer); holdTimer = null; b.classList.remove('is-holding'); }
+    else if (b.dataset.type === 'momentary') onCommand(b.dataset.id, 'up');
+    else if (b.dataset.type === 'toggle' && e.type === 'pointerup') {
+      if (!isLive(b.dataset.id)) b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true');  // optimistic only without telemetry
+      onCommand(b.dataset.id, 'tap');
+    }
+  };
+  panel.addEventListener('pointerup', release);
+  panel.addEventListener('pointercancel', release);
+  panel.addEventListener('pointerleave', release, true);
+}
+
+/* ---------- Long-label guard ----------
+   CSS clamp() scales font with the button size, but CSS cannot measure the text.
+   So: if the label still overflows its button, shrink --fit in steps until it fits. */
+function fitLabels(root) {
+  root.querySelectorAll('.button-label').forEach(l => {
+    const body = l.parentElement;
+    l.style.removeProperty('--fit'); l.classList.remove('is-broken');
+    let fit = 1;
+    // body.scrollHeight > clientHeight means content is taller than the button
+    while (fit > 0.55 && (body.scrollHeight > body.clientHeight + 1 || l.scrollWidth > l.clientWidth + 1)) {
+      fit -= 0.05; l.style.setProperty('--fit', fit.toFixed(2));
+    }
+    // still too wide at the minimum size: allow a mid-word break instead of clipping
+    if (l.scrollWidth > l.clientWidth + 1) { l.classList.add('is-broken'); l.style.setProperty('--fit', '0.8'); }
+  });
+}
+
+
+/* ===================== RADIO COMPONENT ===================== */
+/* =========================================================
+   Radio component
+   Radio({ bootText, stations }) -> HTML string; bindRadio(root, onCommand) wires behaviour.
+   Every user action is also emitted as onCommand(name, payload) so the app can
+   forward it to the bridge (e.g. 'src', 'next', 'prev', 'folder_up', 'folder_down', 'audio', 'preset', 'volume').
+   ========================================================= */
+function Radio({ bootText = 'HUNTERS CAR AUDIO' } = {}) {
+  const presets = [1, 2, 3, 4, 5, 6].map(n => `<button class="r-btn" data-preset="${n}">${n}</button>`).join('');
+  // 14 EQ bars; random heights/speeds are assigned in bindRadio()
+  const bars = '<i></i>'.repeat(14);
+  return `
+  <div class="radio" data-state="off" data-paused="false">
+    <div class="r-left">
+      <button class="r-btn r-src" data-act="src">SRC</button>
+      <div class="r-knob-wrap"><div class="r-knob" data-knob><div class="r-knob-dot"></div></div></div>
+    </div>
+
+    <div class="r-screen">
+      <div class="r-view r-view--boot"><span class="r-boot-text">${bootText}</span></div>
+      <div class="r-view r-view--main">
+        <div class="r-top"><span class="r-info" data-src>RADIO</span><span class="r-clock" data-clock>--<span class="colon">:</span>--</span></div>
+        <div class="r-station" data-station>EURO TRUCK FM</div>
+        <div class="r-bottom"><span class="r-info" data-mode>EQ FLAT</span><div class="r-eq">${bars}</div></div>
+      </div>
+      <div class="r-osd" data-osd></div>
+    </div>
+
+    <div class="r-right">
+      <div class="r-dpad">
+        <button class="r-btn" data-act="up" aria-label="Folder up">▲</button>
+        <button class="r-btn" data-act="left" aria-label="Previous">◀</button>
+        <span class="r-mid"></span>
+        <button class="r-btn" data-act="right" aria-label="Next">▶</button>
+        <button class="r-btn" data-act="down" aria-label="Folder down">▼</button>
+      </div>
+      <button class="r-btn r-audio" data-act="audio">AUDIO</button>
+    </div>
+
+    <div class="r-presets">${presets}</div>
+  </div>`;
+}
+
+function bindRadio(root, onCommand = () => {}) {
+  const $ = s => root.querySelector(s);
+  const STATIONS = ['EURO TRUCK FM', 'ROAD RADIO', 'NIGHT DRIVE', 'CB CHANNEL 19', 'TRUCKER HITS', 'AUTOBAHN FM'];
+  const SOURCES = ['RADIO', 'USB', 'AUX'];
+  const EQ_MODES = ['FLAT', 'BASS', 'ROCK', 'VOCAL'];
+  const BOOT_MS = 3200, HOLD_OFF_MS = 1000;
+  const st = { on: false, station: 0, src: 0, eq: 0, vol: 18, timers: {} };
+
+  // --- randomise EQ bars once (heights + speed + phase), animation itself is pure CSS ---
+  root.querySelectorAll('.r-eq i').forEach(b => {
+    const r = (min, max) => (min + Math.random() * (max - min)).toFixed(2);
+    b.style.setProperty('--h1', r(.15, .5)); b.style.setProperty('--h2', r(.6, 1));
+    b.style.setProperty('--h3', r(.25, .7)); b.style.setProperty('--h4', r(.5, 1));
+    b.style.setProperty('--dur', Math.round(380 + Math.random() * 520) + 'ms');
+    b.style.setProperty('--delay', -Math.round(Math.random() * 600) + 'ms');
+  });
+
+  const setState = s => { root.dataset.state = s; root.classList.toggle('is-on', s === 'on'); $('.r-src').classList.toggle('is-on', s === 'on'); };
+  const osd = (txt, ms = 1200) => {                       // transient overlay (volume, EQ mode)
+    const o = $('[data-osd]'); o.textContent = txt; o.classList.add('is-visible');
+    clearTimeout(st.timers.osd); st.timers.osd = setTimeout(() => o.classList.remove('is-visible'), ms);
+  };
+  const render = () => {
+    $('[data-station]').textContent = STATIONS[st.station].slice(0, 14);
+    $('[data-src]').textContent = SOURCES[st.src];
+    $('[data-mode]').textContent = 'EQ ' + EQ_MODES[st.eq];
+    root.querySelectorAll('[data-preset]').forEach(b => b.classList.toggle('is-active', st.on && +b.dataset.preset === st.station + 1));
+    root.querySelector('.r-knob').style.setProperty('--angle', (-135 + st.vol / 30 * 270) + 'deg');
+  };
+  const tickClock = () => {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    $('[data-clock]').innerHTML = `${p(d.getHours())}<span class="colon">:</span>${p(d.getMinutes())}`;
+  };
+  const clockT = setInterval(tickClock, 10000); tickClock();
+
+  const powerOn = () => {
+    if (st.on) return; st.on = true; setState('booting');
+    root.querySelector('.r-view--boot').style.setProperty('--boot-ms', BOOT_MS + 'ms');
+    // restart the marquee animation each time
+    const t = $('.r-boot-text'); t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+    st.timers.boot = setTimeout(() => { setState('on'); render(); }, BOOT_MS);
+    onCommand('power', true);
+  };
+  const powerOff = () => { st.on = false; clearTimeout(st.timers.boot); setState('off'); render(); onCommand('power', false); };
+
+  // --- SRC: tap = power on / next source; hold 1 s = power off ---
+  const src = $('.r-src'); let holdT = null, held = false;
+  src.addEventListener('pointerdown', () => {
+    held = false;
+    holdT = setTimeout(() => { held = true; if (st.on) powerOff(); }, HOLD_OFF_MS);
+  });
+  const srcUp = () => {
+    clearTimeout(holdT);
+    if (held) return;
+    if (!st.on) powerOn();
+    else if (root.dataset.state === 'on') { st.src = (st.src + 1) % SOURCES.length; render(); osd(SOURCES[st.src]); onCommand('src', SOURCES[st.src]); }
+  };
+  src.addEventListener('pointerup', srcUp);
+  src.addEventListener('pointerleave', () => clearTimeout(holdT));
+
+  // --- D-pad / AUDIO / presets (ignored unless the radio is fully on) ---
+  const live = fn => (...a) => { if (root.dataset.state === 'on') fn(...a); };
+  const go = d => { st.station = (st.station + d + STATIONS.length) % STATIONS.length; render(); onCommand(d > 0 ? 'next' : 'prev', STATIONS[st.station]); };
+  root.querySelectorAll('[data-act]').forEach(b => {
+    const a = b.dataset.act;
+    if (a === 'left')  b.addEventListener('click', live(() => go(-1)));
+    if (a === 'right') b.addEventListener('click', live(() => go(+1)));
+    if (a === 'up')    b.addEventListener('click', live(() => { onCommand('folder_up'); osd('FOLDER +'); }));
+    if (a === 'down')  b.addEventListener('click', live(() => { onCommand('folder_down'); osd('FOLDER -'); }));
+    if (a === 'audio') b.addEventListener('click', live(() => { st.eq = (st.eq + 1) % EQ_MODES.length; render(); osd('EQ ' + EQ_MODES[st.eq]); onCommand('audio', EQ_MODES[st.eq]); }));
+  });
+  root.querySelectorAll('[data-preset]').forEach(b =>
+    b.addEventListener('click', live(() => { st.station = +b.dataset.preset - 1; render(); onCommand('preset', st.station + 1); })));
+
+  // --- Rotary knob: drag around the centre, or mouse wheel ---
+  const knob = $('[data-knob]');
+  const setVol = v => { st.vol = Math.max(0, Math.min(30, v)); render(); if (st.on) { osd('VOL ' + String(st.vol).padStart(2, '0'), 900); onCommand('volume', st.vol); } };
+  let lastAng = null;
+  const ang = e => { const r = knob.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
+  knob.addEventListener('pointerdown', e => { knob.setPointerCapture(e.pointerId); lastAng = ang(e); knob.style.cursor = 'grabbing'; });
+  knob.addEventListener('pointermove', e => {
+    if (lastAng === null) return;
+    let d = ang(e) - lastAng; if (d > 180) d -= 360; if (d < -180) d += 360;   // unwrap the ±180° seam
+    if (Math.abs(d) >= 9) { setVol(st.vol + Math.sign(d)); lastAng = ang(e); }   // 9° per volume step
+  });
+  const knobEnd = () => { lastAng = null; knob.style.cursor = ''; };
+  knob.addEventListener('pointerup', knobEnd); knob.addEventListener('pointercancel', knobEnd);
+  knob.addEventListener('wheel', e => { e.preventDefault(); setVol(st.vol + (e.deltaY < 0 ? 1 : -1)); }, { passive: false });
+
+  render();
+  // destroy(): stop every timer so an unmounted radio leaves nothing running
+  const destroy = () => { clearInterval(clockT); clearTimeout(holdT); Object.values(st.timers).forEach(clearTimeout); };
+  return { powerOn, powerOff, state: st, destroy };
+}
+
+
+/* ===================== INFOTAINMENT COMPONENT =====================
+   Infotainment() -> HTML string. bindInfotainment(root, onCommand) -> { update(data) }.
+   update() is the ONLY entry point for telemetry, so fed by the bridge through one call:
+   update({ gear, speed, fuel, limit, cruise, range, consumption })                         */
+function Infotainment() {
+  const ic = {
+    prev: '<svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>',
+    next: '<svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg>',
+    play: '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>',
+    note: '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2.5"/><circle cx="17" cy="16" r="2.5"/></svg>'
+  };
+  return `
+  <div class="infotainment">
+    <section class="w w--tele">
+      <div class="w-title">Telemetry</div>
+      <div class="tele-main">
+        <div class="gear"><b data-gear>–</b><small>Gear</small></div>
+        <div class="speed"><b data-speed>0</b><small>km/h</small></div>
+      </div>
+      <div class="fuel">
+        <div class="fuel-row"><span>FUEL</span><span data-fuel-txt>–</span></div>
+        <div class="bar" data-fuel-bar><i></i></div>
+      </div>
+    </section>
+
+    <section class="w w--trip">
+      <div class="w-title">Route advisor</div>
+      <div class="trip-grid">
+        <div class="m"><div class="limit" data-limit>–</div><div class="m-val"><small>Limit</small></div></div>
+        <div class="m"><div class="m-val"><b data-cruise>OFF</b><small>Cruise set</small></div></div>
+        <div class="m" data-m-range><div class="m-val"><b data-range>–</b><small>Range km</small></div></div>
+        <div class="m" data-m-cons><div class="m-val"><b data-cons>–</b><small>Avg L/100 km</small></div></div>
+      </div>
+    </section>
+
+    <section class="w w--media">
+      <div class="w-title">Now playing</div>
+      <div class="mp">
+        <div class="art">${ic.note}</div>
+        <div class="mp-info">
+          <div class="mp-track" data-track>–</div>
+          <div class="mp-artist" data-artist>–</div>
+          <div class="bar mp-prog" data-prog><i></i></div>
+        </div>
+      </div>
+      <div class="mp-ctl">
+        <button data-m="prev" aria-label="Previous">${ic.prev}</button>
+        <button data-m="play" class="play" aria-label="Play / Pause" data-playbtn>${ic.play}</button>
+        <button data-m="next" aria-label="Next">${ic.next}</button>
+      </div>
+    </section>
+  </div>`;
+}
+
+function bindInfotainment(root, onCommand = () => {}) {
+  const $ = s => root.querySelector(s);
+  const PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+  const PLAY  = '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>';
+  const m = { playing: false, pos: 0 };
+  const dash = v => (v === null || v === undefined ? '\u2013' : v);
+
+  // update() is the ONLY entry point for telemetry. null/undefined = "not available":
+  // gear/speed/fuel/limit show a dash, range and consumption hide their whole field.
+  function update(d = {}) {
+    if ('gear'  in d) $('[data-gear]').textContent = dash(d.gear);
+    if ('speed' in d) $('[data-speed]').textContent = d.speed == null ? '\u2013' : Math.round(d.speed);
+    if ('fuel'  in d) {
+      const f = d.fuel == null ? null : Math.max(0, Math.min(100, d.fuel));
+      $('[data-fuel-bar]').style.setProperty('--v', (f || 0) + '%');
+      $('[data-fuel-bar]').classList.toggle('is-low', f !== null && f < 20);
+      $('[data-fuel-txt]').textContent = f === null ? '\u2013' : Math.round(f) + '%';
+    }
+    if ('limit' in d) $('[data-limit]').textContent = d.limit ? d.limit : '\u2013';
+    if ('cruise' in d) { const c = $('[data-cruise]'); c.textContent = d.cruise ? d.cruise : 'OFF'; c.classList.toggle('cruise-on', !!d.cruise); }
+    if ('range' in d) { $('[data-m-range]').hidden = d.range == null; if (d.range != null) $('[data-range]').textContent = Math.round(d.range); }
+    if ('consumption' in d) { $('[data-m-cons]').hidden = d.consumption == null; if (d.consumption != null) $('[data-cons]').textContent = d.consumption.toFixed(1); }
+  }
+
+  // Media card: shows what the PC's media session reports when a player is running,
+  // otherwise a static placeholder. The buttons only send OS media keys.
+  function setMedia(msg) {
+    const on = !!(msg && msg.running);
+    $('[data-track]').textContent = on && msg.track ? msg.track : 'No media playing';
+    $('[data-artist]').textContent = on && msg.artist ? msg.artist : '\u2013';
+    m.playing = on && !!msg.playing;
+    $('[data-playbtn]').innerHTML = m.playing ? PAUSE : PLAY;
+  }
+
+  const onClick = e => {
+    const b = e.target.closest('[data-m]'); if (!b) return;
+    onCommand('media_' + b.dataset.m);              // media_prev | media_play | media_next -> bridge
+  };
+  root.addEventListener('click', onClick);
+  const progT = setInterval(() => {                  // generic animation only: the PC does not report track position
+    if (!m.playing) return; m.pos = (m.pos + 1) % 180;
+    $('[data-prog] i').style.width = (m.pos / 180 * 100) + '%';
+  }, 1000);
+
+  setMedia(null);
+  update({ gear: null, speed: null, fuel: null, limit: 0, cruise: 0, range: null, consumption: null });
+
+  // destroy(): stop the progress timer and drop the listener when this view is unmounted
+  const destroy = () => { clearInterval(progT); root.removeEventListener('click', onClick); };
+  return { update, setMedia, destroy };
+}
+
+/* ===================== ROCKER COMPONENT =====================
+   Rocker({ id, up, down }) -> two stacked momentary Buttons; each half is a normal Button,
+   so LED, hide-labels, label fitting and press handling are reused unchanged. */
+ICONS.winup   = '<path d="M5 20V11l5-7h9v16z"/><path d="M14 15V8M11.5 10.5 14 8l2.5 2.5"/>';
+ICONS.windown = '<path d="M5 20V11l5-7h9v16z"/><path d="M14 8v7M11.5 12.5 14 15l2.5-2.5"/>';
+const Rocker = ({ up, down }) => `<div class="rocker">${[up, down].map(h => Button(Object.assign({ type: 'momentary' }, h))).join('')}</div>`;
+
+/* ===================== 20 COMMANDS, GROUPED BY ZONE ===================== */
+const GREEN = '#3ddc84', AMBER = '#ffb020', RED = '#ff4d4d', BLUE = '#4da3ff', WHITE = '#e8eef5';
+const ZONES = [
+  { id: 'lights', title: 'Lights', keys: [
+    { id:'hazard',   icon:'hazard',  label:'HAZARD',    type:'toggle',    color:AMBER },
+    { id:'lowbeam',  icon:'low',     label:'LOW BEAM',  type:'toggle',    color:GREEN },
+    { id:'highbeam', icon:'high',    label:'HIGH BEAM', type:'toggle',    color:BLUE  },
+    { id:'beacon',   icon:'beacon',  label:'BEACON',    type:'toggle',    color:AMBER },
+    { id:'wipers',   icon:'wiper',   label:'WIPERS',    type:'toggle',    color:AMBER } ] },
+  { id: 'mech', title: 'Mechanics', keys: [
+    { id:'park',     icon:'park',    label:'PARK BRAKE',     type:'toggle',    color:RED   },
+    { id:'cruise',   icon:'cruise',  label:'CRUISE',         type:'toggle',    color:GREEN },
+    { id:'ebrake',   icon:'ebrake',  label:'ENGINE BRAKE',   type:'toggle',    color:AMBER },
+    { id:'diff',     icon:'diff',    label:'DIFF LOCK',      type:'toggle',    color:RED   },
+    { id:'retminus', icon:'minus',   label:'RETARDER −',     type:'momentary', color:AMBER },
+    { id:'retplus',  icon:'plus',    label:'RETARDER +',     type:'momentary', color:AMBER },
+    { id:'axle',     icon:'axle',    label:'LIFT AXLE',      type:'toggle',    color:GREEN },
+    { id:'trailer',  icon:'hitch',   label:'TRAILER ATTACH', type:'toggle',    color:GREEN } ] },
+  { id: 'cab', title: 'Cab', keys: [
+    { id:'engine',   icon:'power',   label:'START ENGINE', type:'longpress', color:GREEN },
+    { id:'windows',  type:'rocker',                                                      // left window: top half closes, bottom half opens
+      up:   { id:'windows_up',   icon:'winup',   label:'WINDOW UP',   color:WHITE },
+      down: { id:'windows_down', icon:'windown', label:'WINDOW DOWN', color:WHITE } },
+    { id:'airhorn',  icon:'airhorn', label:'AIR HORN',     type:'momentary', color:WHITE },
+    { id:'horn',     icon:'horn',    label:'HORN',         type:'momentary', color:WHITE } ] },
+  { id: 'sys', title: 'System', keys: [
+    { id:'dash',     icon:'dash',    label:'DASHBOARD',  type:'toggle',    color:WHITE },
+    { id:'map',      icon:'map',     label:'MAP',        type:'toggle',    color:WHITE },
+    { id:'assist',   icon:'assist',  label:'ASSIST (F7)', type:'momentary', color:BLUE } ] }
+];
+const Zone = z => `
+  <section class="zone zone--${z.id}">
+    <div class="zone-title">${z.title}</div>
+    <div class="zone-grid">${z.keys.map(k => k.type === 'rocker' ? Rocker(k) : Button(k)).join('')}</div>
+  </section>`;
+
+/* ===================== BRIDGE WIRING ===================== */
+// Panel button id -> bridge command name (UPPER_SNAKE). ETS2Bridge turns it into keys through KEYMAP.
+const COMMAND = {
+  engine: 'START_ENGINE', park: 'PARK_BRAKE', hazard: 'HAZARD', lowbeam: 'LOW_BEAM', highbeam: 'HIGH_BEAM',
+  beacon: 'BEACON', wipers: 'WIPERS', cruise: 'CRUISE', ebrake: 'ENGINE_BRAKE', retplus: 'RETARDER_PLUS',
+  retminus: 'RETARDER_MINUS', diff: 'DIFF_LOCK', axle: 'LIFT_AXLE', trailer: 'TRAILER_ATTACH', airhorn: 'AIR_HORN',
+  horn: 'HORN', dash: 'DASHBOARD', map: 'MAP', windows_up: 'WINDOW_LEFT_UP', windows_down: 'WINDOW_LEFT_DOWN', assist: 'ASSIST'
+};
+// Command -> key names that bridge/server.js understands (its KEYS table). Game defaults come from catalog.js.
+const KEYMAP = {
+  START_ENGINE: ['e'], PARK_BRAKE: ['space'], HAZARD: ['f'], LOW_BEAM: ['l'], HIGH_BEAM: ['k'], BEACON: ['o'],
+  WIPERS: ['p'], CRUISE: ['c'], ENGINE_BRAKE: ['b'], RETARDER_PLUS: [';'], RETARDER_MINUS: ["'"], DIFF_LOCK: ['v'],
+  LIFT_AXLE: ['u'], TRAILER_ATTACH: ['t'], AIR_HORN: ['n'], HORN: ['h'], DASHBOARD: ['i'], MAP: ['m'],
+  WINDOW_LEFT_UP: ['.'], WINDOW_LEFT_DOWN: [','], ASSIST: ['f7'],
+  // Radio keys the game has no default for. Bind these in ETS2's controls (or a macro tool) to whatever you want.
+  RADIO_FOLDER_UP: ['num8'], RADIO_FOLDER_DOWN: ['num2'], RADIO_AUDIO: ['num0'], RADIO_SRC: ['num.'],
+  PRESET_1: ['num1'], PRESET_2: ['num3'], PRESET_3: ['num4'], PRESET_4: ['num6'], PRESET_5: ['num7'], PRESET_6: ['num9'],
+  MEDIA_PREV: ['media_prev'], MEDIA_PLAY: ['media_play'], MEDIA_NEXT: ['media_next']
+};
+// Panel button id -> "is it on?" as reported by the game. Buttons listed here get their LED from telemetry only.
+const LED = {
+  engine: t => t.engine, park: t => t.park, hazard: t => t.hazard, lowbeam: t => t.low, highbeam: t => t.high,
+  beacon: t => t.beacon, wipers: t => t.wipers, cruise: t => t.cruiseOn, ebrake: t => t.motorBrake,
+  diff: t => t.diff, axle: t => t.lift, trailer: t => t.trailer
+};
+// Raw SCS telemetry (m/s, litres, L/km) -> what the infotainment shows (km/h, %, L/100 km).
+function toInfotainment(t) {
+  if (!t.sdk) return { gear: null, speed: null, fuel: null, limit: 0, cruise: 0, range: null, consumption: null };
+  return {
+    gear: t.gear < 0 ? 'R' : t.gear === 0 ? 'N' : String(t.gear),
+    speed: Math.abs(t.speed) * 3.6,
+    fuel: t.fuelCap > 0 ? t.fuel / t.fuelCap * 100 : null,
+    limit: t.limit > 0.5 ? Math.round(t.limit * 3.6) : 0,
+    cruise: t.cruiseOn ? Math.round(t.cruise * 3.6) : 0,
+    range: t.range > 0 ? t.range : null,
+    consumption: t.fuelAvg > 0 ? t.fuelAvg * 100 : null       // hidden by the widget when the game gives no value
+  };
+}
+
+const qs = new URLSearchParams(location.search);
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } } };
+// Served by the PC bridge itself -> same origin over HTTP/SSE. Opened from elsewhere -> the bridge's default port.
+const guessUrl = () => qs.get('bridge') || store.get('bridgeUrl') || (/^https?:/.test(location.protocol) ? location.origin : 'http://localhost:8765');
+
+const bridge = new ETS2Bridge({ url: guessUrl(), pin: qs.get('pin') || '', keymap: KEYMAP });
+const view = { radio: null, info: null };                      // live component handles (for destroy())
+const panel = document.getElementById('panel');
+const dot = document.getElementById('bridge-dot');
+const urlInput = document.getElementById('bridge-url');
+urlInput.value = bridge.opts.url;
+
+/* --- App -> PC: every button gesture becomes a bridge command --- */
+function onButton(id, ev) {
+  const cmd = COMMAND[id]; if (!cmd) return;
+  if (ev === 'down') bridge.press(cmd); else if (ev === 'up') bridge.release(cmd); else bridge.tap(cmd);
+}
+const onInfotainment = c => bridge.tap(c.toUpperCase());       // media_next -> MEDIA_NEXT, media_prev, media_play
+const onRadio = (c, v) => {                                   // generic radio commands; the player binds them freely
+  const map = { next: 'MEDIA_NEXT', prev: 'MEDIA_PREV', folder_up: 'RADIO_FOLDER_UP', folder_down: 'RADIO_FOLDER_DOWN',
+                audio: 'RADIO_AUDIO', src: 'RADIO_SRC', power: 'RADIO_SRC' };
+  if (c === 'preset') bridge.tap('PRESET_' + v);
+  else if (map[c]) bridge.tap(map[c]);                           // 'volume' has no key on purpose (knob is local)
+};
+
+/* --- PC -> App: telemetry repaints LEDs and the infotainment, independent of local clicks --- */
+function paintLeds(t) {
+  if (!t.sdk) return;                                          // no telemetry: keep the optimistic local state
+  for (const [id, read] of Object.entries(LED)) {
+    const b = panel.querySelector(`[data-id="${id}"]`);
+    if (b) b.setAttribute('aria-pressed', !!read(t));
+  }
+}
+function repaint() {
+  paintLeds(bridge.telemetry);
+  if (view.info) { view.info.update(toInfotainment(bridge.telemetry)); view.info.setMedia(bridge.media); }
+}
+bridge.on('telemetry', repaint);
+bridge.on('media', repaint);
+bridge.on('error', m => console.warn('[bridge]', m));
+let lat = '';
+const paintDot = () => { dot.querySelector('span').textContent = dot.dataset.s.toUpperCase() + (dot.dataset.s === 'online' ? lat : ''); };
+bridge.on('status', s => { dot.dataset.s = s; lat = ''; paintDot(); });
+bridge.on('latency', ms => { lat = ' \u00b7 ' + ms + ' ms'; paintDot(); });   // round-trip of the last key POST
+
+/* ===================== MOUNT ===================== */
+function mountPanel(theme) {
+  if (view.radio) view.radio.destroy();                        // stop timers of the view being replaced
+  if (view.info) view.info.destroy();
+  view.radio = view.info = null;
+  panel.dataset.theme = theme;
+  const zone = id => Zone(ZONES.find(z => z.id === id));
+  if (theme === 'oldschool') {
+    // Pioneer-style radio lives ONLY in the Old School family.
+    panel.innerHTML = `<div class="slot-radio">${Radio({ bootText: 'HUNTERS CAR AUDIO' })}</div>` + ZONES.map(Zone).join('');
+  } else {
+    // Modern: infotainment on the whole top row; the 3 System keys are docked under it.
+    panel.innerHTML = `<div class="media-stack">${Infotainment()}${zone('sys')}</div>` + ['lights', 'mech', 'cab'].map(zone).join('');
+  }
+  if (!panel._bound) {                                         // delegation: bind ONCE, or toggles fire twice after a theme switch
+    bindPanel(panel, onButton, { isLive: id => !!(LED[id] && bridge.telemetry.sdk) });
+    panel._bound = true;
+  }
+  const r = panel.querySelector('.radio'); if (r) view.radio = bindRadio(r, onRadio);
+  const i = panel.querySelector('.infotainment'); if (i) view.info = bindInfotainment(i, onInfotainment);
+  fitLabels(document);
+  repaint();                                                   // new DOM: show the current game state immediately
+}
+mountPanel('oldschool');
+
+document.getElementById('t-theme').onclick = e => {
+  const next = panel.dataset.theme === 'oldschool' ? 'modern' : 'oldschool';
+  mountPanel(next); e.target.textContent = 'Theme: ' + (next === 'oldschool' ? 'Old School' : 'Modern');
+};
+document.getElementById('t-labels').onclick = () => { panel.classList.toggle('hide-labels'); fitLabels(document); };
+document.getElementById('t-conn').onclick = () => { store.set('bridgeUrl', urlInput.value.trim()); bridge.connect(urlInput.value.trim()); };
+new ResizeObserver(() => fitLabels(document)).observe(panel);
+
+if (qs.has('demo')) {          // ?demo -> feed fake telemetry through the SAME path (no PC needed)
+  let v = 20;
+  setInterval(() => { v = Math.max(0, Math.min(25, v + (Math.random() - .45) * 2));
+    bridge._setTel({ sdk: true, speed: v, gear: 8, fuel: 640, fuelCap: 1000, limit: 22.2, cruise: 22.2, cruiseOn: true,
+      range: 742, fuelAvg: .284, park: false, hazard: false, low: true, high: false, beacon: false, wipers: false, engine: true });
+  }, 800);
+} else bridge.connect();
+</script>
+</body>
+</html>

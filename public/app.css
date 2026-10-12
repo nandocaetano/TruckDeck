@@ -1,0 +1,3156 @@
+/* Layout concept: one fixed screen. A slim instrument-cluster header, then a dashboard
+   fascia that fills the rest; every control sits in its own recessed cutout like a real
+   switch blank. Single dark look on purpose: it is a cab at night, on any host theme. */
+:root {
+  color-scheme: dark;
+  /* chrome (app UI around the panel) */
+  --ui-bg: #0e1012;
+  --ui-surface: #181b1f;
+  --ui-raised: #23272c;
+  --ui-line: #343a41;
+  --ui-fg: #e6e9ec;
+  --ui-dim: #98a1ab;
+  --ui-accent: #f2a23a;      /* sodium amber: instrument backlight */
+  --ui-danger: #e5484d;
+  --ui-glow: rgba(242, 162, 58, 0.22);
+  --ui-soft-line: rgba(255, 255, 255, 0.08);
+  /* indicator lamps */
+  --lamp-green: #5fe36a;
+  --lamp-amber: #ffb02e;
+  --lamp-red: #ff4438;
+  --lamp-blue: #4aa8ff;
+  --lamp-white: #f3f6ff;
+  /* fascia (overridden per regional style below) */
+  --fascia-a: #24272b;
+  --fascia-b: #17191c;
+  --well: #08090a;
+  --cap-hi: #3d4248;
+  --cap-mid: #2a2e33;
+  --cap-lo: #1c1f23;
+  --print: #cfd5db;          /* unlit pictogram / legend ink */
+  --cap-radius: 0.09;        /* fraction of the widget unit */
+  --fascia-ink: var(--print); /* legends printed straight on the fascia (toggles, plates) */
+  /* analog dials and the radio display */
+  --dial-face: #0b0c0e;
+  --dial-ink: #e8ecef;
+  --dial-needle: #ff5a36;
+  --dial-bezel: conic-gradient(from 20deg, #f2f4f5, #7c8288, #dfe3e6, #5d6268, #f2f4f5, #878d93, #e9ecee, #5f646a, #f2f4f5);
+  --vfd: #7dffb0;
+  --legend-track: 0.06em;
+  /* type */
+  --font-legend: "Barlow Condensed", "Roboto Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-lcd: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-ui: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* American: warm charcoal fascia, brighter legends, squarer caps */
+[data-style="us"] {
+  --fascia-a: #2e2a26;
+  --fascia-b: #1c1917;
+  --cap-hi: #45403b;
+  --cap-mid: #322e2a;
+  --cap-lo: #211e1b;
+  --print: #efe6d2;
+  --cap-radius: 0.05;
+  --legend-track: 0.07em;
+}
+
+/* Brazilian: black fascia with the orange legends of 80s/90s cabs */
+[data-style="br"] {
+  --fascia-a: #1b1c1e;
+  --fascia-b: #0f1011;
+  --cap-hi: #33363a;
+  --cap-mid: #222427;
+  --cap-lo: #151719;
+  --print: #ffab4a;
+  --cap-radius: 0.03;
+  --legend-track: 0.04em;
+}
+
+/* id/class display rules below would otherwise beat the hidden attribute */
+[hidden] { display: none !important; }
+/* Brazilian old school: brown moulded dash of the 113-era cabs, cream legends, orange needles */
+[data-style="brc"] {
+  --fascia-a: #4d3a2c;
+  --fascia-b: #2e221a;
+  --cap-hi: #3c2f27;
+  --cap-mid: #281e18;
+  --cap-lo: #18110d;
+  --print: #f3e7cf;
+  --cap-radius: 0.04;
+  --legend-track: 0.05em;
+  --dial-face: #0d0c0b;
+  --dial-ink: #fbf6ea;
+  --dial-needle: #ff8c1a;
+  --vfd: #ffb347;
+}
+
+/* European classic: slate 1980s cab, matte black instrument rings, red needles */
+[data-style="euc"] {
+  --fascia-a: #3d434a;
+  --fascia-b: #24282d;
+  --cap-hi: #2f3338;
+  --cap-mid: #1f2226;
+  --cap-lo: #131517;
+  --print: #e9eef2;
+  --cap-radius: 0.07;
+  --legend-track: 0.06em;
+  --dial-face: #101316;
+  --dial-ink: #eef2f5;
+  --dial-needle: #e5202e;
+  --dial-bezel: linear-gradient(160deg, #2a2d31, #0a0b0c);
+  --vfd: #8dffb6;
+}
+
+/* Soviet classic: dashboard painted the pale green of ZIL and KamAZ cabs, black bakelite
+   keys, cream numerals, white needles. The fascia is light, so legends on it turn dark. */
+[data-style="su"] {
+  --fascia-a: #93b3a0;
+  --fascia-b: #6f917d;
+  --cap-hi: #2d2d2d;
+  --cap-mid: #1b1b1b;
+  --cap-lo: #0d0d0d;
+  --print: #efe6cf;
+  --fascia-ink: #10261a;
+  --cap-radius: 0.16;
+  --legend-track: 0.09em;
+  --dial-face: #0e0e0e;
+  --dial-ink: #f1e8cf;
+  --dial-needle: #f7f3e6;
+  --dial-bezel: linear-gradient(160deg, #3a3a3a, #050505);
+  --vfd: #ffc56b;
+}
+
+[data-style="modern_us"] {
+  --fascia-a: #312821;
+  --fascia-b: #15110e;
+  --cap-hi: #47423d;
+  --cap-mid: #302c28;
+  --cap-lo: #1c1916;
+  --print: #eef6ff;
+  --cap-radius: 0.06;
+  --legend-track: 0.07em;
+  --vfd: #9bd8ff;
+}
+
+[data-style="modern_eu"], [data-style="eu_frame"] {
+  --fascia-a: #30363d;
+  --fascia-b: #15191d;
+  --cap-hi: #3f464f;
+  --cap-mid: #282e35;
+  --cap-lo: #171b20;
+  --print: #eaf0f5;
+  --cap-radius: 0.08;
+  --legend-track: 0.05em;
+  --vfd: #94ffc3;
+}
+
+/* Modern: the material is continuous so app-drawn buttons may be moved without exposing
+   painted sockets. Displays and perimeter stitching remain physical parts of the fascia. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern {
+  overflow: hidden;
+  isolation: isolate;
+  background-color: #0b0d0f;
+  background-size: 100% 100%;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), inset 0 -3px 8px rgba(0,0,0,.72), 0 4px 18px rgba(0,0,0,.58);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern::before {
+  display: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern > .w { z-index: 3; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps {
+  overflow: hidden;
+  border: 0;
+  border-radius: 2.5% / 8%;
+  background: #010203 !important;
+  box-shadow: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps::after { opacity: .22; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps .th-speed b,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps .th-gear b,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps .ti-c b,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps .ti-rpm b {
+  text-shadow: 0 0 .32em color-mix(in srgb, var(--acc) 48%, transparent);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps .ti-rpm u { box-shadow: 0 0 .45em color-mix(in srgb, var(--acc) 50%, transparent); }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps.hero .th-stats { grid-template-rows: repeat(4, minmax(0, 1fr)); }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps.portrait.hero .th-main {
+  position: relative;
+  display: block;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps.portrait.hero .th-speed {
+  position: absolute;
+  left: 34%;
+  top: 3%;
+  width: 32%;
+  height: 94%;
+  z-index: 2;
+  background: transparent;
+  box-shadow: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps.portrait.hero .th-gear {
+  position: absolute;
+  left: 64%;
+  top: 22%;
+  width: 14%;
+  height: 58%;
+  z-index: 2;
+  background: transparent;
+  box-shadow: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps.portrait.hero .th-stats {
+  position: absolute;
+  inset: 0;
+  grid-template-columns: 23% 23%;
+  grid-template-rows: repeat(4, 1fr);
+  justify-content: space-between;
+  column-gap: 54%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps.portrait.hero .th-speed b { font-size: 4.8em; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-gps.portrait.hero .th-gear b { font-size: 3.2em; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-kbd .cap {
+  border-color: rgba(86,94,100,.52);
+  box-shadow:
+    0 0 0 .5px rgba(90,96,100,.18),
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -1px 2px rgba(0,0,0,.6),
+    0 1.5px 3px rgba(0,0,0,.7);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-kbd.down .cap {
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.82), inset 0 -1px 0 rgba(255,255,255,.045);
+  transform: translateY(1px);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern.edit .w.sk.k-modern.k-kbd { cursor: grab; touch-action: none; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern.edit .w.sk.k-modern.k-kbd.dragging { cursor: grabbing; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern.edit .w.sk.k-modern.k-kbd::after {
+  display: block;
+  inset: -2px;
+  border: 1px dashed rgba(230,238,242,.72);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern.edit .w.sk.k-modern.k-kbd.sel::after { border: 2px solid var(--ui-accent); }
+
+/* Modern layout groups are physical recesses populated by CSS Grid. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid {
+  position: absolute;
+  display: grid;
+  box-sizing: border-box;
+  gap: 5%;
+  padding: .45%;
+  overflow: visible;
+  background: transparent;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-upper {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-brakes,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-utility {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-system {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+  gap: 4%;
+  left: 82%; top: 1%; width: 16%; height: 4.3%;
+  z-index: 6;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-upper.landscape { left: 3%; top: 29%; width: 94%; height: 25%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-upper.landscape {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+  height: 22%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-brakes.landscape,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-utility.landscape {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-brakes.landscape { left: 3%; top: 56%; width: 94%; height: 17%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-utility.landscape { left: 3%; top: 77%; width: 94%; height: 17%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-upper.portrait { left: 8%; top: 52%; width: 85%; height: 21%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-brakes.portrait { left: 7.5%; top: 77%; width: 41%; height: 21%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-utility.portrait { left: 52%; top: 77%; width: 41%; height: 21%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0;
+  min-height: 0;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd .cap {
+  inset: 0;
+  border: 0;
+  border-radius: 8%;
+  background-image: url("skins/modern/button-3x1-metal.jpg");
+  background-position: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  box-shadow: 0 .12em .3em rgba(0,0,0,.8);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid.portrait > .w.sk.k-modern.k-kbd .cap,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-system > .w.sk.k-modern.k-kbd .cap {
+  background-image: url("skins/modern/button-portrait-square.jpg");
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-brakes.portrait > .w.sk.k-modern.k-kbd .cap,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid-utility.portrait > .w.sk.k-modern.k-kbd .cap {
+  background-image: url("skins/modern/button-portrait-vertical.jpg");
+  background-size: contain;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid.landscape > .w.sk.k-modern.k-kbd .cap {
+  background-image: url("skins/modern/button-horizontal.jpg");
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd .cap::before,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd .cap::after { display: none; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd .ico {
+  width: 31%; height: 31%;
+  color: #eef5f8;
+  filter: drop-shadow(0 1px 1px #000);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd .lbl {
+  color: #eef3f5;
+  text-shadow: 0 1px 2px #000;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.modern-grid > .w.sk.k-modern.k-kbd[data-fn="engine"] .cap {
+  border: 2px solid #b9bec1;
+  box-shadow: 0 0 0 2px #3c4144, 0 0 0 4px #aeb4b8, inset 0 1px 0 #fff, 0 .2em .45em #000;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility {
+  border: 0;
+  border-radius: 2.5% / 8%;
+  background: #010203 !important;
+  box-shadow: none;
+  padding-top: 1.8em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .mu-head {
+  position: absolute;
+  left: 4%; right: 4%; top: 5%;
+  display: flex;
+  justify-content: space-between;
+  color: #8fa9b8;
+  font: 600 .72em/1 var(--font-legend);
+  letter-spacing: .08em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .mu-head time {
+  color: #e9f7ff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 .35em rgba(130,215,255,.55);
+}
+
+[data-style="modern_br"] {
+  --fascia-a: #24211d;
+  --fascia-b: #11100e;
+  --cap-hi: #393733;
+  --cap-mid: #24231f;
+  --cap-lo: #141310;
+  --print: #ffc45d;
+  --cap-radius: 0.06;
+  --legend-track: 0.03em;
+  --vfd: #ffe08a;
+}
+
+[data-style="modern_heavy"] {
+  --fascia-a: #151d26;
+  --fascia-b: #070a0e;
+  --cap-hi: #2d3540;
+  --cap-mid: #171d25;
+  --cap-lo: #090d13;
+  --print: #bfe3ff;
+  --cap-radius: 0.05;
+  --legend-track: 0.08em;
+  --vfd: #7dd4ff;
+}
+
+[data-style="modern_rugged"] {
+  --fascia-a: #2a2d2d;
+  --fascia-b: #101111;
+  --cap-hi: #333735;
+  --cap-mid: #202321;
+  --cap-lo: #121412;
+  --print: #f4f1e7;
+  --cap-radius: 0.04;
+  --legend-track: 0.05em;
+  --vfd: #8dff9b;
+}
+
+[data-style="old_peterbilt"] {
+  --fascia-a: #5a321b;
+  --fascia-b: #241207;
+  --cap-hi: #2d2c2b;
+  --cap-mid: #181817;
+  --cap-lo: #090909;
+  --print: #f5ead1;
+  --cap-radius: 0.04;
+  --legend-track: 0.06em;
+  --dial-face: #0b0a09;
+  --dial-ink: #ffe7a8;
+  --dial-needle: #ff3b24;
+  --vfd: #ffb347;
+}
+
+[data-style="old_kenworth"] {
+  --fascia-a: #4a2918;
+  --fascia-b: #170c07;
+  --cap-hi: #292a28;
+  --cap-mid: #171816;
+  --cap-lo: #080908;
+  --print: #f0e5c8;
+  --cap-radius: 0.04;
+  --legend-track: 0.06em;
+  --dial-face: #080a08;
+  --dial-ink: #d9ff9a;
+  --dial-needle: #ff8a29;
+  --vfd: #d9ff70;
+}
+
+[data-style="old_scania"] {
+  --fascia-a: #252321;
+  --fascia-b: #0e0d0c;
+  --cap-hi: #30302d;
+  --cap-mid: #1b1b19;
+  --cap-lo: #0b0b0a;
+  --print: #f7e2b0;
+  --cap-radius: 0.05;
+  --legend-track: 0.05em;
+  --dial-face: #080808;
+  --dial-ink: #ffd58e;
+  --dial-needle: #e92129;
+  --vfd: #ffad3b;
+}
+
+[data-style="old_brazil"] {
+  --fascia-a: #6b523d;
+  --fascia-b: #312316;
+  --cap-hi: #2c2822;
+  --cap-mid: #191713;
+  --cap-lo: #0a0907;
+  --print: #f8deb0;
+  --cap-radius: 0.04;
+  --legend-track: 0.03em;
+  --dial-face: #090807;
+  --dial-ink: #f4ead9;
+  --dial-needle: #ff3528;
+  --vfd: #ffb245;
+}
+
+[data-style="old_volvo"] {
+  --fascia-a: #333941;
+  --fascia-b: #15191e;
+  --cap-hi: #33363a;
+  --cap-mid: #1d2024;
+  --cap-lo: #0d0f12;
+  --print: #ece7dc;
+  --cap-radius: 0.08;
+  --legend-track: 0.06em;
+  --dial-face: #090b0d;
+  --dial-ink: #f1f4ed;
+  --dial-needle: #ff512f;
+  --vfd: #ffb153;
+}
+[data-style="scania_frame"] {
+  --fascia-a: #1a1c1f;
+  --fascia-b: #0e1012;
+  --cap-hi: #3a3e44;
+  --cap-mid: #22262b;
+  --cap-lo: #0c0e11;
+  --print: #e8ecf0;
+  --cap-radius: 0.10;
+  --legend-track: 0.06em;
+  --dial-face: #0a0c10;
+  --dial-ink: #f0f2f4;
+  --dial-needle: #e92129;
+  --dial-bezel: #1a1c20;
+  --vfd: #58b8ff;
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 20% -10%, rgba(242, 162, 58, 0.16), transparent 34%),
+    radial-gradient(circle at 95% 8%, rgba(74, 168, 255, 0.13), transparent 32%),
+    linear-gradient(145deg, #08090b, var(--ui-bg) 58%, #060708);
+  color: var(--ui-fg);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+
+#app { height: 100%; display: flex; flex-direction: column; }
+
+/* ---- Header --------------------------------------------------------------------------- */
+#bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding-inline: max(14px, env(safe-area-inset-left, 0px)) max(14px, env(safe-area-inset-right, 0px));
+  background: linear-gradient(180deg, rgba(32, 36, 41, 0.96), rgba(14, 16, 18, 0.88));
+  border-bottom: 1px solid var(--ui-soft-line);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(14px);
+}
+.barbtn {
+  flex: none;
+  height: 32px;
+  min-width: 32px;
+  padding-inline: 10px;
+  border: 1px solid color-mix(in srgb, var(--ui-line) 78%, #fff 6%);
+  border-radius: 7px;
+  background: linear-gradient(180deg, #30363d, #171a1e);
+  font-family: var(--font-legend);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.barbtn svg { width: 18px; height: 18px; display: block; }
+/* quiet header key: no frame until touched */
+.barbtn.ghost { border-color: transparent; background: none; color: var(--ui-dim); padding-inline: 6px; opacity: 0.7; }
+.barbtn.ghost.on { color: var(--ui-accent); opacity: 1; }
+.barbtn.active { background: linear-gradient(180deg, #ffc266, var(--ui-accent)); border-color: var(--ui-accent); color: #1a1205; box-shadow: 0 0 18px var(--ui-glow); }
+#tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: none;
+  height: 32px;
+  padding-inline: 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ui-dim);
+  font-family: var(--font-legend);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.tab[aria-selected="true"] { color: var(--ui-fg); border-bottom-color: var(--ui-accent); text-shadow: 0 0 14px var(--ui-glow); }
+#status {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-legend);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ui-dim);
+  white-space: nowrap;
+}
+#status i { width: 8px; height: 8px; border-radius: 50%; background: var(--ui-dim); }
+#status[data-state="ok"] i { background: var(--lamp-green); box-shadow: 0 0 6px var(--lamp-green); }
+#status[data-state="pin"] i { background: var(--lamp-amber); }
+#status[data-state="lost"] i { background: var(--lamp-red); }
+@media (max-width: 520px) { #status b { display: none; } #bar { gap: 6px; } }
+
+/* ---- Stage and fascia ------------------------------------------------------------------ */
+#stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  position: relative;
+  background:
+    radial-gradient(80% 60% at 50% 0%, rgba(255, 255, 255, 0.035), transparent 62%),
+    radial-gradient(65% 40% at 50% 100%, rgba(0, 0, 0, 0.45), transparent 70%);
+}
+#panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--u, 60px) * 0.12);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, var(--fascia-a), var(--fascia-b));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 9px rgba(0, 0, 0, 0.72),
+    0 18px 46px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(0, 0, 0, 0.65);
+}
+#panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.12), transparent 18% 72%, rgba(0, 0, 0, 0.22)),
+    radial-gradient(70% 65% at 50% 5%, rgba(255, 255, 255, 0.09), transparent 56%);
+  mix-blend-mode: screen;
+  opacity: 0.42;
+  z-index: 1;
+}
+#panel > .w, #panel > .empty-hint { z-index: 2; }
+#panel.edit {
+  /* dot at every cell corner so free cells read as places to drop things */
+  background-image:
+    radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.28) 1.5px, transparent 2px),
+    linear-gradient(160deg, var(--fascia-a), var(--fascia-b));
+  background-size: var(--u) var(--u), auto;
+  cursor: cell;
+}
+.empty-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--ui-dim);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* ---- Widgets: shared ------------------------------------------------------------------- */
+/* --k is the widget's own unit in px (set inline): cell size scaled by the widget's smaller
+   side, so a 2x2 key gets a bigger pictogram without the legend becoming a billboard. */
+.w {
+  position: absolute;
+  box-sizing: border-box;
+  padding: calc(var(--u) * 0.045);
+  --lamp: var(--lamp-green);
+  touch-action: none;
+}
+.w[data-led="amber"] { --lamp: var(--lamp-amber); }
+.w[data-led="red"] { --lamp: var(--lamp-red); }
+.w[data-led="blue"] { --lamp: var(--lamp-blue); }
+.w[data-stage="1"] { --lamp: var(--lamp-amber); }
+.w[data-stage="2"] { --lamp: var(--lamp-green); }
+.w[data-led="white"] { --lamp: var(--lamp-white); }
+
+.cap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--k) * 0.03);
+  color: var(--print);
+  font-family: var(--font-legend);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+}
+.ico { display: block; width: calc(var(--k) * 0.36); height: calc(var(--k) * 0.36); flex: none; }
+.ico svg { display: block; width: 100%; height: 100%; }
+.lbl {
+  font-size: calc(var(--k) * 0.124);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: var(--legend-track);
+  text-transform: uppercase;
+  text-align: center;
+  max-width: 94%;
+  /* two-word legends wrap onto two lines instead of being cut at the cap edge */
+  max-height: 2em;
+  overflow: hidden;
+}
+.lbl.long { font-size: calc(var(--k) * 0.11); letter-spacing: 0.02em; }
+.lbl.xlong { font-size: calc(var(--k) * 0.095); letter-spacing: 0; }
+/* two-line / two-word legends: small enough that both lines + the icon fit the key */
+.lbl.two { font-size: calc(var(--k) * 0.092); line-height: 0.9; letter-spacing: 0; max-height: 2.1em; }
+.led {
+  display: block;
+  flex: none;
+  width: calc(var(--k) * 0.3);
+  height: calc(var(--k) * 0.055);
+  border-radius: 99px;
+  background: #0b0c0d;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.w.on .led { background: var(--lamp); box-shadow: 0 0 calc(var(--k) * 0.1) var(--lamp), inset 0 0 1px rgba(255, 255, 255, 0.7); }
+.w.on .ico { color: var(--lamp); filter: drop-shadow(0 0 calc(var(--k) * 0.05) var(--lamp)); }
+
+/* ---- Rocker switch --------------------------------------------------------------------- */
+.rocker .cap, .hazard .cap {
+  border-radius: calc(var(--k) * var(--cap-radius));
+  /* two planes meeting at the pivot line, like a real rocker */
+  background: linear-gradient(180deg, var(--cap-hi) 0%, var(--cap-mid) 46%, var(--cap-lo) 54%, var(--cap-mid) 100%);
+  box-shadow:
+    0 0 0 calc(var(--u) * 0.022) var(--well),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 calc(var(--u) * 0.03) calc(var(--u) * 0.04) rgba(0, 0, 0, 0.7);
+  transition: transform 60ms, filter 60ms;
+}
+.rocker .cap::before, .hazard .cap::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 24% 76%, rgba(0, 0, 0, 0.32));
+  pointer-events: none;
+}
+.w.down .cap { transform: translateY(calc(var(--u) * 0.02)) scale(0.985); filter: brightness(0.82); }
+
+/* ---- Hazard: the one red key on the dash ----------------------------------------------- */
+.hazard .tri { width: 62%; height: 62%; display: block; }
+.hazard .tri path:first-child { fill: #b3140f; stroke: #5d0a07; stroke-width: 2; stroke-linejoin: round; }
+.hazard .tri path:last-child { fill: none; stroke: #ffd9d4; stroke-width: 5; stroke-linejoin: round; }
+.hazard.on .tri path:first-child { fill: var(--lamp-red); }
+.hazard.on .tri { filter: drop-shadow(0 0 calc(var(--k) * 0.09) var(--lamp-red)); }
+@keyframes blink { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .hazard.on .tri { animation: none; } }
+
+/* ---- Round push button (start/stop, air horn) ------------------------------------------ */
+.round .cap { background: none; }
+.round .bezel {
+  position: relative;
+  height: 92%;
+  max-width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  /* machined ring: alternating highlights around the circle */
+  background: conic-gradient(from 20deg, #f2f4f5, #7c8288, #dfe3e6, #5d6268, #f2f4f5, #878d93, #e9ecee, #5f646a, #f2f4f5);
+  box-shadow: 0 0 0 calc(var(--u) * 0.022) var(--well), 0 calc(var(--u) * 0.04) calc(var(--u) * 0.06) rgba(0, 0, 0, 0.75);
+  display: grid;
+  place-items: center;
+}
+.round .core {
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, var(--cap-hi), var(--cap-lo) 75%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.7), inset 0 2px 2px rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--k) * 0.025);
+  transition: transform 60ms, filter 60ms;
+}
+.round .ico { width: calc(var(--k) * 0.26); height: calc(var(--k) * 0.26); }
+.round .lbl { font-size: calc(var(--k) * 0.115); }
+.round .led { width: calc(var(--k) * 0.2); }
+.round.down .cap { transform: none; filter: none; }
+.round.down .core { transform: scale(0.95); filter: brightness(0.8); }
+.round.on .core { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.7), inset 0 0 calc(var(--k) * 0.12) color-mix(in srgb, var(--lamp) 45%, transparent); }
+
+/* ---- Toggle switch (American dash) ----------------------------------------------------- */
+.toggle .cap { justify-content: space-between; padding-block: calc(var(--k) * 0.07); color: var(--fascia-ink); }
+.toggle .lbl { font-size: calc(var(--k) * 0.14); }
+.toggle .sw { position: relative; flex: 1 1 auto; width: 100%; }
+.toggle .nut {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--k) * 0.36);
+  height: calc(var(--k) * 0.36);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, #eceff1, #6f757b, #d9dde0, #585d63, #eceff1, #6f757b, #eceff1);
+  box-shadow: 0 0 0 calc(var(--u) * 0.02) var(--well), 0 2px 4px rgba(0, 0, 0, 0.7);
+}
+.toggle .bat {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--k) * 0.15);
+  height: calc(var(--k) * 0.3);
+  border-radius: 99px;
+  background: linear-gradient(90deg, #6d7379, #f4f6f7 45%, #9aa0a6 70%, #4d5257);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  /* off = lever thrown down, on = thrown up; the pivot is the centre of the nut */
+  transform: translate(-50%, -8%);
+  transition: transform 90ms ease-out;
+}
+.toggle.on .bat { transform: translate(-50%, -92%); }
+.toggle.down .cap { transform: none; filter: none; }
+
+/* ---- Air valve knobs ------------------------------------------------------------------- */
+.valve .cap { background: none; filter: drop-shadow(0 calc(var(--u) * 0.05) calc(var(--u) * 0.05) rgba(0, 0, 0, 0.8)); transition: transform 90ms, filter 90ms; }
+.valve .knob {
+  display: grid;
+  place-items: center;
+  color: #1b1500;
+  transition: filter 90ms;
+}
+.valve .knob .lbl { font-size: calc(var(--k) * 0.105); font-weight: 700; letter-spacing: 0.04em; white-space: pre-line; overflow: visible; }
+.valve[data-color="yellow"] .knob {
+  width: 61%;
+  aspect-ratio: 1;
+  max-height: 61%;
+  transform: rotate(45deg);
+  border-radius: calc(var(--k) * 0.07);
+  background: linear-gradient(135deg, #ffe66b, #f0b400 60%, #b98400);
+  box-shadow: inset 0 0 0 calc(var(--k) * 0.022) rgba(27, 21, 0, 0.75);
+}
+.valve[data-color="yellow"] .knob .lbl { transform: rotate(-45deg); }
+.valve[data-color="red"] .knob {
+  height: 86%;
+  aspect-ratio: 1;
+  max-width: 86%;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+  background: radial-gradient(circle at 40% 30%, #ff6d5e, #d21f12 55%, #8e0e06);
+  color: #fff3f1;
+}
+/* off = pushed in (released): sits lower and dimmer. on = pulled out (applied). */
+.valve:not(.on) .cap { transform: scale(0.9); filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)); }
+.valve:not(.on) .knob { filter: brightness(0.72) saturate(0.85); }
+.valve.down .cap { transform: scale(0.86); }
+
+/* ---- LCD readout ----------------------------------------------------------------------- */
+.display .lcd {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: calc(var(--k) * 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 18%),
+    linear-gradient(180deg, #030504, #0a1110);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.95), 0 1px 0 rgba(255, 255, 255, 0.09);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  overflow: hidden;
+}
+.display .cap2 {
+  font-family: var(--font-legend);
+  font-size: calc(var(--k) * 0.125);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--vfd) 46%, #50615a);
+  white-space: nowrap;
+}
+.display .val {
+  font-family: var(--font-lcd);
+  font-size: calc(var(--k) * 0.44);
+  font-variant-numeric: tabular-nums;
+  color: var(--vfd);
+  text-shadow: 0 0 calc(var(--k) * 0.09) color-mix(in srgb, var(--vfd) 55%, transparent);
+  white-space: nowrap;
+}
+.display .val small { font-size: 0.42em; margin-left: 0.25em; color: color-mix(in srgb, var(--vfd) 58%, #6d7671); text-shadow: none; }
+/* sentence-like readout (trip summary): smaller type so day, distance and time fit */
+.display.textual .val { font-size: calc(var(--k) * 0.25); }
+.display.textual .val small { font-size: 0.8em; }
+
+/* narrow, upright readout (portrait panels): unit drops under the number so both fit */
+.display.tall .lcd { gap: calc(var(--k) * 0.06); }
+.display.tall .val { font-size: calc(var(--k) * 0.3); text-align: center; }
+.display.tall .val small { display: block; margin: 0.2em 0 0; }
+.display.tall .cap2 { white-space: normal; text-align: center; line-height: 1.1; }
+
+/* ---- Status strip: damage and trip ------------------------------------------------------ */
+.w.status .sbar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  gap: calc(var(--u) * 0.07);
+  font-family: var(--font-lcd);
+  color: var(--vfd);
+}
+.w.status .sgroup {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: calc(var(--u) * 0.06);
+  padding-inline: calc(var(--u) * 0.1);
+  border-radius: calc(var(--u) * 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, #030504, #0a1110);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.95), 0 1px 0 rgba(255, 255, 255, 0.09);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.w.status .dmg { display: flex; align-items: center; gap: calc(var(--u) * 0.06); font-size: calc(var(--u) * 0.2); }
+.w.status .dmg .ico { width: calc(var(--u) * 0.3); height: calc(var(--u) * 0.3); color: color-mix(in srgb, var(--vfd) 52%, #6c7771); }
+.w.status .dmg b { font-weight: 400; font-variant-numeric: tabular-nums; min-width: 2.4ch; }
+.w.status .dmg[data-level="warn"] b { color: var(--lamp-amber); }
+.w.status .dmg[data-level="bad"] b { color: var(--lamp-red); }
+/* damage takes only the room it needs; the trip sentence gets everything else */
+.w.status .sgroup:first-child { flex: 0 0 auto; gap: calc(var(--u) * 0.16); }
+.w.status .trip { justify-content: center; font-size: calc(var(--u) * 0.155); text-overflow: ellipsis; text-align: center; }
+/* narrow panels: damage on one line, trip under it */
+.w.status.stack .sbar { flex-direction: column; gap: calc(var(--u) * 0.05); }
+.w.status.stack .dmg { font-size: calc(var(--u) * 0.19); }
+.w.status.stack .dmg .ico { width: calc(var(--u) * 0.26); height: calc(var(--u) * 0.26); }
+.w.status.stack .sgroup:first-child { flex: 1 1 0; }
+.w.status.stack .trip { flex: 1 1 0; font-size: calc(var(--u) * 0.15); }
+
+/* ---- Analog dial ------------------------------------------------------------------------ */
+.gauge { display: grid; place-items: center; }
+.gauge .dial {
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  padding: 5%;
+  border-radius: 50%;
+  background: var(--dial-bezel);
+  box-shadow: 0 0 0 calc(var(--u) * 0.02) var(--well), 0 calc(var(--u) * 0.04) calc(var(--u) * 0.06) rgba(0, 0, 0, 0.7);
+}
+.gauge svg { display: block; width: 100%; height: 100%; border-radius: 50%; box-shadow: inset 0 0 calc(var(--u) * 0.12) #000; }
+.gauge .face { fill: var(--dial-face); }
+.gauge .tick { stroke: var(--dial-ink); stroke-width: 1.6; stroke-linecap: butt; fill: none; }
+.gauge .tick.major { stroke-width: 3.2; }
+.gauge .band { fill: none; stroke-width: 7; }
+.gauge .band.eco { stroke: #3fae5a; }
+.gauge .band.red { stroke: #d6362b; }
+.gauge .num { fill: var(--dial-ink); font-family: var(--font-legend); font-size: 19px; font-weight: 600; text-anchor: middle; }
+.gauge .unit { fill: var(--dial-ink); opacity: 0.7; font-family: var(--font-legend); font-size: 12px; letter-spacing: 0.12em; text-anchor: middle; }
+.gauge .needle { transform-origin: 100px 100px; transform: rotate(135deg); transition: transform 260ms cubic-bezier(0.3, 0.7, 0.4, 1); }
+.gauge .needle path { fill: var(--dial-needle); }
+.gauge .hub { fill: #17181a; stroke: #3a3d41; stroke-width: 2; }
+@media (prefers-reduced-motion: reduce) { .gauge .needle { transition: none; } }
+
+/* ---- Music player (cassette-era head unit) ----------------------------------------------- */
+.radio .unit {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.06);
+  padding: calc(var(--u) * 0.08);
+  border-radius: calc(var(--u) * 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* brushed faceplate */
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.1), transparent 18% 70%, rgba(0, 0, 0, 0.28)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #2b2d30, #131416);
+  box-shadow: 0 0 0 calc(var(--u) * 0.022) var(--well), inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 calc(var(--u) * 0.03) calc(var(--u) * 0.05) rgba(0, 0, 0, 0.7);
+}
+.radio .vfd {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 0.08);
+  padding-inline: calc(var(--u) * 0.1);
+  border-radius: calc(var(--u) * 0.04);
+  background: #050807;
+  box-shadow: inset 0 2px 6px #000;
+  color: var(--vfd);
+  font-family: var(--font-lcd);
+  text-shadow: 0 0 calc(var(--u) * 0.06) color-mix(in srgb, var(--vfd) 60%, transparent);
+  overflow: hidden;
+}
+.radio .vfd-text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: calc(var(--u) * 0.03); }
+/* spectrum bars: the moving display of a 1990s head unit; they dance only while music plays */
+.radio .eq { display: none; }
+.radio.classic .eq { flex: none; display: flex; align-items: flex-end; gap: 2px; width: 24%; height: 72%; }
+.radio.classic .eq i {
+  flex: 1 1 0;
+  height: 100%;
+  transform-origin: bottom;
+  transform: scaleY(0.12);
+  /* cyan body with a red peak, cut into segments like a fluorescent display */
+  background:
+    repeating-linear-gradient(to top, transparent 0 3px, #050807 3px 4px),
+    linear-gradient(to top, #37d5ff 0 62%, #ffd23f 62% 82%, #ff5a4a 82%);
+  animation: eq 0.7s ease-in-out infinite alternate;
+  animation-play-state: paused;
+}
+.radio.classic.playing .eq i { animation-play-state: running; }
+.radio.classic .eq i:nth-child(2n) { animation-duration: 0.52s; animation-delay: -0.2s; }
+.radio.classic .eq i:nth-child(3n) { animation-duration: 0.88s; animation-delay: -0.45s; }
+.radio.classic .eq i:nth-child(4n + 1) { animation-duration: 0.63s; animation-delay: -0.1s; }
+@keyframes eq { from { transform: scaleY(0.15); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .radio.classic .eq i { animation: none; transform: scaleY(0.5); } }
+.radio.compact .eq { width: 16%; height: 78%; }
+.radio .vfd-top { display: flex; justify-content: space-between; gap: 8px; font-size: calc(var(--u) * 0.13); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; white-space: nowrap; }
+.radio .artist { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.radio .track { font-size: calc(var(--u) * 0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.radio .track.scroll { text-overflow: clip; }
+.radio .track.scroll span { display: inline-block; padding-left: 100%; animation: marquee 14s linear infinite; }
+@keyframes marquee { to { transform: translateX(-100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .radio .track.scroll { text-overflow: ellipsis; }
+  .radio .track.scroll span { padding-left: 0; animation: none; }
+}
+.radio .mkeys { flex: none; display: flex; gap: calc(var(--u) * 0.05); height: 34%; min-height: 26px; }
+.radio .mkey {
+  flex: 1 1 0;
+  display: grid;
+  place-items: center;
+  border-radius: calc(var(--u) * 0.04);
+  background: linear-gradient(180deg, #45484d, #1c1e21);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 2px #000;
+  color: #e6e9ec;
+}
+.radio .mkey svg { height: 58%; width: auto; aspect-ratio: 1; }
+.radio .mkey.down { transform: translateY(1px); filter: brightness(0.75); }
+
+/* compact (one row high): one line of text over the keys */
+.radio.compact .unit { gap: calc(var(--u) * 0.04); padding: calc(var(--u) * 0.06); }
+.radio.compact .vfd-top { display: none; }
+.radio.compact .vfd { flex: 0 0 34%; }
+.radio.compact .track { font-size: calc(var(--u) * 0.16); }
+.radio.compact .mkeys { flex: 1 1 0; height: auto; min-height: 0; }
+
+/* modern cabs: a flat media tile, the kind a current truck's infotainment shows */
+.radio.modern .unit {
+  background:
+    radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--ui-accent) 20%, transparent), transparent 42%),
+    linear-gradient(160deg, #1b1e22, #0c0d0f);
+  border-radius: calc(var(--u) * 0.14);
+  box-shadow: 0 0 0 calc(var(--u) * 0.022) var(--well), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.radio.modern .vfd {
+  background: none;
+  box-shadow: none;
+  color: var(--ui-fg);
+  font-family: var(--font-ui);
+  text-shadow: none;
+  padding-inline: calc(var(--u) * 0.06);
+}
+.radio.modern .vfd-top { color: var(--ui-dim); opacity: 1; letter-spacing: 0.04em; font-size: calc(var(--u) * 0.12); }
+.radio.modern .track { font-size: calc(var(--u) * 0.19); font-weight: 600; }
+.radio.modern .mkeys { justify-content: space-between; align-items: center; }
+.radio.modern .mkey {
+  flex: 0 1 auto;
+  height: 100%;
+  max-height: calc(var(--u) * 0.62);
+  aspect-ratio: 1;
+  min-width: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+.radio.modern .mkey svg { height: 50%; }
+.radio.modern .mkey[data-media="media_play"] { background: var(--ui-accent); color: #1a1205; }
+
+/* ---- Engraved plate -------------------------------------------------------------------- */
+.plate .cap {
+  flex-direction: row;
+  gap: calc(var(--k) * 0.08);
+  color: color-mix(in srgb, var(--fascia-ink) 70%, transparent);
+}
+.plate .cap::after { content: ""; flex: 1 1 0; height: 1px; background: currentColor; opacity: 0.5; }
+.plate .lbl { font-size: calc(var(--k) * 0.16); white-space: normal; text-align: left; overflow: visible; }
+
+/* ---- Edit mode ------------------------------------------------------------------------- */
+#panel.edit .w { cursor: grab; }
+#panel.edit .w::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--u) * 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  pointer-events: none;
+}
+#panel.edit .w.sel::after { border: 2px solid var(--ui-accent); }
+#panel.edit .w.dragging { z-index: 5; opacity: 0.85; cursor: grabbing; }
+.grip { display: none; }
+#panel.edit .grip {
+  display: block;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 55%, var(--ui-accent) 55%);
+  border-bottom-right-radius: 6px;
+  z-index: 2;
+}
+
+/* ---- Sheet (drawer) -------------------------------------------------------------------- */
+#scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.56); backdrop-filter: blur(3px); z-index: 20; }
+#sheet.left { right: auto; left: 0; border-left: 0; border-right: 1px solid var(--ui-line); }
+#sheet {
+  position: fixed;
+  z-index: 21;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100%);
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(242, 162, 58, 0.12), transparent 36%),
+    linear-gradient(180deg, rgba(30, 34, 39, 0.98), rgba(13, 15, 18, 0.99));
+  border-left: 1px solid var(--ui-soft-line);
+  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.48);
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  -webkit-user-select: text;
+  user-select: text;
+}
+.sheet-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ui-soft-line);
+  background: rgba(255, 255, 255, 0.025);
+}
+.sheet-head h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-legend);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+.group { display: flex; flex-direction: column; gap: 8px; }
+.group > h3 {
+  margin: 0;
+  font-family: var(--font-legend);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ui-dim);
+}
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > span { font-size: 12px; color: var(--ui-dim); letter-spacing: 0.04em; text-transform: uppercase; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row > * { min-width: 0; }
+.grow { flex: 1 1 0; }
+input[type="text"], input[type="search"], select, textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--ui-soft-line);
+  border-radius: 7px;
+  background: #0b0d10;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.34);
+}
+input[type="text"]:focus, input[type="search"]:focus, select:focus, textarea:focus {
+  border-color: var(--ui-accent);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.34), 0 0 0 4px var(--ui-glow);
+}
+textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); font-size: 13px; }
+.btn {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--ui-soft-line);
+  border-radius: 7px;
+  background: linear-gradient(180deg, #30363d, var(--ui-raised));
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.btn.primary { background: linear-gradient(180deg, #ffc66e, var(--ui-accent)); border-color: var(--ui-accent); color: #1a1205; font-weight: 700; box-shadow: 0 0 18px var(--ui-glow); }
+.btn.danger { color: var(--ui-danger); }
+.btn.danger.armed { background: var(--ui-danger); border-color: var(--ui-danger); color: #fff; }
+.btn.small { min-height: 32px; padding: 4px 10px; font-size: 13px; }
+.checks { display: grid; grid-template-columns: 1fr; gap: 2px; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 5px 8px; border-radius: 7px; background: rgba(255, 255, 255, 0.035); }
+.check input { width: 20px; height: 20px; flex: none; accent-color: var(--ui-accent); }
+.check span { min-width: 0; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.sizer { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.stepper b { min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.stepper .btn { min-width: 40px; padding-inline: 0; }
+.note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ui-dim); }
+.list { display: flex; flex-direction: column; border: 1px solid var(--ui-soft-line); border-radius: 8px; overflow: hidden; background: rgba(0, 0, 0, 0.14); }
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--ui-soft-line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+.item:last-child { border-bottom: 0; }
+.item:active { filter: brightness(0.86); }
+.item .ico { width: 24px; height: 24px; color: var(--ui-dim); }
+.item .name { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.item .name small { color: var(--ui-dim); font-size: 12px; }
+.item.current { background: linear-gradient(90deg, var(--ui-glow), rgba(255, 255, 255, 0.025)); box-shadow: inset 3px 0 0 var(--ui-accent); }
+.kbd {
+  flex: none;
+  padding: 2px 7px;
+  border: 1px solid var(--ui-line);
+  border-radius: 4px;
+  background: var(--ui-raised);
+  font-family: var(--font-lcd);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.tag { flex: none; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ui-accent); }
+.keyrow { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-bottom: 1px solid var(--ui-line); background: var(--ui-bg); }
+.keyrow:last-child { border-bottom: 0; }
+.keyrow .top { display: flex; gap: 8px; align-items: baseline; }
+.keyrow .top b { flex: 1 1 auto; min-width: 0; font-weight: 500; }
+.combo { display: flex; gap: 6px; align-items: center; }
+.combo select { min-height: 36px; padding: 4px 6px; }
+.combo select:first-child { flex: 0 0 104px; }
+
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 30;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f7fafc, #dde4ea);
+  color: #111417;
+  font-size: 14px;
+  text-align: center;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+}
+
+@media (max-width: 640px) {
+  /* phones: the drawer becomes a bottom sheet so the panel stays visible above it */
+  #sheet.left { border-right: 0; }
+  #sheet { top: auto; left: 0; width: 100%; max-height: 78%; border-left: 0; border-top: 1px solid var(--ui-line); border-radius: 12px 12px 0 0; padding-top: 0; }
+}
+
+/* ---- Opening animation ------------------------------------------------------------------ */
+/* Ignition sequence: the chrome ring machines itself in, the frog (the author's nickname is
+   "Sapinho") pops up behind the glass and blinks, then the LED comes on and the name appears. */
+#boot {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: radial-gradient(circle at 50% 42%, #1a1d21, #08090a 70%);
+  color: #e6e9ec;
+  transition: opacity 420ms ease;
+}
+#boot.done { opacity: 0; pointer-events: none; }
+#boot .mark { width: min(38vmin, 220px); height: auto; }
+#boot .m-ring { stroke-dasharray: 528; stroke-dashoffset: 528; animation: bootDraw 700ms cubic-bezier(0.5, 0, 0.2, 1) forwards; }
+#boot .m-disc { opacity: 0; animation: bootFade 400ms 250ms ease forwards; }
+#boot .m-frog { transform: translateY(120px); animation: bootHop 520ms 640ms cubic-bezier(0.3, 1.5, 0.5, 1) forwards; }
+#boot .m-lid { transform-box: fill-box; transform-origin: center top; transform: scaleY(0); animation: bootBlink 260ms 1340ms ease-in-out; }
+#boot .m-eye { animation: bootGlow 520ms 1500ms ease-out forwards; }
+#boot .m-led { fill: #101214; animation: bootLed 200ms 1560ms steps(1, end) forwards; }
+#boot b, #boot span { opacity: 0; animation: bootFade 380ms 1400ms ease forwards; font-family: var(--font-legend, "Arial Narrow", Arial, sans-serif); text-transform: uppercase; }
+#boot b { font-size: clamp(26px, 6vmin, 40px); font-weight: 700; letter-spacing: 0.22em; color: #f2a23a; margin-right: -0.22em; }
+#boot span { font-size: clamp(12px, 2.6vmin, 16px); letter-spacing: 0.32em; color: #98a1ab; margin-right: -0.32em; animation-delay: 1520ms; }
+@keyframes bootDraw { to { stroke-dashoffset: 0; } }
+@keyframes bootFade { to { opacity: 1; } }
+@keyframes bootHop { to { transform: translateY(0); } }
+@keyframes bootBlink { 0%, 100% { transform: scaleY(0); } 45%, 60% { transform: scaleY(1); } }
+@keyframes bootGlow { from { filter: drop-shadow(0 0 0 rgba(242, 162, 58, 0)); } 40% { filter: drop-shadow(0 0 12px rgba(242, 162, 58, 0.95)); } to { filter: drop-shadow(0 0 5px rgba(242, 162, 58, 0.5)); } }
+@keyframes bootLed { to { fill: #5fe36a; filter: drop-shadow(0 0 5px #5fe36a); } }
+@media (prefers-reduced-motion: reduce) {
+  #boot .m-ring { animation: none; stroke-dashoffset: 0; }
+  #boot .m-disc, #boot b, #boot span { animation: none; opacity: 1; }
+  #boot .m-frog { animation: none; transform: none; }
+  #boot .m-lid, #boot .m-eye { animation: none; }
+  #boot .m-led { animation: none; fill: #5fe36a; }
+}
+
+/* ---- Art panels ------------------------------------------------------------------------- */
+/* The panel IS the picture; everything below is laid over it in % of the picture, so it
+   holds at any size. Keys are invisible touch areas, readouts are written in the colours
+   sampled from the art underneath them. */
+#stage.skin { padding: 4px; }
+#panel.skin {
+  background-color: #050505;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border: 0;
+  border-radius: 10px;
+  cursor: default;
+}
+#panel.skin::before { display: none; }
+.w.sk { padding: 0; }
+
+/* keys */
+.k-hot { border-radius: 9% / 11%; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.k-hot.down { background: rgba(0, 0, 0, 0.3); box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.75); }
+/* lamp: dark while the function is off, lit in the art's own lamp colour while it is on */
+.k-hot .lamp {
+  position: absolute;
+  border-radius: 30% / 50%;
+  background: #0b0c0d;
+  box-shadow: 0 0 3px 2px rgba(9, 10, 11, 0.9);
+  pointer-events: none;
+}
+.k-hot.on .lamp {
+  background: var(--lamp);
+  box-shadow: 0 0 5px 1px var(--lamp), 0 0 13px 2px color-mix(in srgb, var(--lamp) 55%, transparent);
+}
+/* keys painted without a lamp glow as a whole while on */
+/* keys painted without a lamp: while on, the key's own pictogram lights up (no outline) */
+.k-hot.nolamp.on { -webkit-backdrop-filter: brightness(1.55) saturate(1.5); backdrop-filter: brightness(1.55) saturate(1.5); }
+.k-hot.nolamp.on.down { background: rgba(0, 0, 0, 0.3); }
+
+/* readouts */
+.k-live, .k-rtext, .k-fbar, .k-cover {
+  background: var(--bg);
+  color: var(--ink);
+  border-radius: 6% / 12%;
+  box-shadow: 0 0 3px 1px var(--bg);
+  overflow: hidden;
+  pointer-events: none;
+}
+.k-live {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-legend);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+.k-live small { font-weight: 500; opacity: 0.85; margin-top: 0.18em; }
+.k-rtext {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 3%;
+  box-sizing: border-box;
+  font-family: var(--font-legend);
+  line-height: 1.12;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.k-rtext small { opacity: 0.8; overflow: hidden; text-overflow: ellipsis; }
+.k-rtext b { overflow: hidden; font-weight: 600; }
+.k-rtext b span { display: inline-block; }
+.k-rtext b.scroll span { padding-left: 100%; animation: sk-marquee 14s linear infinite; }
+
+/* freight info line above artist */
+.k-rtext .freight {
+  display: block;
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: normal;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+}
+
+/* small touch media keys drawn on the radio screen */
+.rt-keys {
+  display: flex;
+  justify-content: center;
+  gap: 6%;
+  margin-top: 2%;
+  pointer-events: auto;
+}
+.rt-keys i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background 120ms;
+  font-size: inherit;
+  color: inherit;
+  opacity: 0.7;
+}
+.rt-keys i:active, .rt-keys i.down { background: rgba(255, 255, 255, 0.22); opacity: 1; }
+.rt-keys i .ico { width: 55%; height: 55%; }
+
+@keyframes sk-marquee { to { transform: translateX(-100%); } }
+.k-fbar i { display: block; height: 100%; background: var(--ink); border-radius: inherit; transition: width 400ms; }
+
+/* telltales: the art shows them lit; an unlit one is dimmed */
+.k-tell { border-radius: 14%; pointer-events: none; transition: background 120ms; }
+.k-tell.off { background: rgba(5, 5, 6, 0.8); }
+
+/* dial needles */
+.k-gauge { pointer-events: none; }
+.k-gauge svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.k-gauge .sneedle { transform-origin: 0 0; transition: transform 240ms linear; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.75)); }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .k-gauge .sneedle, .k-fbar i { transition: none; }
+  .k-rtext b.scroll span { animation: none; padding-left: 0; }
+}
+
+/* edit mode on an art page: only the keys are outlined, nothing moves */
+#panel.skin.edit { background-size: 100% 100%; cursor: default; }
+#panel.skin.edit .w.sk { cursor: default; }
+#panel.skin.edit .w.sk::after { display: none; }
+#panel.skin.edit .k-hot { cursor: pointer; }
+#panel.skin.edit .k-hot::after { display: block; inset: 1px; border: 1px dashed rgba(255, 255, 255, 0.75); }
+#panel.skin.edit .k-hot.sel::after { border: 2px solid var(--ui-accent); }
+
+/* small panel picture in the lists */
+.thumb { flex: none; width: 72px; height: 42px; object-fit: cover; border-radius: 5px; background: #111; }
+
+/* ---- Segment-display font for the classic panels (bundled, SIL OFL: fonts/DSEG-LICENSE.txt) */
+@font-face { font-family: "Seg14"; src: url("fonts/DSEG14Classic-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+#panel.classic .k-live, #panel.classic .k-rtext {
+  font-family: "Seg14", var(--font-lcd);
+  font-weight: 700;
+  text-shadow: 0 0 0.3em color-mix(in srgb, var(--ink) 70%, transparent);
+}
+#panel.classic .k-live small { font-weight: 700; }
+
+/* ---- Key states on art panels ------------------------------------------------------------ */
+/* A switch that is off loses the coloured glow of its pictogram; with the truck lights off
+   the whole key goes dark, like an unlit dash at night. Done by filtering what is BEHIND the
+   invisible key, so the picture itself is never changed. */
+.k-hot.idle { -webkit-backdrop-filter: saturate(0.16) brightness(0.9); backdrop-filter: saturate(0.16) brightness(0.9); }
+#panel.unlit .k-hot { -webkit-backdrop-filter: brightness(0.5) saturate(0.55); backdrop-filter: brightness(0.5) saturate(0.55); }
+#panel.unlit .k-hot.idle { -webkit-backdrop-filter: brightness(0.42) saturate(0.1); backdrop-filter: brightness(0.42) saturate(0.1); }
+#panel.unlit .k-hot.on { -webkit-backdrop-filter: brightness(0.85); backdrop-filter: brightness(0.85); }
+#panel.unlit .k-gauge { background: radial-gradient(closest-side, rgba(0, 0, 0, 0.5) 96%, transparent); }
+@supports not ((backdrop-filter: brightness(1)) or (-webkit-backdrop-filter: brightness(1))) {
+  #panel.unlit .k-hot:not(.on) { background: rgba(0, 0, 0, 0.5); }
+  .k-hot.idle { background: rgba(0, 0, 0, 0.22); }
+}
+
+/* ---- Volume knob --------------------------------------------------------------------------- */
+.k-knob { border-radius: 50%; cursor: ns-resize; }
+.k-knob i { position: absolute; left: 50%; top: 50%; height: 78%; aspect-ratio: 1; margin: 0; translate: -50% -50%; border-radius: 50%; pointer-events: none; transition: transform 90ms; }
+.k-knob i::after { content: ""; position: absolute; left: 50%; top: 3%; width: 9%; height: 9%; margin-left: -4.5%; border-radius: 50%; background: #fff; opacity: 0.8; box-shadow: 0 0 4px #fff; }
+.k-knob.down { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25), 0 0 14px rgba(255, 255, 255, 0.25); }
+
+/* ---- Stickers ------------------------------------------------------------------------------ */
+.k-sticker { pointer-events: none; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.6)) sepia(0.2) brightness(0.94); }
+.k-sticker svg { display: block; width: 100%; height: 100%; }
+
+/* ---- Truck information screen on art panels ---- */
+.k-gps { overflow: hidden; border-radius: 2%; pointer-events: none; }
+
+/* ---- Side rail: electrics, ignition, Enter, on-board computer ------------------------------- */
+#stage.skin { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; }
+
+#rail { display: flex; flex-direction: column; gap: 8px; flex: none; width: 70px; }
+#rail[hidden] { display: none; }
+#stage.tall #rail { flex-direction: row; width: auto; height: 58px; }
+.rkey {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 58px;
+  max-height: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 2px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2a2d31, #15171a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 6px rgba(0, 0, 0, 0.6);
+  color: #d9dde2;
+  font-family: var(--font-legend);
+  touch-action: none;
+  cursor: pointer;
+}
+#stage.tall .rkey { min-height: 0; min-width: 64px; flex-direction: row; gap: 6px; padding: 4px 10px; }
+.rkey .ico { width: 24px; height: 24px; }
+.rkey .ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rkey b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 9px; font-weight: 600; letter-spacing: 0.03em; white-space: nowrap; }
+#stage.tall .rkey { min-width: 0; padding: 4px 6px; }
+#stage.tall .rkey .ico { flex: none; width: 18px; height: 18px; }
+.rkey .led { position: absolute; top: 5px; left: 50%; width: 16px; height: 4px; margin-left: -8px; border-radius: 2px; background: #0b0c0d; }
+#stage.tall .rkey .led { top: 4px; }
+.rkey.on .led { background: #3dff7a; box-shadow: 0 0 6px #3dff7a; }
+.rkey.on { color: #fff; border-color: rgba(61, 255, 122, 0.45); }
+.rkey.down, .rkey:active { filter: brightness(0.8); transform: translateY(1px); }
+
+/* ---- On-board computer ---------------------------------------------------------------------- */
+#obc {
+  flex: 1 1 0;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #0c1014, #07090b);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #dfe6ec;
+  font-family: var(--font-ui);
+  -webkit-overflow-scrolling: touch;
+}
+#obc[hidden] { display: none; }
+.ogrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+.ocard { padding: 10px 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); }
+.ocard h3 { margin: 0 0 6px; font-family: var(--font-legend); font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #f2a23a; }
+.orow { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 14px; }
+.orow:last-child { border-bottom: 0; }
+.orow span { color: #93a0ac; }
+.orow b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.orow.warn b { color: #ffb02e; }
+.orow.bad b { color: #ff5a4f; }
+.obar { display: grid; grid-template-columns: minmax(84px, 34%) 1fr 44px; align-items: center; gap: 8px; padding: 4px 0; font-size: 14px; }
+.obar span { color: #93a0ac; }
+.obar i { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.09); overflow: hidden; }
+.obar u { display: block; height: 100%; min-width: 2px; background: #3dff7a; border-radius: 4px; }
+.obar b { text-align: right; font-variant-numeric: tabular-nums; }
+.obar.warn u { background: #ffb02e; } .obar.warn b { color: #ffb02e; }
+.obar.bad u { background: #ff5a4f; } .obar.bad b { color: #ff5a4f; }
+.obc-wait, .obc-none, .obc-demo { margin: 4px 0 8px; color: #93a0ac; font-size: 14px; }
+.obc-demo { color: #f2a23a; }
+
+/* ---- Ignition key barrel (classic panels) --------------------------------------------------- */
+.k-ign { border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.k-ign svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.k-ign .ikey { transform: rotate(-50deg); transition: transform 190ms cubic-bezier(0.3, 1.4, 0.5, 1); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
+.k-ign[data-s="1"] .ikey { transform: rotate(0deg); }
+.k-ign[data-s="2"] .ikey { transform: rotate(50deg); }
+.k-ign .iring { stroke: #0b0c0d; transition: stroke 160ms; }
+.k-ign[data-s="1"] .iring { stroke: #ffb02e; filter: drop-shadow(0 0 5px #ffb02e); }
+.k-ign[data-s="2"] .iring { stroke: #3dff7a; filter: drop-shadow(0 0 6px #3dff7a); }
+.k-ign:active { filter: brightness(0.85); }
+@media (prefers-reduced-motion: reduce) { .k-ign .ikey { transition: none; } }
+
+/* readouts that open the on-board computer */
+.k-live.tap { pointer-events: auto; cursor: pointer; }
+.k-live.tap:active { filter: brightness(1.5); }
+.obc-back { margin-bottom: 10px; }
+
+#panel.unlit .k-hot.nolamp.on { -webkit-backdrop-filter: brightness(1.3) saturate(1.4); backdrop-filter: brightness(1.3) saturate(1.4); }
+
+/* ---- Auxiliary switch bank beside the panel -------------------------------------------------- */
+#extras {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 14px 18px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.05), transparent 40%),
+    linear-gradient(180deg, #191b1e, #0c0d0f);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -2px 8px rgba(0, 0, 0, 0.7), 0 14px 34px rgba(0, 0, 0, 0.7);
+}
+#extras[hidden] { display: none; }
+/* four screws holding the plate */
+#extras .scr { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #e9ecef, #6b7078 55%, #24272b); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+#extras .scr::after { content: ""; position: absolute; left: 1px; right: 1px; top: 4px; height: 1px; background: rgba(0, 0, 0, 0.6); transform: rotate(35deg); }
+#extras .scr.a { left: 6px; top: 6px; } #extras .scr.b { right: 6px; top: 6px; }
+#extras .scr.c { left: 6px; bottom: 6px; } #extras .scr.d { right: 6px; bottom: 6px; }
+.xgroup h4 {
+  margin: 0 0 5px;
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-legend); font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em;
+  color: color-mix(in srgb, var(--acc) 62%, #6b7078);
+}
+.xgroup h4::after { content: ""; flex: 1 1 0; height: 1px; background: currentColor; opacity: 0.35; }
+.xrow { display: flex; gap: 7px; height: var(--rowh); padding: 5px; border-radius: 8px; background: #08090a; box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.07); }
+.xkey {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 8px 0 0;
+  border: 0;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #2c2f33 0%, #1b1d20 46%, #121315 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -4px 6px rgba(0, 0, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.8);
+  color: var(--acc);
+  touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: transform 60ms, filter 60ms;
+}
+.xkey .ico { height: 46%; aspect-ratio: 1; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--acc) 55%, transparent)); }
+.xkey .ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.xkey .led { position: absolute; top: 12%; left: 50%; width: 30%; height: 4px; margin-left: -15%; border-radius: 2px; background: #060707; box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.9); }
+.xkey.on .led { background: #3dff7a; box-shadow: 0 0 7px #3dff7a, 0 0 14px rgba(61, 255, 122, 0.5); }
+.xkey.down { transform: translateY(1.5px); filter: brightness(0.72); box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.8); }
+#extras.unlit .xkey { color: #55595f; }
+#extras.unlit .xkey .ico { filter: none; }
+#extras.unlit .xgroup h4 { color: #4a4e54; }
+
+/* ---- Finish: the panel as a mounted instrument ------------------------------------------------ */
+#stage.skin { gap: 14px; overflow: hidden; isolation: isolate; background: #050506; }
+#stage.skin::before {
+  content: ""; position: absolute; inset: -60px; z-index: -1;
+  background: var(--amb) center / cover no-repeat;
+  filter: blur(42px) brightness(0.3) saturate(1.25);
+}
+#stage.skin::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(0, 0, 0, 0.6));
+}
+#panel.skin {
+  /* the picture fills the whole screen: no frame, no rounded corners, nothing around it */
+  border-radius: 0;
+  box-shadow: none;
+}
+/* glass over the whole panel: a faint diagonal sheen and darker corners */
+#panel.skin::after {
+  content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none; border-radius: inherit;
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.055) 0%, transparent 22%, transparent 70%, rgba(255, 255, 255, 0.025) 100%),
+    radial-gradient(130% 100% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.34));
+}
+#panel.skin.edit::after { display: none; }
+/* keys go in under the finger */
+.k-hot { transition: box-shadow 70ms, background 70ms; }
+.k-hot.down { -webkit-backdrop-filter: brightness(0.66); backdrop-filter: brightness(0.66); background: none; box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(0, 0, 0, 0.5); }
+/* lamps bloom a little past their slot, like a real LED behind a lens */
+.k-hot.on .lamp { box-shadow: 0 0 4px 1px var(--lamp), 0 0 12px 3px color-mix(in srgb, var(--lamp) 60%, transparent), 0 0 26px 6px color-mix(in srgb, var(--lamp) 22%, transparent); }
+.k-hot.on .lamp::after { content: ""; position: absolute; inset: 18% 12% 46%; border-radius: inherit; background: rgba(255, 255, 255, 0.5); }
+/* dial needles: thin highlight and a pivot cap */
+.k-gauge .sneedle { filter: drop-shadow(0 1.5px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 3px rgba(255, 90, 40, 0.35)); }
+/* readouts glow like lit segments / LCD */
+.k-live b, .k-live small { text-shadow: 0 0 0.35em color-mix(in srgb, var(--ink) 45%, transparent); }
+.k-tell { transition: background 140ms; }
+/* on-board computer and info screen sit in the same glass */
+#obc { box-shadow: 0 0 0 3px #060607, 0 22px 50px rgba(0, 0, 0, 0.8); background: linear-gradient(180deg, rgba(14, 18, 23, 0.94), rgba(6, 8, 10, 0.96)); }
+.k-gps.tinfo { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 0 18px rgba(0, 0, 0, 0.8); }
+
+/* ---- Truck information screen (modern panels) ----------------------------------------------- */
+/* Sized in em: the app sets the font size from the screen's shape, so it scales with the panel. */
+.k-gps.tinfo {
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+  padding: 0.7em 0.9em;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #0b1016, #06090c);
+  color: #e8eef4;
+  font-family: var(--font-legend);
+  line-height: 1.1;
+  border-radius: 3%;
+  overflow: hidden;
+}
+.ti-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8em; white-space: nowrap; }
+
+/* damage indicator bar (icons + percentages, between header and content) */
+.ti-dmg {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  font-size: 0.92em;
+  white-space: nowrap;
+  color: #8496a6;
+  padding: 0.1em 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.ti-di {
+  display: flex;
+  align-items: center;
+  gap: 0.2em;
+}
+.ti-di .ico { width: 1.2em; height: 1.2em; opacity: 0.7; }
+.ti-di b { font-weight: 600; font-variant-numeric: tabular-nums; color: #7ee08f; }
+.ti-di[data-level="warn"] .ico { color: var(--lamp-amber); opacity: 1; }
+.ti-di[data-level="warn"] b { color: var(--lamp-amber); }
+.ti-di[data-level="bad"] .ico { color: var(--lamp-red); opacity: 1; }
+.ti-di[data-level="bad"] b { color: var(--lamp-red); }
+/* hide damage bar when tinfo is very small */
+.tinfo.small .ti-dmg { display: none; }
+
+.ti-dest { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #9fb0bf; font-size: 1.05em; }
+.ti-dest b { color: #fff; font-weight: 600; margin-right: 0.3em; }
+.ti-clock { flex: none; font-size: 1.05em; font-variant-numeric: tabular-nums; color: #cfd8e0; }
+.ti-rpm { display: flex; align-items: center; gap: 0.7em; }
+.ti-rpm i { flex: 1 1 0; height: 0.8em; border-radius: 0.4em; background: rgba(255, 255, 255, 0.09); overflow: hidden;
+  /* marks every 500 rpm on a 2500 scale */
+  background-image: repeating-linear-gradient(90deg, transparent 0 calc(20% - 1px), rgba(255, 255, 255, 0.22) calc(20% - 1px) 20%); }
+.ti-rpm u { display: block; height: 100%; border-radius: inherit; transition: width 200ms linear;
+  background: linear-gradient(90deg, #4fc3ff 0%, #4fc3ff 55%, #ffb02e 75%, #ff5a4f 92%); background-size: 100% 100%; }
+.ti-rpm.red u { background: linear-gradient(90deg, #4fc3ff 0%, #4fc3ff 55%, #ffb02e 75%, #ff5a4f 92%); }
+.ti-rpm b { flex: none; min-width: 5.2em; text-align: right; font-size: 1em; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ti-grid { flex: 1 1 0; min-height: 0; display: grid; grid-auto-rows: 1fr; gap: 0.4em; }
+.ti-c { display: flex; flex-direction: column; justify-content: center; padding: 0.15em 0.55em; border-radius: 0.4em; background: rgba(255, 255, 255, 0.045); min-width: 0; }
+.ti-c span { font-size: 0.78em; letter-spacing: 0.08em; text-transform: uppercase; color: #8496a6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ti-c b { font-size: 1.45em; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ti-c.bad b { color: #ff5a4f; }
+.ti-foot { display: flex; flex-wrap: nowrap; gap: 1em; align-items: baseline; font-size: 0.9em; color: #8496a6; white-space: nowrap; overflow: hidden; }
+.ti-d b { color: #7ee08f; font-weight: 600; }
+.ti-d.warn b { color: #ffb02e; }
+.ti-d.bad b { color: #ff5a4f; }
+.ti-w { margin-left: auto; color: #ffb02e; font-weight: 600; letter-spacing: 0.06em; }
+.tinfo.small { gap: 0.3em; padding: 0.5em 0.7em; }
+.tinfo.small .ti-foot { display: none; }
+.tinfo.small .ti-c { padding: 0 0.4em; }
+.tinfo.small .ti-c b { font-size: 1.25em; }
+.tinfo.small .ti-dest, .tinfo.small .ti-clock, .tinfo.small .ti-rpm b { font-size: 0.9em; }
+.k-gps.tinfo { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 0 18px rgba(0, 0, 0, 0.8); }
+
+
+/* ==== Key movement ============================================================================ */
+/* Earlier rules lit or dimmed the rectangle behind a key. That is replaced here: the key's own
+   picture (.cap) is what changes, feathered at the edges so no outline of the touch area shows. */
+.k-hot, .k-hot.idle, .k-hot.down, .k-hot.nolamp.on, .k-hot.nolamp.on.down,
+#panel.unlit .k-hot, #panel.unlit .k-hot.idle, #panel.unlit .k-hot.on, #panel.unlit .k-hot.nolamp.on {
+  -webkit-backdrop-filter: none; backdrop-filter: none; background: none; box-shadow: none;
+}
+.cap {
+  position: absolute;
+  background-image: var(--skin);
+  background-repeat: no-repeat;
+  pointer-events: none;
+  visibility: hidden;                      /* at rest the picture underneath is the key */
+  transform-origin: 50% 50%;
+  transition: transform 110ms cubic-bezier(0.3, 1.4, 0.5, 1), filter 110ms;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent), linear-gradient(180deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent), linear-gradient(180deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+}
+.cap.rd, .cap.c-valve {
+  border-radius: 50%;
+  -webkit-mask-image: radial-gradient(closest-side, #000 91%, transparent 100%); mask-image: radial-gradient(closest-side, #000 91%, transparent 100%);
+  -webkit-mask-composite: source-over; mask-composite: add;
+}
+.k-hot.on .cap, .k-hot.down .cap, .k-hot.idle .cap, #panel.unlit .cap, .k-ign .cap { visibility: visible; }
+
+/* state of the lettering: off = no coloured glow; dash lights off = dark; on without a lamp = brighter */
+.k-hot.idle .cap { filter: none; }   /* a tinted feathered copy left a visible halo over the key */
+#panel.unlit .k-hot .cap { filter: brightness(0.5) saturate(0.5); }
+#panel.unlit .k-hot.idle .cap { filter: brightness(0.42) saturate(0.1); }
+#panel.unlit .k-hot.on .cap { filter: brightness(0.9); }
+.k-hot.nolamp.on .cap { filter: brightness(1.45) saturate(1.4); }
+
+/* rocker: tilts about its middle. On = top half pressed in; "less / down" keys press the bottom half */
+.k-hot.on .cap.c-rocker { transform: perspective(260px) rotateX(7deg); }
+.k-hot.down .cap.c-rocker { transform: perspective(260px) rotateX(10deg); filter: brightness(0.86); }
+.k-hot.down .cap.c-rocker.dn { transform: perspective(260px) rotateX(-10deg); }
+/* flat tile and round push button: sink straight in; a latched one stays slightly in */
+.k-hot.on .cap.c-tile { transform: scale(0.985); }
+.k-hot.down .cap.c-tile { transform: scale(0.955); filter: brightness(0.8); }
+.k-hot.on .cap.c-round { transform: scale(0.975); }
+.k-hot.down .cap.c-round { transform: scale(0.94); filter: brightness(0.8); }
+/* air valve: pulled out while applied, pushed in to release */
+/* A rigid metal/plastic knob: no spring-back overshoot (that read as soft rubber), a small straight
+   move and a brightness change only (a drop-shadow on the feathered copy blurred its edge). */
+.cap.c-valve { transition: transform 70ms ease-out, filter 70ms ease-out; }
+.k-hot.on .cap.c-valve { transform: scale(1.02); filter: brightness(1.06); }
+.k-hot.down .cap.c-valve { transform: scale(0.975); filter: brightness(0.82); }
+/* toggle lever: thrown to the other side */
+.cap.c-toggle { transition: transform 90ms; }
+.k-hot.on .cap.c-toggle { transform: scaleY(-1); }
+.k-hot.down .cap.c-toggle { filter: brightness(0.85); }
+/* small flat buttons (radio, status bar): they only light under the finger */
+.k-hot.down .cap.c-flat { filter: brightness(1.7); }
+.k-hot.on .cap.c-flat { filter: brightness(1.3); }
+
+/* ignition on a START rocker: the key's own lamp shows the stage */
+.k-ign.lampst { border-radius: 9% / 11%; }
+.k-ign.lampst .lamp { position: absolute; border-radius: 30% / 50%; background: #0b0c0d; box-shadow: 0 0 3px 2px rgba(9, 10, 11, 0.9); }
+.k-ign.lampst[data-s="1"] .lamp { background: #ffb02e; box-shadow: 0 0 5px 1px #ffb02e, 0 0 14px 3px rgba(255, 176, 46, 0.55); }
+.k-ign.lampst[data-s="2"] .lamp { background: #3dff7a; box-shadow: 0 0 5px 1px #3dff7a, 0 0 14px 3px rgba(61, 255, 122, 0.55); }
+.k-ign.lampst[data-s="0"] .cap { filter: saturate(0.16) brightness(0.9); }
+.k-ign.lampst[data-s="1"] .cap { transform: perspective(260px) rotateX(5deg); filter: sepia(1) saturate(2.2) hue-rotate(-12deg); }
+.k-ign.lampst[data-s="2"] .cap { transform: perspective(260px) rotateX(8deg); }
+.k-ign.lampst:active .cap { filter: brightness(0.82); }
+/* ignition on a rotary knob: the knob turns one step per stage */
+.k-ign.knobst .well { position: absolute; inset: 4%; border-radius: 50%; background: radial-gradient(closest-side, #050505 80%, #15161a); }
+.k-ign.knobst .cap { transition: transform 200ms cubic-bezier(0.3, 1.5, 0.5, 1); transform: rotate(-42deg); }
+.k-ign.knobst[data-s="1"] .cap { transform: rotate(0deg); }
+.k-ign.knobst[data-s="2"] .cap { transform: rotate(42deg); }
+@media (prefers-reduced-motion: reduce) { .cap { transition: none; } }
+
+/* staged START controls: round buttons and tiles sink instead of tilting */
+.k-ign.lampst[data-s="1"] .cap.c-round, .k-ign.lampst[data-s="1"] .cap.c-tile { transform: scale(0.985); }
+.k-ign.lampst[data-s="2"] .cap.c-round, .k-ign.lampst[data-s="2"] .cap.c-tile { transform: scale(0.97); }
+.k-ign.lampst.crank .cap { transform: scale(0.93); filter: brightness(0.8); }
+/* key barrel and rotary knob: ON and RUN share one position; START is held against the spring */
+.k-ign[data-s="2"] .ikey { transform: rotate(0deg); }
+.k-ign.crank .ikey { transform: rotate(50deg); }
+.k-ign.knobst[data-s="2"] .cap { transform: rotate(0deg); }
+.k-ign.knobst.crank .cap { transform: rotate(42deg); }
+/* two-way rocker (wipers): small marks for the two halves; pressing the lower half tilts it the other way */
+.k-hot .half { position: absolute; right: 7%; font: 600 0.6em/1 var(--font-legend); font-style: normal; color: rgba(255, 255, 255, 0.55); pointer-events: none; font-size: calc(var(--u) * 0.16); }
+.k-hot .half.up { top: 7%; } .k-hot .half.lo { bottom: 31%; }
+.k-hot.lo.down .cap.c-rocker { transform: perspective(260px) rotateX(-10deg); }
+.k-hot.lo.down .cap.c-tile, .k-hot.lo.down .cap.c-round { transform: scale(0.955) translateY(2%); }
+
+/* ---- Info screen: one look per panel (glow-up) ---------------------------------------------------
+   Same screen, tinted and shaped like the dashboard around it: glass sheen and scan lines on top,
+   an accent colour for the bar, the labels and a soft glow on the figures. */
+.k-gps.tinfo {
+  --acc: #4fc3ff; --bg1: #0c1218; --bg2: #06090c; --line: rgba(120, 200, 255, 0.2); --lbl: #8fb4cc; --cell: rgba(120, 190, 255, 0.07); --rad: 0.45em;
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--acc) 9%, var(--bg1)), var(--bg2) 70%);
+  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 0 24px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.k-gps.tinfo::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.085), transparent 34%), repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px);
+}
+.tinfo .ti-c { background: var(--cell); border-radius: var(--rad); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 14%, transparent); }
+.tinfo .ti-c span { color: var(--lbl); }
+.tinfo .ti-c b { text-shadow: 0 0 0.5em color-mix(in srgb, var(--acc) 40%, transparent); }
+.tinfo .ti-c.bad b { text-shadow: 0 0 0.5em rgba(255, 90, 79, 0.55); }
+.tinfo .ti-rpm i { background: color-mix(in srgb, var(--acc) 14%, rgba(255, 255, 255, 0.05)); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6); }
+.tinfo .ti-rpm u { background: linear-gradient(90deg, color-mix(in srgb, var(--acc) 55%, #000), var(--acc)); box-shadow: 0 0 0.6em color-mix(in srgb, var(--acc) 70%, transparent); }
+.tinfo .ti-rpm.red u { background: linear-gradient(90deg, #a33, #ff5a4f); box-shadow: 0 0 0.6em rgba(255, 90, 79, 0.7); }
+.tinfo .ti-dest { color: var(--lbl); }
+.tinfo .ti-clock { color: color-mix(in srgb, var(--acc) 35%, #e8eef4); }
+/* 01 long haul: navy glass, cold blue */
+.tinfo[data-theme="modern_us"] { --acc: #58c8ff; --bg1: #0b1420; --bg2: #05080d; --lbl: #8db6d4; }
+/* 02 fleet dash: graphite and ice, squared */
+.tinfo[data-theme="modern_eu"], .tinfo[data-theme="eu_frame"] { --acc: #9fdcff; --bg1: #12161c; --bg2: #07090c; --lbl: #98a8b8; --cell: rgba(255, 255, 255, 0.055); --line: rgba(255, 255, 255, 0.16); --rad: 0.2em; }
+/* Scania premium: blue LCD, dark steel */
+.tinfo[data-theme="scania_frame"] { --acc: #58b8ff; --bg1: #0c1018; --bg2: #060810; --lbl: #8ca4bc; --cell: rgba(88, 184, 255, 0.06); --line: rgba(88, 184, 255, 0.20); --rad: 0.25em; }
+/* 03 Brazilian: deep green */
+.tinfo[data-theme="modern_br"] { --acc: #3be68f; --bg1: #08140f; --bg2: #040907; --lbl: #7fb89c; --cell: rgba(60, 230, 140, 0.07); --line: rgba(60, 230, 140, 0.22); --rad: 0.6em; }
+/* 04 night console: amber on black */
+.tinfo[data-theme="modern_heavy"] { --acc: #ffb02e; --bg1: #150f06; --bg2: #070503; --lbl: #c09a5c; --cell: rgba(255, 176, 46, 0.075); --line: rgba(255, 176, 46, 0.24); --rad: 0.3em; }
+.tinfo[data-theme="modern_heavy"] .ti-c b { letter-spacing: 0.02em; }
+/* 05 rugged: industrial orange, flat plates with a marker edge */
+.tinfo[data-theme="modern_rugged"] { --acc: #ff8a1f; --bg1: #101010; --bg2: #070707; --lbl: #b3a28f; --cell: rgba(255, 255, 255, 0.05); --line: rgba(255, 138, 31, 0.28); --rad: 0.1em; }
+.tinfo[data-theme="modern_rugged"] .ti-c { box-shadow: inset 0.2em 0 0 var(--acc); padding-left: 0.8em; }
+.tinfo[data-theme="modern_rugged"] .ti-c span { font-weight: 700; letter-spacing: 0.1em; }
+.tinfo[data-theme="modern_rugged"] .ti-c b { font-weight: 800; }
+
+/* a sideways swipe on the panel changes panel: the browser must not claim that drag for itself */
+#stage { touch-action: none; }
+
+/* truck off: the readouts keep their dark backing but show nothing */
+.w.dead > *, .w.dead b, .w.dead small { opacity: 0; transition: opacity 350ms; }
+
+/* wipers OFF key: a plain button. No LED, only a very faint presence light, never lit. */
+.k-hot.plain .lamp { background: #0d0b09; box-shadow: 0 0 3px 0 rgba(255, 160, 70, 0.2); }
+.k-hot.plain.on .lamp { background: #0d0b09; box-shadow: 0 0 3px 0 rgba(255, 160, 70, 0.2); }
+.k-hot.plain .lamp::after { content: none; }
+
+/* ---- LED: soft, like a car's switch backlight ---------------------------------------------
+   off = a faint tint of the lamp colour (about 20 %), on = full colour with a small, tight glow. */
+.k-hot .lamp { background: color-mix(in srgb, var(--lamp) 16%, #0b0c0d); box-shadow: none; }
+.k-hot.on .lamp { background: var(--lamp); box-shadow: 0 0 3px 0 var(--lamp), 0 0 8px 1px color-mix(in srgb, var(--lamp) 38%, transparent); }
+.k-hot.on .lamp::after { background: rgba(255, 255, 255, 0.28); }
+.k-hot.plain .lamp, .k-hot.plain.on .lamp { background: #0d0b09; box-shadow: 0 0 3px 0 rgba(255, 160, 70, 0.2); }
+.k-ign.lampst .lamp { box-shadow: none; }
+.k-ign.lampst[data-s="1"] .lamp { box-shadow: 0 0 3px 0 #ffb02e, 0 0 8px 1px rgba(255, 176, 46, 0.38); }
+.k-ign.lampst[data-s="2"] .lamp { box-shadow: 0 0 3px 0 #3dff7a, 0 0 8px 1px rgba(61, 255, 122, 0.38); }
+
+/* engine key: a ring fills while the finger holds it for the full second */
+@property --hold { syntax: '<number>'; inherits: false; initial-value: 0; }
+.k-ign.holding::after {
+  content: ""; position: absolute; inset: 2%; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(#ff3b30 calc(var(--hold) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(closest-side, transparent 86%, #000 88%); mask: radial-gradient(closest-side, transparent 86%, #000 88%);
+  animation: holdfill 1s linear forwards;
+}
+@keyframes holdfill { to { --hold: 1; } }
+
+/* ---- One LED language for every key family (grid keys, rocker keys, extra keys) -------------- */
+.w .led, .rkey .led, .xkey .led { background: color-mix(in srgb, var(--lamp, #3dff7a) 16%, #0b0c0d); box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.9); }
+.w.on .led { background: var(--lamp); box-shadow: 0 0 3px 0 var(--lamp), 0 0 8px 1px color-mix(in srgb, var(--lamp) 38%, transparent); }
+.rkey.on .led, .xkey.on .led { background: var(--lamp, #3dff7a); box-shadow: 0 0 3px 0 var(--lamp, #3dff7a), 0 0 8px 1px color-mix(in srgb, var(--lamp, #3dff7a) 38%, transparent); }
+.w.on .ico { filter: drop-shadow(0 0 calc(var(--k) * 0.025) var(--lamp)); }
+.k-hot.holding::after { content: ""; position: absolute; left: 8%; right: 8%; bottom: 4%; height: 4px; border-radius: 2px; background: var(--lamp, #ff3b30); transform-origin: left; animation: holdbar 1s linear forwards; pointer-events: none; }
+@keyframes holdbar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* names hidden: the symbol stays, the lettering goes */
+#panel.hide-labels .lbl, #panel.hide-labels .xkey small, #panel.hide-labels .rkey small { display: none; }
+
+/* ---- Panel gallery: full-screen carousel -------------------------------------------------- */
+#gallery { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: rgba(8, 9, 11, 0.97); color: var(--ui-fg, #e8e6e1); }
+#gallery[hidden] { display: none; }
+#gallery header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top)); }
+#gallery header h2 { margin: 0; font-size: 18px; flex: 1 1 auto; }
+#gallery .gcount { color: var(--ui-dim, #9a978f); font-size: 13px; font-variant-numeric: tabular-nums; }
+.gtrack { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; gap: 18px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; padding: 8px 8vw 24px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.gtrack::-webkit-scrollbar { display: none; }
+.gcard { flex: none; scroll-snap-align: center; display: flex; flex-direction: column; gap: 8px; width: min(78vw, 640px); max-height: 100%; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.045); border: 1px solid rgba(255, 255, 255, 0.1); box-sizing: border-box; }
+.gcard.current { border-color: var(--ui-accent, #f2a23a); box-shadow: 0 0 0 1px var(--ui-accent, #f2a23a), 0 0 22px rgba(242, 162, 58, 0.22); }
+.gcard .gpic { width: 100%; max-height: 52vh; border-radius: 8px; overflow: hidden; background: #0c0d0f; display: flex; align-items: center; justify-content: center; min-height: 0; }
+.gcard .gpic img { width: 100%; height: 100%; object-fit: contain; display: block; -webkit-user-drag: none; user-select: none; }
+.gcard .gpic.plus { aspect-ratio: 1.6; font-size: 64px; color: var(--ui-dim, #9a978f); }
+.gcard h3 { margin: 4px 0 0; font-size: 17px; }
+.gcard p { margin: 0; color: var(--ui-dim, #9a978f); font-size: 13px; line-height: 1.35; }
+.gcard .btn { align-self: stretch; }
+.gnav { position: absolute; top: 50%; translate: 0 -50%; width: 44px; height: 64px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.08); color: #fff; font-size: 34px; line-height: 1; cursor: pointer; }
+.gnav.prev { left: 6px; } .gnav.next { right: 6px; }
+@media (pointer: coarse) { .gnav { display: none; } }
+@media (orientation: landscape) and (max-height: 560px) { .gcard { width: min(52vw, 520px); } .gcard .gpic { max-height: 46vh; } }
+
+/* ---- Stickers of your own -------------------------------------------------------------------- */
+.k-deco { position: absolute; z-index: 3; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65)) sepia(0.18) brightness(0.93); }
+.k-deco svg { display: block; width: 100%; height: auto; overflow: visible; }
+#panel.deco .k-deco { pointer-events: auto; cursor: grab; touch-action: none; }
+#panel.deco .k-deco.sel { outline: 2px dashed var(--ui-accent, #f2a23a); outline-offset: 3px; }
+#panel.deco .w { pointer-events: none; }
+#decobar { position: fixed; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); translate: -50% 0; z-index: 30; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: calc(100vw - 24px); padding: 8px; border-radius: 12px; background: rgba(14, 15, 17, 0.92); border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6); }
+#decobar[hidden] { display: none; }
+.stickergrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.stkpick { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border-radius: 10px; border: 1px solid var(--ui-soft-line, rgba(255, 255, 255, 0.12)); background: rgba(255, 255, 255, 0.045); color: inherit; cursor: pointer; font: inherit; }
+.stkpick:active { filter: brightness(0.85); }
+.stkpick .stkart { width: 100%; height: 76px; display: flex; align-items: center; justify-content: center; }
+.stkpick .stkart svg { max-width: 100%; max-height: 100%; width: auto; height: auto; }
+.stkpick small { color: var(--ui-dim, #9a978f); font-size: 12px; text-align: center; }
+#decobar .btn { padding: 9px 10px; min-width: 40px; font-size: 14px; }
+@media (max-width: 480px) { #decobar { gap: 4px; padding: 6px; } #decobar .btn { padding: 8px 9px; min-width: 36px; font-size: 13px; } }
+
+.mine-add { display: flex; align-items: center; justify-content: center; cursor: pointer; text-align: center; }
+.stkwrap { position: relative; }
+.stkwrap .stkpick { width: 100%; height: 100%; box-sizing: border-box; }
+.stkdel { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; }
+.k-deco img { display: block; width: 100%; height: auto; pointer-events: none; -webkit-user-drag: none; }
+.stkart img { max-width: 100%; max-height: 100%; }
+
+/* blurred copy of the art behind a centred panel: the screen never shows a bare gap */
+#stage.skin::before {
+  content: ""; position: absolute; inset: -20px; z-index: 0;
+  background: var(--amb) center / cover no-repeat;
+  filter: blur(22px) brightness(0.55) saturate(1.1);
+  pointer-events: none;
+}
+#stage.skin > #panel, #stage.skin > #extras { z-index: 1; }
+
+/* ---- Keys drawn by the app inside the empty slots of a frame picture ---------------------------- */
+#panel.skin .w.k-kbd { padding: 0; pointer-events: auto; cursor: pointer; }
+#panel.skin .w.k-kbd .cap { width: 100%; height: 100%; }
+#panel.skin .w.k-kbd.mini .lbl, #panel.skin .w.k-kbd.mini .led { display: none; }
+/* the generic ".cap" rule above belongs to painted keys (it shows the picture's own cap): an app-drawn cap is always visible */
+#panel.skin .k-kbd .cap { visibility: visible; inset: 0; -webkit-mask-image: none; mask-image: none; }
+#panel.skin .w.k-kbd.mini[data-id^="t"] .cap { border:0; background:transparent; box-shadow:none; color:var(--print); }
+#panel.skin .w.k-kbd.mini[data-id^="t"] .ico { width:58%; height:58%; }
+#panel.skin .k-plate[data-id="keypad_backdrop"] { pointer-events:none; }
+#panel.skin .k-plate[data-id="keypad_backdrop"] .cap {
+  border:1px solid rgba(105,129,145,.18); border-radius:8px;
+  background:linear-gradient(180deg,rgba(13,18,23,.94),rgba(7,10,13,.96));
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.035),inset 0 -4px 10px rgba(0,0,0,.55);
+}
+#panel.skin .k-plate[data-id="keypad_backdrop"] .cap::after { display:none; }
+
+/* ---- Wide information screen ('hero'): speed | gear | four values, rpm bar underneath ------------------ */
+.k-gps.tinfo.hero { gap: 0.3em; padding: 0.4em 0.8em 0.45em; }
+.tinfo.hero .ti-head { font-size: 1em; }
+.tinfo.hero .th-main { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: 1.5fr 0.5fr 2fr; gap: 0.5em; align-items: stretch; }
+.tinfo.hero .th-speed, .tinfo.hero .th-gear { display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 0;
+  background: var(--cell); border-radius: var(--rad); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 14%, transparent); }
+.tinfo.hero .th-speed b { font-size: 3.6em; line-height: 0.92; font-weight: 700; font-variant-numeric: tabular-nums; text-shadow: 0 0 0.4em color-mix(in srgb, var(--acc) 45%, transparent); }
+.tinfo.hero .th-speed.bad b { color: #ff5a4f; }
+.tinfo.hero .th-speed small, .tinfo.hero .th-gear small { font-size: 0.8em; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lbl); }
+.tinfo.hero .th-gear b { font-size: 2.5em; line-height: 1; font-weight: 700; }
+.tinfo.hero .th-stats { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 0.4em; min-width: 0; }
+.tinfo.hero .th-stats .ti-c { padding: 0.1em 0.6em; }
+.tinfo.hero .th-stats .ti-c b { font-size: 1.4em; }
+.tinfo.hero .ti-rpm { font-size: 0.9em; }
+.tinfo.hero .ti-rpm b { min-width: 4.6em; }
+
+.tinfo.hero .th-main { grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+.tinfo.hero .th-stats { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); overflow: hidden; }
+.tinfo.hero .th-stats .ti-c { overflow: hidden; line-height: 1.05; }
+.tinfo.hero .th-speed b { font-size: 2.9em; }
+
+/* ---- Keys drawn inside a frame: larger pictogram and name than on the grid pages (the slot is roomy) ---- */
+#panel.skin .k-kbd .ico { width: calc(var(--k) * 0.32); height: calc(var(--k) * 0.32); }
+#panel.skin .k-kbd .lbl { font-size: calc(var(--k) * 0.132); }
+#panel.skin .k-kbd .lbl.long { font-size: calc(var(--k) * 0.17); }
+#panel.skin .k-kbd .lbl.xlong { font-size: calc(var(--k) * 0.108); }
+#panel.skin .k-kbd:not(.wide) .lbl.two { font-size: calc(var(--k) * 0.10); line-height: 0.9; }
+#panel.skin .k-kbd.hazard .tri { width: 70%; height: 70%; }
+/* low, wide slot: pictogram on the left, name on the right, lamp as a bar along the bottom */
+#panel.skin .k-kbd.wide .cap { flex-direction: row; gap: calc(var(--k) * 0.1); padding: 0 calc(var(--k) * 0.1); }
+#panel.skin .k-kbd.wide .ico { width: calc(var(--k) * 0.42); height: calc(var(--k) * 0.42); }
+#panel.skin .k-kbd.wide .lbl { font-size: calc(var(--k) * 0.19); text-align: left; line-height: 1.04; max-width: none; min-width: 0; flex: 0 1 auto; overflow: visible; }
+#panel.skin .k-kbd.wide .lbl.long { font-size: calc(var(--k) * 0.15); }
+#panel.skin .k-kbd.wide .lbl.xlong { font-size: calc(var(--k) * 0.12); }
+#panel.skin .k-kbd.wide .led { position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); width: 34%; }
+
+/* ---- Full screen: no top bar, panel edge to edge, one small dim button to leave ------------------------ */
+#app.fs #bar { display: none; }
+#app.fs #stage { padding: 0; }
+#fsExit { position: fixed; bottom: max(6px, env(safe-area-inset-bottom, 0px)); right: max(6px, env(safe-area-inset-right, 0px)); z-index: 30;
+  display: flex; align-items: center; gap: 5px;
+  height: 26px; padding: 4px 6px; border: 0; border-radius: 7px; background: rgba(0, 0, 0, 0.35); color: #cfd6dc; opacity: 0.45; cursor: pointer; }
+#fsExit svg { display: block; width: 18px; height: 18px; flex-shrink: 0; }
+#fsExit:active { opacity: 0.9; }
+#fsExit .fs-led { width: 6px; height: 6px; border-radius: 50%; background: var(--ui-dim); flex-shrink: 0; }
+#fsExit .fs-led[data-state="ok"] { background: var(--lamp-green); box-shadow: 0 0 4px var(--lamp-green); }
+#fsExit .fs-led[data-state="pin"] { background: var(--lamp-amber); }
+#fsExit .fs-led[data-state="lost"] { background: var(--lamp-red); }
+/* floating fullscreen button (bottom-right, outside fullscreen) */
+#btnCornerFs { position: fixed; bottom: max(6px, env(safe-area-inset-bottom, 0px)); right: max(6px, env(safe-area-inset-right, 0px)); z-index: 25;
+  width: 28px; height: 28px; padding: 5px; border: 0; border-radius: 7px; background: rgba(0, 0, 0, 0.25); color: #8a9199; opacity: 0.5; cursor: pointer; }
+#btnCornerFs svg { display: block; width: 100%; height: 100%; }
+#btnCornerFs:active { opacity: 0.9; }
+#app.fs #btnCornerFs { display: none; }
+
+/* ---- Wipers: three lamp segments, one per speed ------------------------------------------------------- */
+#panel.skin .k-kbd[data-wip] .led { width: calc(var(--k) * 0.46); --d: #0b0c0d; --a: var(--d); --b: var(--d); --c: var(--d);
+  background: linear-gradient(90deg, var(--a) 0 29%, transparent 29% 35.5%, var(--b) 35.5% 64.5%, transparent 64.5% 71%, var(--c) 71% 100%); box-shadow: none; }
+#panel.skin .k-kbd.wide[data-wip] .led { width: 40%; }
+#panel.skin .k-kbd[data-wip="1"] .led { --a: var(--lamp); }
+#panel.skin .k-kbd[data-wip="2"] .led { --a: var(--lamp); --b: var(--lamp); }
+#panel.skin .k-kbd[data-wip="3"] .led { --a: var(--lamp); --b: var(--lamp); --c: var(--lamp); }
+#panel.skin .k-kbd[data-wip]:not([data-wip="0"]) .led { filter: drop-shadow(0 0 calc(var(--k) * 0.05) var(--lamp)); }
+
+.tinfo.hero.tiny { padding: 0.35em 0.7em 0.4em; gap: 0.25em; }
+.tinfo.hero.tiny .ti-c span, .tinfo.hero.tiny .th-gear small { display: none; }
+.tinfo.hero.tiny .th-speed { flex-direction: row; gap: 0.3em; align-items: baseline; }
+.tinfo.hero.tiny .th-speed b { font-size: 2.3em; }
+.tinfo.hero.tiny .th-gear b { font-size: 1.8em; }
+.tinfo.hero.tiny .th-stats .ti-c b { font-size: 1.15em; }
+
+/* ==== Old Soviet panel: real parts over an empty enamel plate ========================================== */
+/* dials */
+#panel.skin .k-sgauge { display: grid; place-items: center; pointer-events: none; }
+.k-sgauge .sg { height: 100%; max-width: 100%; aspect-ratio: 1; background: url("skins/sov/gauge.png") center / contain no-repeat; filter: drop-shadow(0 3px 4px rgba(40, 25, 5, 0.45)); position: relative; --glow: 0; }
+.k-sgauge .sg::after {
+  content: ''; position: absolute; inset: 8%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse 90% 55% at 50% 82%, rgba(255, 165, 45, 0.52) 0%, rgba(255, 140, 30, 0.22) 30%, rgba(255, 120, 20, 0.06) 55%, transparent 70%);
+  opacity: var(--glow, 0); transition: opacity 180ms linear;
+  mix-blend-mode: screen;
+  overflow: hidden;
+}
+.k-sgauge svg { display: block; width: 100%; height: 100%; }
+.k-sgauge .nums text { fill: #e9e6da; font: 600 11px var(--font-legend); text-anchor: middle; }
+.k-sgauge.small .nums text { font-size: 14px; }
+.k-sgauge .unit { fill: #b9b5a6; font: 600 7.5px var(--font-legend); text-anchor: middle; letter-spacing: 0.08em; }
+.k-sgauge.small .unit { font-size: 10px; }
+.k-sgauge .needle { transform-origin: 100px 100px; transition: transform 220ms linear; }
+.k-sgauge .needle line { stroke: #ff7a1a; stroke-width: 2.6; stroke-linecap: round; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8)); }
+.k-sgauge .hub { fill: #1a1a1a; stroke: #7c7f82; stroke-width: 1.4; }
+.k-sgauge .hub2 { fill: #b8bcc0; }
+
+/* switches, buttons, lamps */
+#panel.skin .k-spr { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0; pointer-events: auto; cursor: pointer; }
+#panel.skin .k-spr.passive { pointer-events: none; cursor: default; }
+.k-spr .pic { position: relative; flex: none; display: block; height: var(--ph); aspect-ratio: var(--pa); max-width: 100%; background: center / contain no-repeat; transition: transform 70ms, filter 70ms; }
+.k-spr.s-sq .pic { background-image: url("skins/sov/sq_off.png"); }
+.k-spr.s-sq.on .pic { background-image: url("skins/sov/sq_on.png"); }
+.k-spr.s-tog .pic { background-image: url("skins/sov/tog.png"); }
+.k-spr.s-tog.on .pic { transform: scaleY(-1); }
+.k-spr.s-push .pic { background-image: url("skins/sov/push.png"); }
+.k-spr.s-key .pic { background-image: url("skins/sov/key.png"); transition: transform 180ms; }
+.k-spr.s-key.on .pic { transform: rotate(58deg); }
+.k-spr.s-lamp.c-r .pic { background-image: url("skins/sov/lamp_r.png"); --glow: rgba(255, 40, 30, 0.85); }
+.k-spr.s-lamp.c-g .pic { background-image: url("skins/sov/lamp_g.png"); --glow: rgba(40, 255, 130, 0.8); }
+.k-spr.s-lamp .pic { filter: brightness(0.55) saturate(0.7); }
+.k-spr.s-lamp.on .pic { filter: brightness(1.75) saturate(1.7) drop-shadow(0 0 calc(var(--k) * 0.16) var(--glow)); }
+.k-spr.down.s-sq .pic, .k-spr.down.s-push .pic { transform: scale(0.94); filter: brightness(0.82); }
+.k-spr.down.s-key .pic { filter: brightness(0.85); }
+/* pictogram printed on the square key */
+.k-spr.s-sq .ico { position: absolute; inset: 27%; width: auto; height: auto; color: rgba(58, 36, 12, 0.78); }
+.k-spr.s-sq.on .ico { color: rgba(70, 30, 0, 0.9); }
+.k-spr .ico svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* name tag: black engraved plate, cream letters */
+.k-spr .tag { flex: none; margin-top: calc(var(--k) * 0.03); max-width: 100%; box-sizing: border-box; padding: 0.22em 0.6em 0.2em; overflow: hidden; white-space: nowrap; text-overflow: clip;
+  font: 700 calc(var(--k) * 0.125) / 1 var(--font-legend); letter-spacing: 0.06em; text-transform: uppercase; color: #ebe2c8; background: linear-gradient(180deg, #24221e, #151411);
+  border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 1px 2px rgba(30, 18, 4, 0.6); }
+#panel.hide-labels .k-spr .tag { visibility: hidden; }
+
+/* green segment display */
+.k-gps.tinfo.vfd { display: grid; grid-template-rows: 1fr auto; gap: 0; padding: 4% 3% 0; cursor: pointer; border-radius: 6px;
+  background: linear-gradient(180deg, #2a2b2c, #111212 18%, #0b0b0b); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px #000, 0 3px 6px rgba(40, 25, 5, 0.55); }
+.k-gps.tinfo.vfd::after { display: none; }
+.vfd .vf-glass, .vfd .vf-cap { display: grid; grid-template-columns: 3fr 2fr 3fr 4.4fr; column-gap: 4%; }
+.vfd .vf-glass { min-height: 0; padding: 5% 4%; border-radius: 3px; transform: none;
+  background: radial-gradient(120% 140% at 30% 0%, #0f3a33, #072019 55%, #04130f); box-shadow: inset 0 0 0 1px rgba(120, 255, 220, 0.12), inset 0 0 14px rgba(0, 0, 0, 0.9); }
+.vfd .vf-d { display: flex; justify-content: center; gap: 4%; min-width: 0; min-height: 0; transform: skewX(-5deg); }
+.vfd .vf-d svg { flex: 1 1 0; min-width: 0; height: 100%; overflow: visible; }
+.vfd .vf-d svg.col { flex: 0.34 1 0; }
+.vfd .vf-d path { fill: none; stroke: rgba(90, 255, 205, 0.07); stroke-width: 1.7; stroke-linecap: round; }
+.vfd .vf-d path.on { stroke: #7dfbd6; filter: drop-shadow(0 0 1.2px #38f2bd); }
+.vfd .vf-d circle { fill: #7dfbd6; filter: drop-shadow(0 0 1.2px #38f2bd); }
+.vfd .vf-cap { padding: 0 4%; align-items: center; height: 1.9em; font: 700 0.62em / 1 var(--font-legend); letter-spacing: 0.12em; color: #e2902c; text-align: center; white-space: nowrap; }
+
+/* fixes after the first look */
+#panel.skin .k-sgauge { display: block; }
+.k-sgauge .sg { position: absolute; inset: 0; margin: auto; height: 100%; width: auto; aspect-ratio: 1; max-width: 100%; max-height: 100%; }
+.k-sgauge .unit { font-size: 7px; }
+.k-sgauge.small .unit { font-size: 9px; }
+.k-spr.s-lamp .pic { filter: brightness(0.8) saturate(0.85); }
+.k-gps.tinfo.vfd { display: flex; flex-direction: column; padding: 0.55em 0.6em 0; overflow: hidden; }
+.vfd .vf-glass { flex: 1 1 0; min-height: 0; padding: 0.4em 0.7em; align-items: stretch; }
+.vfd .vf-d { height: 100%; align-items: stretch; gap: 0.12em; }
+.vfd .vf-d svg { flex: 0 1 auto; height: 100%; width: auto; min-width: 0; }
+.vfd .vf-d svg.col { flex: 0 1 auto; }
+.vfd .vf-cap { flex: none; height: 1.25em; font-size: 0.5em; padding: 0 1.4em; }
+
+/* square keys: no lamp inside. Free / pressed, and pushed in while latched on */
+.k-spr.s-sq.on .pic { background-image: url("skins/sov/sq_off.png"); }
+.k-spr.s-sq.on .ico { color: rgba(58, 36, 12, 0.78); }
+.k-spr.s-sq.in .pic { transform: scale(0.95) translateY(2%); filter: brightness(0.86); }
+.k-spr.s-sq.down .pic { transform: scale(0.93) translateY(3%); filter: brightness(0.8); }
+/* tell-tale lamps in other colours: the red lamp of the photo, turned to blue or amber */
+.k-spr.s-lamp.c-b .pic { background-image: url("skins/sov/lamp_b.png"); --glow: rgba(70, 130, 255, 0.9); }
+.k-spr.s-lamp.c-a .pic { background-image: url("skins/sov/lamp_a.png"); --glow: rgba(255, 170, 40, 0.9); }
+.k-spr.s-lamp .pic { --hue: hue-rotate(0deg); filter: var(--hue) brightness(0.8) saturate(0.85); }
+.k-spr.s-lamp.on .pic { filter: var(--hue) brightness(1.75) saturate(1.7) drop-shadow(0 0 calc(var(--k) * 0.16) var(--glow)); }
+/* engine lamp: brightness set many times a second from the engine speed (--lv, 0 to 1.1) */
+.k-spr.s-lamp.engl .pic { transition: none; }
+.k-spr.s-lamp.engl.lit .pic { filter: brightness(calc(0.8 + 1.15 * var(--lv))) saturate(calc(0.85 + 1 * var(--lv))) drop-shadow(0 0 calc(var(--k) * 0.2 * var(--lv)) rgba(40, 255, 130, calc(0.9 * var(--lv)))); }
+#panel.skin .k-spr.s-sq .ico, #panel.skin .k-spr.s-sq.on .ico { color: rgba(58, 36, 12, 0.78); filter: none; }
+
+/* ---- Lamps, second pass: only the glass lens lights up. The lens is its own layer, cut at its edge;
+   the metal ring underneath is never filtered. ---------------------------------------------------- */
+#panel.skin .k-spr.s-lamp .pic, #panel.skin .k-spr.s-lamp.on .pic, #panel.skin .k-spr.s-lamp.engl.lit .pic { filter: none; }
+.k-spr.s-lamp .pic::after { content: ""; position: absolute; inset: 0; background: center / contain no-repeat; filter: brightness(0.62) saturate(0.8); }
+.k-spr.s-lamp.c-r .pic::after { background-image: url("skins/sov/lamp_r_lens.png"); }
+.k-spr.s-lamp.c-g .pic::after { background-image: url("skins/sov/lamp_g_lens.png"); }
+.k-spr.s-lamp.c-b .pic::after { background-image: url("skins/sov/lamp_b_lens.png"); }
+.k-spr.s-lamp.c-a .pic::after { background-image: url("skins/sov/lamp_a_lens.png"); }
+.k-spr.s-lamp.on .pic::after { filter: brightness(1.95) saturate(1.8) drop-shadow(0 0 calc(var(--k) * 0.1) var(--glow)); }
+.k-spr.s-lamp.engl.lit .pic::after { filter: brightness(calc(0.62 + 1.4 * var(--lv))) saturate(calc(0.8 + 1.1 * var(--lv))) drop-shadow(0 0 calc(var(--k) * 0.12 * var(--lv)) rgba(40, 255, 130, calc(0.9 * var(--lv)))); }
+/* square keys never change with the state, only with the finger (and stay in while latched) */
+#panel.skin .k-spr.s-sq.on .pic, #panel.skin .k-spr.s-sq.idle .pic { background-image: url("skins/sov/sq_off.png"); }
+/* hazard triangle on the square key: its glyph fills the whole icon box (the others leave a margin) and a triangle's weight sits low, so it read as too big and off-centre. Shrunk to the size of its neighbours and lifted to the optical centre of the key face. */
+#panel.skin .k-spr.s-sq .ico.i-hazard { transform: translate(-2%, -5%) scale(0.84); }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Dark cabin mode: everything dark except the instrument light sources.
+   The panel looks like you're sitting in a truck cabin at night.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════  DARK CABIN MODE  ═══════════════════════
+   The night look is a light map drawn by the app (see lmDraw in app.js): a canvas multiplied
+   over the panel (ambient + every light source with its spill) and a faint additive bloom.
+   Nothing here dims elements one by one any more.
+   ════════════════════════════════════════════════════════════════ */
+#panel > canvas.lightmap, #panel > canvas.lightbloom {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; border-radius: inherit;
+}
+#panel > canvas.lightmap { z-index: 7; mix-blend-mode: multiply; }
+#panel > canvas.lightbloom { z-index: 8; mix-blend-mode: screen; }
+
+/* screen brightness (menu: Display brightness; auto dims with the cabin like a real dash) */
+#panel .k-gps.tinfo, #panel .k-rtext, #panel .k-live, #panel .vf-glass, #panel .w.display, #panel .w.radio {
+  filter: brightness(var(--disp-bright, 1));
+}
+
+/* extras bar sits outside the panel, so it is dimmed here */
+#panel.cabin-dark ~ #extras { background: rgba(6, 6, 8, calc(0.3 + 0.65 * var(--cabin, 0))); }
+#panel.cabin-dark ~ #extras .xkey { opacity: calc(1 - 0.6 * var(--cabin, 0)); }
+#panel.cabin-dark ~ #extras .xgroup h4 { opacity: calc(1 - 0.6 * var(--cabin, 0)); }, 170, 50, calc(0.25 * var(--glow, 0))))
+    drop-shadow(0 0 calc(40px * var(--glow, 0)) rgba(255, 140, 30, calc(0.08 * var(--glow, 0))));
+}
+
+/* Modern skin gauges: subtle cool bloom */
+#panel.cabin-dark .k-gauge {
+  filter: drop-shadow(0 0 12px rgba(200, 220, 240, 0.08));
+}
+
+/* Non-skin display widgets */
+#panel.cabin-dark .display .lcd {
+  box-shadow:
+    0 0 14px 4px rgba(100, 160, 220, 0.1),
+    0 0 30px 8px rgba(100, 160, 220, 0.04);
+}
+
+/* ---- Extras bar (bottom toolbar) ---- */
+#panel.cabin-dark ~ #extras { background: rgba(6, 6, 8, 0.94); }
+#panel.cabin-dark ~ #extras .xkey { color: #252830; }
+#panel.cabin-dark ~ #extras .xgroup h4 { color: #1a1d22; }
+
+/* ---- Stickers: dim but not invisible ---- */
+#panel.cabin-dark .k-sticker { opacity: 0.14; }
+
+/* ---- Edit mode: restore full visibility for layout editing ---- */
+#panel.cabin-dark.edit { background-blend-mode: normal !important; background-color: #080808 !important; }
+#panel.cabin-dark.edit .k-spr .pic { filter: none !important; }
+#panel.cabin-dark.edit .k-spr .tag { opacity: 1; }
+#panel.cabin-dark.edit .cap { filter: none; }
+
+
+/* ---- radio screen fit ---- */
+.k-rtext > .freight, .k-rtext > small, .k-rtext > b, .k-rtext > .rt-keys { flex-shrink: 0; }
+.k-rtext.rt-wide { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center; column-gap: 3%; }
+.k-rtext.rt-wide > .freight, .k-rtext.rt-wide > small, .k-rtext.rt-wide > b { grid-column: 1; min-width: 0; display: block; }
+.k-rtext.rt-wide > .rt-keys { grid-column: 2; grid-row: 1 / span 3; align-self: center; margin-top: 0; gap: 0.5em; }
+
+/* ---- truck info screen: value cells read label | value on one line, so they fit the low strip ---- */
+.tinfo.hero .th-stats .ti-c { flex-direction: row; align-items: center; justify-content: space-between; gap: 0.45em; padding: 0 0.55em; }
+.tinfo.hero .th-stats .ti-c span { flex: 0 1 auto; min-width: 0; font-size: 0.64em; letter-spacing: 0.04em; line-height: 1; }
+.tinfo.hero .th-stats .ti-c b { flex: none; font-size: 1.2em; line-height: 1; }
+/* fuel / range column carries the longest values ("1480 km"): give it the extra width */
+.tinfo.hero .th-stats { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+
+/* ==== Compound gauge (cgauge) — Scania S-series speedometer & tachometer ==== */
+.k-cgauge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+.k-cgauge .cg-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* SVG styling — dark face, chrome bezel, needle */
+.cg-svg .cg-face { fill: url(#cgFace); }
+.cg-svg .cg-bezel { fill: none; stroke: url(#cgBezel); stroke-width: 3; }
+.cg-svg .cg-band-eco { fill: #1a6bc4; opacity: 0.55; }
+.cg-svg .cg-band-red { fill: #cc2020; opacity: 0.55; }
+.cg-svg .cg-tick-major { stroke: #ccc; stroke-width: 2; stroke-linecap: round; }
+.cg-svg .cg-tick-minor { stroke: #666; stroke-width: 1; stroke-linecap: round; }
+.cg-svg .cg-number { fill: #d0d0d0; font-size: 10px; text-anchor: middle; dominant-baseline: central; font-family: 'Arial Narrow', Arial, sans-serif; font-weight: bold; }
+.cg-svg .cg-unit { fill: #888; font-size: 7px; text-anchor: middle; font-family: Arial, sans-serif; }
+.cg-svg .cg-needle { fill: #e02020; }
+.cg-svg .cg-hub { fill: #222; stroke: #555; stroke-width: 1; }
+
+/* Digital readout overlay — centered on the gauge face */
+.cg-digital {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: #e8e8e8;
+  font-family: 'Arial Narrow', Arial, sans-serif;
+  text-shadow: 0 0 6px rgba(100, 180, 255, 0.3);
+}
+
+/* Speedo digital: big speed number + unit, odo, trip, city, fuel bar */
+.cg-speedo-dig {
+  top: 42%;
+  left: 25%;
+  width: 50%;
+  height: 36%;
+  gap: 1%;
+}
+.cg-speedo-dig .cg-speed {
+  font-size: min(3.2vw, 28px);
+  font-weight: bold;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(100, 200, 255, 0.5);
+}
+.cg-speedo-dig .cg-speed-unit {
+  font-size: min(1.3vw, 11px);
+  color: #aaa;
+  letter-spacing: 0.05em;
+  margin-top: -2%;
+}
+.cg-speedo-dig .cg-odo {
+  font-size: min(1.3vw, 11px);
+  color: #bbb;
+  letter-spacing: 0.02em;
+}
+.cg-speedo-dig .cg-trip {
+  font-size: min(1.1vw, 9px);
+  color: #888;
+}
+.cg-speedo-dig .cg-city {
+  font-size: min(1.1vw, 9px);
+  color: #6ab4ff;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Fuel bar at bottom of speedo — E | [===fill===] | F */
+.cg-fuelbar {
+  width: 80%;
+  display: flex;
+  align-items: center;
+  gap: 4%;
+  margin-top: 2%;
+}
+.cg-fuelbar-e, .cg-fuelbar-f {
+  font-size: min(0.9vw, 7px);
+  color: #666;
+  font-style: normal;
+  font-weight: bold;
+}
+.cg-fuelbar-track {
+  flex: 1 1 0;
+  height: min(0.7vw, 5px);
+  min-height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.cg-fuelbar-fill {
+  height: 100%;
+  background: #2a8844;
+  border-radius: 1px;
+  transition: width 0.4s ease;
+}
+
+/* Tacho digital: day, clock, temps, rest, indicators */
+.cg-tacho-dig {
+  top: 38%;
+  left: 22%;
+  width: 56%;
+  height: 40%;
+  gap: 1%;
+}
+.cg-tacho-dig .cg-day {
+  font-size: min(1.2vw, 10px);
+  color: #aaa;
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+}
+.cg-tacho-dig .cg-clock {
+  font-size: min(3.2vw, 28px);
+  font-weight: bold;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(100, 200, 255, 0.5);
+  letter-spacing: 0.04em;
+}
+.cg-tacho-dig .cg-temp1,
+.cg-tacho-dig .cg-temp2 {
+  font-size: min(1.3vw, 11px);
+  color: #bbb;
+}
+.cg-tacho-dig .cg-rest {
+  font-size: min(1.1vw, 9px);
+  color: #e90;
+}
+
+/* LNHE indicator toggles — row of 4 letters at bottom of tacho */
+.cg-indicators {
+  display: flex;
+  gap: 0.3em;
+  font-size: min(1.1vw, 9px);
+  letter-spacing: 0.08em;
+  color: #444;
+}
+.cg-indicators span {
+  transition: color 0.2s;
+}
+.cg-indicators span.on {
+  color: #4e4;
+  text-shadow: 0 0 4px rgba(80, 230, 80, 0.7);
+}
+
+/* Dead state (ignition off) — dim everything */
+.k-cgauge.dead .cg-digital { opacity: 0.08; }
+.k-cgauge.dead .cg-needle { opacity: 0.2; }
+
+/* ==== Scania OBC — multi-screen centre display ==== */
+.scania-obc {
+  display: flex;
+  flex-direction: column;
+  padding: 4% 5%;
+  font-family: 'Arial Narrow', Arial, sans-serif;
+  color: #ddd;
+  gap: 3%;
+}
+.scania-obc.dead { opacity: 0.08; }
+
+/* Tab bar — row of small icons like ETS2 */
+.sc-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 6%;
+  flex: 0 0 auto;
+}
+.sc-tab {
+  width: 12%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #556;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.2s;
+  border-radius: 3px;
+}
+.sc-tab svg {
+  width: 70%;
+  height: 70%;
+}
+.sc-tab.active {
+  color: #4ae04a;
+  background: rgba(74, 224, 74, 0.08);
+}
+
+/* Title below tabs */
+.sc-title {
+  text-align: center;
+  font-size: min(2vw, 14px);
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 0.05em;
+  flex: 0 0 auto;
+}
+
+/* Screen container */
+.sc-body {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+.sc-screen {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8%;
+  height: 100%;
+  width: 100%;
+}
+.sc-screen.active { display: flex; }
+
+/* Generic row: label on left, value on right */
+.sc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 85%;
+  gap: 0.5em;
+}
+.sc-lbl {
+  font-size: min(1.5vw, 12px);
+  color: #889;
+  letter-spacing: 0.06em;
+}
+.sc-val {
+  font-size: min(2.2vw, 18px);
+  font-weight: bold;
+  color: #4ae04a;
+  text-shadow: 0 0 6px rgba(74, 224, 74, 0.3);
+  text-align: right;
+}
+
+/* Screen 0: Cruise Control */
+.sc-cruise { align-items: center; }
+.sc-cruise-speed {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3em;
+}
+.sc-cs-val {
+  font-size: min(5vw, 40px);
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(100, 200, 255, 0.4);
+  line-height: 1;
+}
+.sc-cruise-info {
+  display: flex;
+  gap: 1.5em;
+  font-size: min(1.6vw, 13px);
+  color: #aab;
+}
+.sc-ci-gear { color: #4ae04a; font-weight: bold; }
+.sc-cruise-dest {
+  font-size: min(1.3vw, 11px);
+  color: #6ab4ff;
+  text-align: center;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Screen 4: Pressure — horizontal bar graphs */
+.sc-press { gap: 10%; }
+.sc-press-row {
+  display: flex;
+  align-items: center;
+  width: 85%;
+  gap: 5%;
+}
+.sc-press-ico {
+  font-size: min(1.8vw, 14px);
+  color: #889;
+  flex: 0 0 auto;
+}
+.sc-press-bar {
+  flex: 1 1 0;
+  height: min(1.6vw, 12px);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.sc-pb-fill {
+  display: block;
+  height: 100%;
+  background: #4ae04a;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 4px rgba(74, 224, 74, 0.4);
+}
+.sc-pb-fill.low { background: #e44; box-shadow: 0 0 4px rgba(230, 60, 60, 0.5); }
+.sc-press-scale {
+  display: flex;
+  justify-content: space-between;
+  width: 75%;
+  margin-left: 10%;
+  font-size: min(1vw, 8px);
+  color: #667;
+}
+
+/* Screen 5: Navigation */
+.sc-nav { align-items: flex-start; padding: 5%; gap: 6%; }
+.sc-nav-dest { font-size: min(1.6vw, 13px); color: #ddd; }
+.sc-nav-dest b { color: #6ab4ff; font-weight: normal; }
+.sc-nav-dist { font-size: min(2.5vw, 20px); font-weight: bold; color: #4ae04a; text-shadow: 0 0 6px rgba(74, 224, 74, 0.3); }
+.sc-nav-eta { font-size: min(1.4vw, 11px); color: #aab; }
+.sc-nav-cargo { font-size: min(1.3vw, 10px); color: #889; }
+
+
+
+/* Scania 2025 rebuilt digital frame */
+#panel { --sc25-bg:#020609; --sc25-bg2:#020609; --sc25-bg3:#020609; --accent:#08d8f2; --glow:#08d8f2; --blinkc:#08d8f2; --print:#f5fbff; }
+.k-sc25, .k-sc25bg { pointer-events:none; }
+.k-sc25 svg, .k-sc25bg svg { width:100%; height:100%; display:block; }
+#app[data-style="scania25_frame"] #panel.skin:not(.sc25-box) { background-image:none !important; background:#020609; }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd .cap { background:none; border:0; box-shadow:none; color:var(--print); border-radius:calc(var(--k) * .18); }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd .cap::before,
+#app[data-style="scania25_frame"] #panel.skin .k-kbd .cap::after { display:none; }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd .ico,
+#app[data-style="scania25_frame"] #panel.skin .k-kbd .lbl { font-size:calc(var(--k) * .145); white-space:nowrap; letter-spacing:0; opacity:.82; }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd .ico { width:calc(var(--k) * .32); height:calc(var(--k) * .32); }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd .lbl { font-size:calc(var(--k) * .145); white-space:nowrap; letter-spacing:0; opacity:.82; }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd.mini .lbl,
+#app[data-style="scania25_frame"] #panel.skin .k-kbd.mini .led { display:none; }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd.mini .ico { width:calc(var(--k) * .42); height:calc(var(--k) * .42); }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd .led { display:none; }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd.on .cap { color:var(--sc25-accent,#08d8f2); }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd.on .ico,
+#app[data-style="scania25_frame"] #panel.skin .k-kbd.on .lbl { opacity:1; filter:drop-shadow(0 0 calc(var(--k) * .12) var(--sc25-accent,#08d8f2)); }
+
+/* Compact colour selector beside Save on the horizontal Scania 2025 panel. */
+#app[data-style="scania25_frame"] #panel.skin:not(.sc25-box) .k-sc25palette { z-index:40 !important; padding:0; overflow:visible; pointer-events:auto !important; }
+#app[data-style="scania25_frame"] .sc25-palette-current,
+#app[data-style="scania25_frame"] .sc25-palette-option {
+  display:flex; align-items:center; justify-content:center; padding:0; border:0; color:#eef8fa; background:transparent;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+#app[data-style="scania25_frame"] .sc25-palette-current { width:100%; height:100%; pointer-events:auto !important; }
+#app[data-style="scania25_frame"] .sc25-palette-current i {
+  display:block; width:min(100%,13px); aspect-ratio:1; border-radius:50%;
+  background:radial-gradient(circle at 32% 25%,#fff 0 5%,var(--swatch) 23% 63%,#101519 72%);
+  border:1px solid rgba(235,247,250,.78); box-shadow:0 0 0 1px rgba(0,0,0,.8),0 0 5px color-mix(in srgb,var(--swatch) 32%,transparent),inset 0 1px 2px rgba(255,255,255,.52);
+}
+#app[data-style="scania25_frame"] .sc25-palette-list {
+  display:none; position:absolute; z-index:30; top:calc(100% + 7px); left:50%; transform:translateX(-50%);
+  flex-direction:column; align-items:center; gap:5px; padding:6px 4px; border:1px solid rgba(205,225,231,.28);
+  border-radius:18px; background:rgba(5,10,13,.94); box-shadow:0 5px 15px rgba(0,0,0,.76),inset 0 1px 0 rgba(255,255,255,.12);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+}
+#app[data-style="scania25_frame"] .k-sc25palette.open .sc25-palette-list { display:flex; }
+#app[data-style="scania25_frame"] .sc25-palette-option { width:27px; height:27px; border-radius:50%; pointer-events:auto !important; }
+#app[data-style="scania25_frame"] .sc25-palette-option i {
+  display:block; width:19px; height:19px; border-radius:50%; background:var(--swatch);
+  border:1px solid rgba(240,249,251,.48); box-shadow:0 1px 3px #000, inset 0 1px 2px rgba(255,255,255,.5);
+  transition:transform 100ms ease,box-shadow 100ms ease;
+}
+#app[data-style="scania25_frame"] .sc25-palette-option.selected i { transform:scale(1.12); box-shadow:0 0 0 2px #061014,0 0 0 3px var(--swatch),0 0 9px var(--swatch); }
+#app[data-style="scania25_frame"] .sc25-palette-option:active i { transform:scale(.88); }
+#app[data-style="scania25_frame"] #panel.skin .k-kbd.down .cap { background:radial-gradient(closest-side, rgba(255,255,255,.14), transparent); }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   SCANIA 2025 PORTRAIT BUTTON BOX — Unified Automotive Design
+   ═══════════════════════════════════════════════════════════════════════════════
+   Design language: matte injection-moulded dark plastic with fine grain texture,
+   subtle metallic trim accents, cyan LED backlight. Every control shares the same
+   material family — no mixing of glossy rectangles with heavy chrome rings.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Panel body: fine-grain textured dark plastic ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box {
+  background-color:#0b0d0f !important;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.006) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.035) 0 1px, transparent 1px 5px),
+    linear-gradient(174deg, #141617 0%, #0d0e10 30%, #090a0b 58%, #101213 100%) !important;
+  background-size: 3px 3px, 5px 5px, 100% 100% !important;
+  border:1px solid rgba(100,108,112,.14);
+  border-radius:2.2%;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    inset 0 0 0 1.5px rgba(0,0,0,.9),
+    inset 0 0 30px rgba(0,0,0,.55),
+    0 6px 16px rgba(0,0,0,.45);
+}
+
+/* ── 2. Kill ambient bleed and glass overlay for clean portrait ── */
+#app[data-style="scania25_frame"] #stage.skin:has(#panel.skin.sc25-box)::before { opacity:0 !important; }
+/* Glass overlay removed in portrait — the SC25 cluster draws its own lighting */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box::after { opacity:0; }
+/* SC25 cluster container: clip SVG overflow in portrait */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-sc25 { overflow:hidden !important; }
+/* Hide the heraldic watermark and road perspective lines in portrait mode */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-sc25 [data-k="watermark"] { display:none !important; }
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-sc25 [data-k="watermark"] + g { display:none !important; }
+/* Palette picker in portrait: needs pointer-events since k-sc25 base disables them */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-sc25palette { z-index:40 !important; padding:0; overflow:visible; pointer-events:auto !important; }
+
+/* ── 3. Standard button cap: matte dark plastic, uniform for all ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd .cap {
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6%;
+  position:relative; overflow:visible; padding:4%; color:#b8c0c5;
+  background:linear-gradient(176deg, #262a2d 0%, #1a1d1f 15%, #111314 52%, #0c0d0e 72%, #151719 100%);
+  border:1px solid rgba(35,38,41,.95);
+  border-top-color:rgba(65,70,74,.5);
+  border-radius:13%;
+  box-shadow:
+    0 0 0 0.5px rgba(90,96,100,.18),
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -1px 2px rgba(0,0,0,.6),
+    0 1.5px 3px rgba(0,0,0,.7);
+  text-shadow:0 1px 1px rgba(0,0,0,.7);
+  transition:transform 55ms ease, filter 55ms ease, box-shadow 55ms ease;
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd .ico {
+  width:40%; height:40%; color:currentColor; opacity:.82;
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd .lbl {
+  max-width:96%;
+  font-family:"Barlow Condensed",Inter,"Segoe UI",Arial,sans-serif;
+  font-size:clamp(5px,1.35vw,10px); font-weight:500;
+  line-height:1.08; letter-spacing:.03em;
+  white-space:pre-line; text-align:center; opacity:.78;
+}
+
+/* ── 4. Wide variant: horizontal icon + label ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.wide .cap {
+  flex-direction:row; gap:8%; padding:0 8%;
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.wide .ico { width:26%; height:42%; }
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.wide .lbl {
+  font-size:clamp(5px,1.15vw,9px); text-align:left;
+}
+
+/* ── 5. Mini variant: transparent ghost button, icon only ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.mini .cap {
+  border:0; background:transparent;
+  box-shadow:none;
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.mini .ico {
+  width:52%; height:52%; opacity:.6;
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.mini .lbl,
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.mini .led { display:none; }
+
+/* ── 6. LED ON state: subtle cyan backlight ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.on .cap {
+  color:#b0f0f8;
+  border-color:rgba(0,200,230,.45);
+  box-shadow:
+    0 0 8px rgba(0,191,255,.18),
+    inset 0 0 6px rgba(0,191,255,.10),
+    inset 0 1px 0 rgba(255,255,255,.14);
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.on .ico,
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.on .lbl {
+  opacity:1;
+  filter:drop-shadow(0 0 4px rgba(0,217,245,.6));
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.mini.on .ico {
+  opacity:1; color:#a0eef6;
+  filter:drop-shadow(0 0 5px rgba(0,217,245,.65));
+}
+
+/* ── 7. PRESSED state: cap sinks ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.down .cap {
+  transform:translateY(1px) scale(.988);
+  filter:brightness(.72);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.85), 0 0 0 0.5px rgba(90,96,100,.14);
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd.mini.down .cap {
+  transform:scale(.92); filter:brightness(.6); background:transparent; box-shadow:none;
+}
+
+/* ── 8. D-PAD: round, same material, thin trim ring ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id^="box_nav_"] .cap {
+  border-radius:50%;
+  background:radial-gradient(circle at 38% 30%, #2a2e31, #171a1c 50%, #0c0e10 80%);
+  border:1px solid rgba(80,86,90,.35);
+  box-shadow:
+    0 0 0 1px rgba(90,96,100,.2),
+    inset 0 1px 1px rgba(255,255,255,.12),
+    inset 0 -2px 4px rgba(0,0,0,.7),
+    0 2px 4px rgba(0,0,0,.75);
+}
+/* D-PAD OK: slightly more prominent ring */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_nav_ok"] .cap {
+  background:radial-gradient(circle at 36% 28%, #282c2f, #151819 55%, #0a0b0c 85%);
+  border-color:rgba(110,118,122,.35);
+  box-shadow:
+    0 0 0 1.5px rgba(110,118,122,.28),
+    0 0 0 3px rgba(0,180,210,.12),
+    inset 0 1px 1px rgba(255,255,255,.14),
+    inset 0 -2px 4px rgba(0,0,0,.7),
+    0 2px 4px rgba(0,0,0,.75);
+}
+/* D-PAD ON: teal ring highlight */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_nav_ok"].on .cap {
+  box-shadow:
+    0 0 0 1.5px rgba(110,118,122,.3),
+    0 0 0 3px rgba(0,210,235,.5),
+    0 0 10px rgba(0,205,235,.25),
+    inset 0 1px 1px rgba(255,255,255,.14),
+    inset 0 -2px 4px rgba(0,0,0,.7);
+}
+
+/* ── 9. Hazard: red matte plastic, SAME proportional family ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_hazard"] .cap {
+  color:#f5d8d6;
+  background:linear-gradient(176deg, #b53a38 0%, #8c2220 20%, #6a1816 55%, #4d1210 100%);
+  border:1px solid rgba(30,6,6,.9);
+  border-top-color:rgba(180,70,68,.3);
+  border-radius:10%;
+  box-shadow:
+    0 0 0 0.5px rgba(100,55,52,.3),
+    inset 0 1px 1px rgba(255,200,195,.18),
+    inset 0 -2px 4px rgba(25,0,0,.65),
+    0 2px 4px rgba(0,0,0,.75);
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_hazard"] .tri {
+  width:55%; height:55%;
+  filter:drop-shadow(0 1px 2px rgba(20,0,0,.7));
+}
+/* Hazard ON: amber glow */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_hazard"].on .cap {
+  background:linear-gradient(176deg, #cc4240 0%, #a32a28 20%, #7e1c1a 55%, #5a1412 100%);
+  box-shadow:
+    0 0 10px rgba(255,80,0,.25),
+    0 0 0 0.5px rgba(100,55,52,.3),
+    inset 0 1px 1px rgba(255,200,195,.22),
+    inset 0 -2px 4px rgba(25,0,0,.55);
+}
+
+/* ── 10. Trailer air supply: octagonal red valve ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_air"] .cap {
+  background:transparent; border:0; box-shadow:none; padding:0;
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_air"] .knob {
+  width:85%; height:85%; display:grid; place-items:center;
+  clip-path:polygon(25% 3%,75% 3%,97% 25%,97% 75%,75% 97%,25% 97%,3% 75%,3% 25%);
+  background:linear-gradient(150deg, #a83835 0%, #862420 40%, #5c1210 100%);
+  border:0; color:#f5e8e7;
+  text-shadow:0 1px 2px rgba(25,4,4,.8);
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.8));
+  box-shadow:
+    inset 0 0 0 1.5px rgba(40,6,6,.8),
+    inset 0 1px 2px rgba(255,200,195,.2),
+    inset 0 -3px 5px rgba(20,0,0,.55);
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_air"] .lbl {
+  transform:none;
+  font-size:clamp(5px,0.95vw,8px); line-height:1.15;
+  text-transform:uppercase; font-weight:600; letter-spacing:.04em;
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_air"].on .knob {
+  background:linear-gradient(150deg, #c04340, #9a2826 42%, #6e1614);
+}
+
+/* ── 11. Start/Stop & Ignition: round with subtle metallic accent ring ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_start"] .cap,
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_ignition"] .cap {
+  padding:0; overflow:visible; border:0; border-radius:50%;
+  background:transparent; box-shadow:none;
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_start"] .bezel,
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_ignition"] .bezel {
+  background:linear-gradient(160deg, #9ea4a7 0%, #5c6265 30%, #3a3f42 60%, #70767a 85%, #a0a5a8 100%);
+  box-shadow:0 0 0 1px rgba(8,9,10,.9), 0 2px 4px rgba(0,0,0,.8);
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_start"] .core,
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_ignition"] .core {
+  background:radial-gradient(circle at 36% 28%, #2a2e31, #141618 55%, #080a0b 85%);
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.18), inset 0 -3px 5px rgba(0,0,0,.8), 0 1px 2px rgba(0,0,0,.6);
+}
+/* ON: subtle cyan halo on ring */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_start"].on .bezel,
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-kbd[data-id="box_ignition"].on .bezel {
+  box-shadow:0 0 0 1px rgba(5,6,7,.9), 0 0 0 2.5px rgba(0,205,235,.55), 0 0 10px rgba(0,205,235,.3);
+}
+
+/* ── 12. Section labels: engraved look ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-plate .cap {
+  display:flex; align-items:center; justify-content:center;
+  border:0; background:transparent; color:rgba(160,172,178,.55);
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-plate .lbl {
+  font:500 clamp(5px,1.1vw,8px)/1 "Barlow Condensed","Segoe UI",Arial,sans-serif;
+  letter-spacing:.16em; white-space:nowrap;
+  text-shadow:0 1px 0 rgba(0,0,0,.9);
+}
+
+/* ── 13. Recessed panel sections ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-plate.recess .cap {
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(60,66,70,.18);
+  border-radius:8px;
+  box-shadow:
+    inset 0 1.5px 4px rgba(0,0,0,.6),
+    inset 0 0 8px rgba(0,0,0,.3),
+    0 1px 0 rgba(255,255,255,.04);
+  color:transparent;
+}
+
+/* ── 14. Clock displays: smoked glass embedded in the panel ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-sc25clock {
+  display:flex; align-items:center;
+  color:#96dde6;
+  padding:0 5%; box-sizing:border-box;
+  background:linear-gradient(180deg, #050708 0%, #0a0d0f 40%, #0e1113 100%);
+  border:1px solid rgba(50,56,60,.45);
+  border-radius:5px;
+  box-shadow:
+    inset 0 2px 5px rgba(0,0,0,.7),
+    inset 0 0 10px rgba(0,0,0,.4),
+    0 1px 0 rgba(255,255,255,.06);
+  font:500 clamp(18px,5vw,34px)/1 "Barlow Condensed","Segoe UI",Arial,sans-serif;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.04em;
+  text-shadow:0 0 8px rgba(0,190,220,.4);
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-sc25clock[data-id="box_game"] {
+  justify-content:flex-end;
+}
+
+/* ── 15. Status bar: integrated dark glass strip ── */
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-status {
+  border:1px solid rgba(55,62,66,.4);
+  border-radius:5px;
+  background:linear-gradient(180deg, #050708, #0c0f11);
+  color:#d5e2e6;
+  box-shadow:
+    inset 0 2px 5px rgba(0,0,0,.6),
+    inset 0 0 8px rgba(0,0,0,.3),
+    0 1px 0 rgba(255,255,255,.05);
+}
+#app[data-style="scania25_frame"] #panel.skin.sc25-box .k-status .trip { color:#a0b0b8; }
+
+/* Radio refinements: compact amber touch keys and a restrained animated display. */
+#panel .k-rtext { font-family:'Barlow Condensed','Arial Narrow',sans-serif; letter-spacing:.025em; }
+#panel .k-rtext b span { animation:radio-display-breathe 5.8s ease-in-out infinite; }
+#panel .rt-keys i { color:#e4a84c; background:rgba(181,116,33,.16); border:1px solid rgba(221,162,73,.22); box-shadow:inset 0 1px 2px rgba(255,221,160,.08); }
+#panel .rt-keys i:active, #panel .rt-keys i.down { color:#17120a; background:#d59a3a; border-color:#f0c16d; box-shadow:0 0 9px rgba(218,155,54,.35); }
+#panel .k-rtext.rt-wide { column-gap:2%; }
+#panel .k-rtext.rt-wide > .rt-keys { gap:.38em; }
+@keyframes radio-display-breathe { 0%,100% { opacity:.92; text-shadow:0 0 0 transparent; } 50% { opacity:1; text-shadow:0 0 .45em rgba(188,220,226,.22); } }
+@media (prefers-reduced-motion: reduce) { #panel .k-rtext b span { animation:none; } }
+
+/* Scania analog dial readouts restored inside each instrument. */
+.k-cgauge { overflow:hidden; }
+.cg-speedo-dig, .cg-tacho-dig { z-index:1; text-shadow:0 1px 3px #000; }
+.cg-speedo-dig .cg-speed { font-size:clamp(22px,2.3vw,34px); }
+.cg-speedo-dig .cg-speed-unit { font-size:clamp(9px,.9vw,13px); }
+.cg-speedo-dig .cg-odo { font-size:clamp(10px,1vw,14px); color:#d8dde2; font-variant-numeric:tabular-nums; }
+.cg-speedo-dig .cg-trip, .cg-speedo-dig .cg-city { font-size:clamp(9px,.82vw,12px); color:#aeb7c0; }
+.cg-speedo-dig .cg-fuelbar { margin-top:3%; }
+.cg-speedo-dig .cg-fuelbar-e, .cg-speedo-dig .cg-fuelbar-f { font-size:clamp(7px,.65vw,9px); color:#aeb7c0; }
+.cg-speedo-dig .cg-fuelbar-track { height:clamp(3px,.45vw,6px); }
+.cg-tacho-dig .cg-day, .cg-tacho-dig .cg-temp1, .cg-tacho-dig .cg-temp2 { font-size:clamp(9px,.85vw,12px); color:#c5cbd1; }
+.cg-tacho-dig .cg-clock { font-size:clamp(20px,2vw,30px); }
+.cg-tacho-dig .cg-rest { font-size:clamp(8px,.75vw,11px); color:#c6b18d; }
+.cg-indicators { font-size:clamp(8px,.7vw,10px); }
+.cg-indicators span.on { color:#e0e8ed; text-shadow:0 0 4px rgba(210,232,242,.36); }
+
+/* Status lamps: centered in the instrument gap, quiet when off and colored when live. */
+.k-tell { display:flex; align-items:center; justify-content:center; background:transparent !important; }
+.k-tell .tell-ico { display:flex; width:100%; height:100%; align-items:center; justify-content:center; color:#e5e9ed; transition:opacity .16s ease,filter .16s ease,color .16s ease; }
+.k-tell .tell-ico svg { width:80%; height:80%; }
+.k-tell.off .tell-ico { opacity:.19; filter:none; }
+.k-tell.tell-green:not(.off) .tell-ico { color:#5bd47d; filter:drop-shadow(0 0 3px rgba(75,210,112,.42)); }
+.k-tell.tell-blue:not(.off) .tell-ico { color:#76baff; filter:drop-shadow(0 0 3px rgba(90,170,255,.4)); }
+.k-tell.tell-red:not(.off) .tell-ico { color:#ee6262; filter:drop-shadow(0 0 3px rgba(235,72,72,.4)); }
+.k-tell.tell-amber:not(.off) .tell-ico { color:#e2b35f; filter:drop-shadow(0 0 3px rgba(222,166,69,.35)); }
+
+/* Scania on-board computer: stronger hierarchy, neutral LCD colors and aligned values. */
+.scania-obc { container-type:inline-size; padding:4.5% 5%; gap:4%; color:#e3e7ea; font-family:'Barlow Condensed','Arial Narrow',sans-serif; }
+.sc-tabs { gap:2.2%; }
+.sc-tab { width:10.5%; color:#7b858d; }
+.sc-tab.active { color:#e1e8ec; background:rgba(210,224,232,.09); }
+.sc-title { font-size:clamp(14px,3.4cqw,20px); color:#e6eaed; letter-spacing:.035em; }
+.sc-body { width:100%; }
+.sc-screen { gap:7%; }
+.sc-row { width:91%; min-height:1.5em; align-items:center; padding:0 0 2%; border-bottom:1px solid rgba(220,230,236,.10); }
+.sc-lbl { font-size:clamp(13px,3.15cqw,18px); color:#aab3ba; letter-spacing:.045em; }
+.sc-val { font-size:clamp(18px,4.15cqw,27px); color:#f1f3f4; text-shadow:none; font-variant-numeric:tabular-nums; }
+.sc-press { gap:8%; }
+.sc-press-bar { height:clamp(5px,1.3cqw,9px); background:rgba(230,237,241,.12); }
+.sc-pb-fill { background:#d5e1e6; box-shadow:none; }
+.sc-pb-fill.low { background:#d07b64; box-shadow:none; }
+.sc-page-caption { font-size:clamp(13px,3.15cqw,18px); color:#aab3ba; letter-spacing:.04em; }
+.sc-cs-val, .sc-speed-val { color:#fff; text-shadow:none; font-variant-numeric:tabular-nums; }
+.sc-ci-gear { color:#e4e9ec; }
+.sc-ci-limit, .sc-cruise-info { color:#b4bdc4; }
+.sc-speed-limit { color:#c6a987; }
+.sc-truck .sc-val, .sc-home .sc-val { color:#f1f3f4; }
+.sc-screen .sc-lbl, .sc-screen .sc-val { line-height:1.1; }
+@media (max-width:700px) {
+  .scania-obc { gap:3%; }
+  .sc-tab { width:9.5%; }
+  .sc-tabs { gap:1.5%; }
+  .sc-row { width:96%; }
+}
+/* Fine separators mark the four horizontal control families without boxing the keys. */
+#panel.skin .w.k-kbd[data-id="f3"]::before,
+#panel.skin .w.k-kbd[data-id="f6"]::before,
+#panel.skin .w.k-kbd[data-id="f9"]::before,
+#panel.skin .w.k-kbd[data-id="f13"]::before,
+#panel.skin .w.k-kbd[data-id="f16"]::before,
+#panel.skin .w.k-kbd[data-id="f19"]::before {
+  content:""; position:absolute; z-index:3; left:-11%; top:9%; height:82%; width:1px;
+  background:linear-gradient(180deg,transparent,rgba(205,218,226,.2),transparent); pointer-events:none;
+}
+#app[data-style="scania_frame"] #panel.skin .w.k-kbd[data-id="f3"]::before,
+#app[data-style="scania_frame"] #panel.skin .w.k-kbd[data-id="f6"]::before,
+#app[data-style="scania_frame"] #panel.skin .w.k-kbd[data-id="f9"]::before,
+#app[data-style="scania_frame"] #panel.skin .w.k-kbd[data-id="f13"]::before,
+#app[data-style="scania_frame"] #panel.skin .w.k-kbd[data-id="f16"]::before,
+#app[data-style="scania_frame"] #panel.skin .w.k-kbd[data-id="f19"]::before {
+  content:""; position:absolute; z-index:3; left:-11%; top:9%; height:82%; width:1px;
+  background:linear-gradient(180deg,transparent,rgba(205,218,226,.2),transparent); pointer-events:none;
+}
+#app[data-style="scania_frame"] #panel.skin .k-plate[data-id^="group_sep_"] { pointer-events:none; z-index:1; }
+#app[data-style="scania_frame"] #panel.skin .k-plate[data-id^="group_sep_"] .cap {
+  padding:0; border:0; border-radius:0; background:linear-gradient(180deg,transparent,rgba(194,207,216,.16) 18%,rgba(194,207,216,.16) 82%,transparent);
+  box-shadow:none; opacity:.8;
+}
+#app[data-style="scania_frame"] #panel.skin .k-plate[data-id^="group_sep_"] .cap::before,
+#app[data-style="scania_frame"] #panel.skin .k-plate[data-id^="group_sep_"] .cap::after { display:none; }
+/* Low-profile Scania OBC used in portrait mode: keep tabs compact and give the data rows room. */
+.scania-obc.compact { padding:1.5% 3%; gap:1.2%; }
+.scania-obc.compact .sc-tabs { flex:0 0 25%; height:25%; gap:1%; align-items:center; }
+.scania-obc.compact .sc-tab { width:9.4%; height:100%; aspect-ratio:auto; }
+.scania-obc.compact .sc-tab svg { width:65%; height:65%; }
+.scania-obc.compact .sc-title { font-size:clamp(12px,2.6cqw,16px); line-height:1; }
+.scania-obc.compact .sc-screen { gap:2%; }
+.scania-obc.compact .sc-row { width:96%; min-height:0; padding-bottom:.5%; }
+.scania-obc.compact .sc-lbl { font-size:clamp(11px,2.7cqw,15px); }
+.scania-obc.compact .sc-val { font-size:clamp(14px,3.2cqw,18px); }
+.scania-obc.compact .sc-press-bar { height:clamp(4px,1cqw,6px); }
+
+/* Scania S/R final fit: make the in-dial readouts sit below the needle hub. */
+#app[data-style="scania_frame"] #panel.skin .cg-speedo-dig {
+  /* The hub sits at 50% of the dial and the pointer sweeps across it, so the stack
+     has to begin below that line - 48% put its first row straight under the needle.
+     57% clears the hub and its highlight while leaving 43% of the face for the
+     stack itself, which is just enough at the sizes set further down. */
+  top:57%; left:20%; width:60%; height:40%; gap:.45%; justify-content:flex-start;
+}
+#app[data-style="scania_frame"] #panel.skin .cg-tacho-dig {
+  top:56%; left:18%; width:64%; height:42%; gap:.6%; justify-content:flex-start;
+}
+#app[data-style="scania_frame"] #panel.skin .cg-speedo-dig .cg-fuelbar { margin-top:2%; }
+#app[data-style="scania_frame"] #panel.skin .cg-speedo-dig .cg-city,
+#app[data-style="scania_frame"] #panel.skin .cg-tacho-dig .cg-rest { color:#c3cbd1; }
+
+/* Portrait dials are nearly square; retain the same ordered readout without clipping. */
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-speedo-dig {
+  top:56%; left:26%; width:48%; height:37%; gap:.2%; justify-content:flex-start;
+}
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-tacho-dig {
+  top:55%; left:23%; width:54%; height:38%; gap:.35%; justify-content:flex-start;
+}
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-speedo-dig .cg-speed,
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-tacho-dig .cg-clock { font-size:clamp(18px,5.5cqw,27px); }
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-speedo-dig .cg-speed-unit,
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-speedo-dig .cg-odo,
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-speedo-dig .cg-trip,
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-speedo-dig .cg-city,
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-tacho-dig .cg-day,
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-tacho-dig .cg-temp1,
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-tacho-dig .cg-temp2 { font-size:clamp(8px,2.5cqw,11px); }
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-fuelbar { width:74%; margin-top:1%; }
+#app[data-style="scania_frame"] #panel.skin .k-cgauge.portrait .cg-fuelbar-track { height:3px; min-height:2px; }
+
+/* Shared instrument bezel and Digital 2025-style upper-right action keys. */
+#app[data-style="scania_frame"] #panel.skin:not(.edit) {
+  border:1px solid rgba(155,174,187,.23); border-radius:10px; box-sizing:border-box;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.82),inset 0 0 24px rgba(135,165,180,.055),0 2px 16px rgba(0,0,0,.52);
+}
+#app[data-style="scania_frame"] #panel.skin .k-kbd.mini .cap {
+  border:0; border-radius:0; background:transparent; box-shadow:none; color:var(--print,#f5fbff);
+}
+#app[data-style="scania_frame"] #panel.skin .k-kbd.mini .cap::before,
+#app[data-style="scania_frame"] #panel.skin .k-kbd.mini .cap::after { display:none; }
+#app[data-style="scania_frame"] #panel.skin .k-kbd.mini .ico { width:calc(var(--k) * .42); height:calc(var(--k) * .42); opacity:.84; }
+#app[data-style="scania_frame"] #panel.skin .k-kbd.mini.on .ico { opacity:1; filter:drop-shadow(0 0 calc(var(--k) * .12) currentColor); }
+#app[data-style="scania_frame"] #panel.skin .k-kbd:not(.mini).on:not([data-id="box_hazard"]) .ico,
+#app[data-style="scania_frame"] #panel.skin .k-kbd:not(.mini).on:not([data-id="box_hazard"]) .lbl { color:var(--scania-accent); filter:drop-shadow(0 0 calc(var(--k) * .10) var(--scania-accent)); }
+
+/* The vertical radio is a footer module, clear of the OBD and final control row. */
+#app[data-style="scania_frame"] #panel.skin .k-rtext[data-id="w_media"] { border-radius:8px; }
+#app[data-style="scania_frame"] #panel.skin .k-rtext[data-id="w_media"] .rt-keys i { width:1.32em; height:1.32em; }
+
+/* Refined S/R controls: keep the molded caps tactile, with a short soft contact shadow. */
+#app[data-style="scania_frame"] #panel.skin .k-kbd .cap {
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -1px 0 rgba(0,0,0,.38),0 1px 2px rgba(0,0,0,.48);
+}
+#app[data-style="scania_frame"] #panel.skin .k-kbd .cap::before {
+  background:linear-gradient(180deg,rgba(255,255,255,.075),transparent 25% 78%,rgba(0,0,0,.16));
+}
+
+/* Dedicated, centered telltale lane below both portrait dials. */
+#app[data-style="scania_frame"] #panel.skin .k-tell { z-index:4; overflow:visible; }
+#app[data-style="scania_frame"] #panel.skin .k-tell .tell-ico svg { width:68%; height:68%; }
+#app[data-style="scania_frame"] #panel.skin .k-tell.off .tell-ico { opacity:.16; }
+
+/* A fine grain overlay gives every photographic frame the same premium fascia finish.
+   Non-frame button grids already use the matching noise + fascia gradient on #panel. */
+#panel.skin::before {
+  display:block; content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.018) 0 1px,transparent 1px 5px),
+    linear-gradient(160deg,rgba(255,255,255,.018),transparent 42%,rgba(0,0,0,.025));
+  opacity:.72; mix-blend-mode:soft-light;
+}
+
+/* Scania S/R: theme-ready instruments, start sweep, reusable palette and premium fascia. */
+#panel.scania-sr { --scania-accent:#d9943c; --scania-needle:#e52c32; --scania-needle-glint:#ffc4b2; --scania-odo:#f5f7f8; --scania-obc-ink:#e8edf0; --scania-obc-glow:#70431f; --scania-backlight:#100c09; --scania-face-center:#171311; }
+#panel.scania-sr .k-cgauge { filter:drop-shadow(0 4px 5px rgba(0,0,0,.82)) drop-shadow(0 -1px 1px rgba(255,223,202,.10)); }
+#panel.scania-sr .cg-svg .cg-housing { filter:drop-shadow(0 2px 2px rgba(0,0,0,.92)); }
+#panel.scania-sr .cg-svg .cg-base-bridge { filter:drop-shadow(0 1px 1px rgba(0,0,0,.9)); }
+#panel.scania-sr .cg-svg .cg-needle { transform-box:view-box; transform-origin:100px 100px; }
+#panel.scania-sr .cg-digital { text-shadow:0 0 7px color-mix(in srgb,var(--scania-obc-glow) 44%,transparent); }
+#panel.scania-sr .cg-svg text { filter:drop-shadow(0 0 1.5px color-mix(in srgb,var(--scania-accent) 42%,transparent)); }
+#panel.scania-sr .cg-svg .cg-needle {
+  fill:var(--scania-needle);
+  /* No filter here on purpose. drop-shadow on an element whose transform changes
+     every telemetry frame forces the WebView to re-rasterise the needle and
+     recompute the blur each time, which is enough to thermally throttle a tablet
+     over a long drive. The pivot glow now lives on the static container below. */
+  /* Telemetry arrives over SSE at roughly 10 Hz, so assigning the transform
+     directly makes the needle step once per frame. Interpolating the rotation on
+     the compositor fills the gaps without any extra work on the JS thread.
+     Linear, not eased: a constant road speed must read as a steady needle, and an
+     ease curve would make every update look like a small pulse. 150ms is just
+     over one frame interval, so it bridges the gap without adding visible lag. */
+  transition:transform .15s linear,opacity .5s ease;
+  will-change:transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  #panel.scania-sr .cg-svg .cg-needle { transition:opacity .5s ease; }
+}
+#panel.scania-sr .cg-speedo-dig .cg-speed,#panel.scania-sr .cg-speedo-dig .cg-odo,#panel.scania-sr .cg-speedo-dig .cg-trip,#panel.scania-sr .cg-speedo-dig .cg-city,#panel.scania-sr .cg-tacho-dig .cg-clock,#panel.scania-sr .cg-tacho-dig .cg-day,#panel.scania-sr .cg-tacho-dig .cg-temp1,#panel.scania-sr .cg-tacho-dig .cg-temp2 { color:var(--scania-odo); transition:color .28s ease,opacity .5s ease,text-shadow .28s ease; }
+#panel.scania-sr .cg-speedo-dig .cg-speed,#panel.scania-sr .cg-speedo-dig .cg-odo,#panel.scania-sr .cg-speedo-dig .cg-trip,#panel.scania-sr .cg-speedo-dig .cg-city,#panel.scania-sr .cg-tacho-dig .cg-clock,#panel.scania-sr .cg-tacho-dig .cg-day,#panel.scania-sr .cg-tacho-dig .cg-temp1,#panel.scania-sr .cg-tacho-dig .cg-temp2 { text-shadow:0 0 4px color-mix(in srgb,var(--scania-obc-glow) 58%,transparent),0 0 9px color-mix(in srgb,var(--scania-accent) 24%,transparent); }
+#panel.scania-sr .scania-obc { color:var(--scania-obc-ink); border:0 !important; outline:0 !important; background:radial-gradient(ellipse 78% 76% at 50% 48%,color-mix(in srgb,var(--scania-obc-glow) 12%,var(--scania-backlight)) 0%,color-mix(in srgb,var(--scania-backlight) 82%,transparent) 57%,transparent 100%); box-shadow:none !important; -webkit-mask-image:radial-gradient(ellipse 96% 98% at center,#000 52%,rgba(0,0,0,.88) 74%,transparent 100%); mask-image:radial-gradient(ellipse 96% 98% at center,#000 52%,rgba(0,0,0,.88) 74%,transparent 100%); transition:opacity .5s ease,filter .5s ease,background .3s ease; }
+#panel.scania-sr .scania-obc::after { display:none; }
+#panel.scania-sr .scania-obc .sc-val,#panel.scania-sr .scania-obc .sc-title,#panel.scania-sr .scania-obc .sc-lbl,#panel.scania-sr .scania-obc .sc-page-caption,#panel.scania-sr .scania-obc .sc-cs-val,#panel.scania-sr .scania-obc .sc-speed-val { color:var(--scania-obc-ink); text-shadow:0 0 4px color-mix(in srgb,var(--scania-obc-glow) 58%,transparent),0 0 9px color-mix(in srgb,var(--scania-accent) 22%,transparent); }
+#panel.scania-sr .scania-obc.dead { opacity:.015; filter:brightness(.15); }
+#panel.scania-sr .k-cgauge.dead .cg-digital { opacity:.015; transition:opacity .5s ease; }
+#panel.scania-sr .k-cgauge.dead .cg-needle { opacity:.04; }
+#panel.scania-sr.cabin-dark .k-cgauge { filter:brightness(calc(1 - .2 * var(--cabin,0))) drop-shadow(0 0 calc(10px * var(--cabin,0)) color-mix(in srgb,var(--scania-accent) 22%,transparent)); transition:filter .4s ease; }
+#panel.scania-sr.cabin-dark .scania-obc { filter:brightness(calc(1 - .24 * var(--cabin,0))); border:0 !important; outline:0 !important; box-shadow:none !important; }
+#panel.scania-sr.cabin-dark .k-tell:not(.off) .tell-ico { filter:drop-shadow(0 0 calc(4px + 3px * var(--cabin,0)) currentColor); }
+#panel.scania-sr.scania-starting .cg-needle { animation:scaniaNeedleSweep 1.05s cubic-bezier(.2,.75,.25,1) both; }
+#panel.scania-sr.scania-starting .k-tell { animation:scaniaLampCheck .48s ease-in-out 2; }
+#panel.scania-sr.scania-starting .scania-obc { animation:scaniaObcBoot 1.05s ease-out both; }
+@keyframes scaniaNeedleSweep { 0%{transform:rotate(-135deg)} 58%{transform:rotate(135deg)} 78%{transform:rotate(-8deg)} 100%{transform:rotate(0deg)} }
+@keyframes scaniaLampCheck { 0%,100%{filter:brightness(1)} 45%{filter:brightness(2.7)} }
+@keyframes scaniaObcBoot { 0%{opacity:.015;filter:brightness(.2)} 35%{opacity:.65;filter:brightness(1.7)} 100%{opacity:1;filter:brightness(1)} }
+@media (prefers-reduced-motion:reduce) { #panel.scania-sr *,#panel.scania-sr *::before,#panel.scania-sr *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+
+/* Leather-grain fascia behind Scania controls, isolated from the instrument glass. */
+#panel.skin .k-plate[data-id="keypad_backdrop"] .cap,#panel.skin .k-plate[data-id="buttonbox_backdrop"] .cap { border:1px solid rgba(158,174,184,.15); border-radius:1.2%; background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,.04) 0 .65px,transparent 1px) 0 0/4px 4px,repeating-linear-gradient(97deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px),linear-gradient(180deg,#191b1d,#0a0c0e 70%,#121416); box-shadow:inset 0 1px 2px rgba(255,255,255,.06),inset 0 -7px 16px rgba(0,0,0,.75),0 2px 8px rgba(0,0,0,.3); }
+#panel.skin .k-plate[data-id="keypad_backdrop"] .cap::after,#panel.skin .k-plate[data-id="buttonbox_backdrop"] .cap::after { display:none; }
+#panel.skin .k-plate[data-id="buttonbox_backdrop"] { pointer-events:none; z-index:1; }
+#panel.skin .w.k-kbd.mini[data-id^="t"] .ico { width:76% !important; height:76% !important; }
+#app[data-style="scania_frame"] #panel.skin .k-kbd.mini[data-id^="t"] { overflow:visible; }
+#app[data-style="scania_frame"] #panel.skin .k-kbd.mini[data-id^="t"] .cap { border:1px solid rgba(198,216,225,.18); border-radius:20%; background:linear-gradient(180deg,rgba(33,40,45,.82),rgba(8,11,14,.9)); box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 2px 5px rgba(0,0,0,.48); }
+#app[data-style="scania_frame"] #panel.skin .k-kbd.mini[data-id^="t"] .ico { filter:drop-shadow(0 0 2px rgba(200,225,240,.35)); }
+#panel.skin .k-scania-palette { z-index:40 !important; padding:0; overflow:visible; pointer-events:auto !important; }
+#panel.skin .k-scania-palette .sc25-palette-current { width:100%; height:100%; pointer-events:auto !important; }
+#panel.skin .k-scania-palette .sc25-palette-current i { width:min(100%,16px); }
+#panel.skin .k-scania-palette .sc25-palette-list { top:calc(100% + 4px); }
+/* Shared top actions: consistent icon scale, touch target and dark glass cap on every frame panel. */
+#panel.skin .k-kbd.mini .ico { width:calc(var(--k) * .72) !important; height:calc(var(--k) * .72) !important; }
+#panel.skin .k-kbd.mini .cap { border:1px solid rgba(205,221,230,.17); border-radius:22%; background:linear-gradient(180deg,rgba(38,46,52,.9),rgba(9,12,15,.94)); box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 2px 5px rgba(0,0,0,.48); }
+#panel.scania-sr.cabin-dark .k-kbd:not(.on) .cap { filter:brightness(calc(1 - .28 * var(--cabin,0))); transition:filter .35s ease; }
+#panel.scania-sr.cabin-dark::before { opacity:calc(.42 - .18 * var(--cabin,0)); }
+/* Complete reusable colour-picker skin for S/R; the list stays cascaded until tapped. */
+#panel.skin .k-sc25palette .sc25-palette-current,#panel.skin .k-sc25palette .sc25-palette-option { display:flex; align-items:center; justify-content:center; padding:0; border:0; color:#eef8fa; background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+#panel.skin .k-sc25palette .sc25-palette-current i { display:block; width:min(100%,16px); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 32% 25%,#fff 0 5%,var(--swatch) 23% 63%,#101519 72%); border:1px solid rgba(235,247,250,.78); box-shadow:0 0 0 1px rgba(0,0,0,.8),0 0 5px color-mix(in srgb,var(--swatch) 32%,transparent),inset 0 1px 2px rgba(255,255,255,.52); }
+#panel.skin .k-sc25palette .sc25-palette-list { display:none; position:absolute; z-index:30; top:calc(100% + 5px); left:50%; transform:translateX(-50%); flex-direction:column; align-items:center; gap:5px; padding:6px 4px; border:1px solid rgba(205,225,231,.28); border-radius:18px; background:rgba(5,10,13,.96); box-shadow:0 5px 15px rgba(0,0,0,.76),inset 0 1px 0 rgba(255,255,255,.12); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+#panel.skin .k-sc25palette.open .sc25-palette-list { display:flex; }
+#panel.skin .k-sc25palette .sc25-palette-option { width:27px; height:27px; border-radius:50%; pointer-events:auto !important; }
+#panel.skin .k-sc25palette .sc25-palette-option i { display:block; width:19px; height:19px; border-radius:50%; background:var(--swatch); border:1px solid rgba(240,249,251,.48); box-shadow:0 1px 3px #000,inset 0 1px 2px rgba(255,255,255,.5); transition:transform 100ms ease,box-shadow 100ms ease; }
+#panel.skin .k-sc25palette .sc25-palette-option.selected i { transform:scale(1.12); box-shadow:0 0 0 2px #061014,0 0 0 3px var(--swatch),0 0 9px var(--swatch); }
+/* Semantic shared component hook for Save, Map and Confirm mini-actions. */
+#panel.skin .k-kbd.mandatory-action .ico { width:calc(var(--k) * .72) !important; height:calc(var(--k) * .72) !important; }
+#panel.skin .k-kbd.mandatory-action .cap { border:1px solid rgba(205,221,230,.17); border-radius:22%; background:linear-gradient(180deg,rgba(38,46,52,.9),rgba(9,12,15,.94)); box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 2px 5px rgba(0,0,0,.48); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCANIA S/R - dial read-outs: bottom quadrant, legible size
+   ═══════════════════════════════════════════════════════════════════════════
+   These blocks used to be centred on the dial, which put them over the needle
+   pivot: the pointer swept across the digits and the hub sat behind them. A real
+   Scania cluster carries them in the lower third, clear of the pointer travel.
+
+   Anchored with flex-start and height:auto rather than centred in a fixed box.
+   Centring was the trap: the stack is taller than the box it sits in, so it
+   overflowed equally in both directions and crept back over the pivot no matter
+   how far the box was pushed down. From the top edge the first line lands
+   exactly where `top` puts it.
+   Scoped to .scania-sr - the same .cg-* classes serve other panels. */
+
+
+/* The primary number carries the dial. Up from 28px, but held to 34 so the whole
+   stack still clears the lower rim instead of spilling past it. */
+#panel.scania-sr .cg-speedo-dig .cg-speed,
+#panel.scania-sr .cg-tacho-dig .cg-clock      { font-size:min(3.9vw, 34px); line-height:1; }
+#panel.scania-sr .cg-speedo-dig .cg-speed-unit,
+#panel.scania-sr .cg-speedo-dig .cg-odo,
+#panel.scania-sr .cg-tacho-dig .cg-temp1,
+#panel.scania-sr .cg-tacho-dig .cg-temp2      { font-size:min(1.55vw, 13px); }
+#panel.scania-sr .cg-speedo-dig .cg-trip,
+#panel.scania-sr .cg-speedo-dig .cg-city,
+#panel.scania-sr .cg-tacho-dig .cg-day,
+#panel.scania-sr .cg-tacho-dig .cg-rest       { font-size:min(1.3vw, 11px); }
+#panel.scania-sr .cg-tacho-dig .cg-indicators { font-size:min(1.2vw, 10px); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCANIA S/R - pivot glow, drawn once and never animated
+   ═══════════════════════════════════════════════════════════════════════════
+   The hub light used to be a drop-shadow on the needle itself. That made the
+   blur a per-frame cost on a rotating element. Here it is a plain radial
+   gradient on the gauge container, which does not rotate, so the compositor
+   paints it once and simply reuses the layer while the needle sweeps over it. */
+/* Deliberately no `position:relative` on .k-cgauge. These widgets are already
+   positioned absolutely from their inline left/top, and an absolutely positioned
+   element is itself the containing block for its own ::before, so the glow anchors
+   correctly without any help. Adding `relative` overrode that `absolute` and
+   dropped both dials into normal flow: the inline coordinates stayed identical
+   while the tacho rendered 278px lower, on top of the keys. */
+#panel.scania-sr .k-cgauge::before {
+  content:'';
+  position:absolute;
+  /* Centred on the needle pivot (the dial centre), about a sixth of the face. */
+  left:50%; top:50%;
+  width:17%; aspect-ratio:1;
+  transform:translate(-50%, -50%);
+  border-radius:50%;
+  background:radial-gradient(circle closest-side,
+    color-mix(in srgb, var(--scania-needle) 26%, transparent) 0%,
+    color-mix(in srgb, var(--scania-accent) 12%, transparent) 46%,
+    transparent 100%);
+  pointer-events:none;
+  z-index:0;          /* under the SVG, so the needle and hub paint on top */
+}
+#panel.scania-sr .k-cgauge.dead::before { opacity:.05; }

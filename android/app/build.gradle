@@ -1,0 +1,32 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    // The application id below becomes permanent on Google Play at the first upload.
+    namespace 'com.hunters.trucksimbuttonbox'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'com.hunters.trucksimbuttonbox'
+        // Android 7.0: old tablets are exactly the devices people mount next to a wheel
+        minSdk 24
+        // Google Play requires new apps to target a recent API level; raise when Play asks
+        targetSdk 36
+        // versionCode must go up by one for every upload to Google Play
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    buildTypes {
+        release {
+            // nothing to shrink: one activity, no libraries
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
