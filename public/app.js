@@ -156,6 +156,7 @@
   const GLOBAL_KEYS = ['lang', 'units', 'temp', 'gearCrawlers', 'lights', 'cabin', 'brightness', 'names', 'autoRotate'];
   function ensurePrefs() {
     const st = S.store;
+    let migrated = false;
     // panels added after the first release: offer them to devices that were set up earlier
     for (const id of ['eu_frame', 'sov_frame']) {
       if (st.layouts.some((l) => l.preset === id)) continue;
@@ -166,7 +167,14 @@
     // the screen-mirror GPS was retired: take its widget and settings out of saved panels
     for (const l of st.layouts) {
       delete l.gps; delete l.gpsUrl; if (l.screen) delete l.screen;
-      for (const pg of l.pages || []) if (!pg.skin && pg.widgets) pg.widgets = pg.widgets.filter((w) => w.t !== 'gps');
+      for (const pg of l.pages || []) {
+        if (pg.widgets) {
+          for (const w of pg.widgets) {
+            if (w.t === 'radio') { w.t = 'radio_widget'; migrated = true; }
+          }
+          if (!pg.skin) pg.widgets = pg.widgets.filter((w) => w.t !== 'gps');
+        }
+      }
     }
     if (!st.prefs) {
       const a = st.layouts.find((l) => l.id === st.activeId) || st.layouts[0];
@@ -182,6 +190,7 @@
     // still switch it off again in the menu.
     if (st.prefs && !st.prefs.rotReset) { st.prefs.autoRotate = true; st.prefs.rotReset = 1; }
     applyPrefs();
+    return migrated;
   }
   function applyPrefs() {
     const pr = S.store.prefs;
@@ -322,7 +331,7 @@
 
   // ---- Functions, keys and state -----------------------------------------------------------
   // Pieces that show something but are not pressed.
-  const PASSIVE = new Set(['display', 'plate', 'gps', 'gauge', 'cgauge', 'sc25', 'sc25bg', 'sc25clock', 'sc25palette', 'scaniapalette', 'radio', 'status', 'live', 'tell', 'rtext', 'fbar', 'cover', 'knob', 'sticker', 'ign', 'sgauge']);
+  const PASSIVE = new Set(['display', 'plate', 'gps', 'gauge', 'cgauge', 'sc25', 'sc25bg', 'sc25clock', 'sc25palette', 'scaniapalette', 'radio_widget', 'status', 'live', 'tell', 'rtext', 'fbar', 'cover', 'knob', 'sticker', 'ign', 'sgauge']);
 
   // Resolve a widget to the function it performs, with per-widget overrides applied.
   function fnOf(w) {
@@ -490,9 +499,9 @@
         lockBuiltIns();
         const upgraded = upgradeStore();
         const injected = ensureShippedPanels();
-        ensurePrefs();
+        const migrated = ensurePrefs();
         lsSet('truckdeck.store', JSON.stringify(S.store));
-        if (injected) save();
+        if (injected || migrated) save();
         S.sel = null;
         S.page = 0;
         renderAll();
@@ -1557,7 +1566,7 @@
     const sx = lmW / (pr.width || 1), sy = lmH / (pr.height || 1);
     const box = (el) => { const r = el.getBoundingClientRect(); return { x: (r.left - pr.left) * sx, y: (r.top - pr.top) * sy, w: r.width * sx, h: r.height * sy }; };
     const src = { probe: panel.firstElementChild, screens: [], lamps: [], dials: [], keys: [] };
-    panel.querySelectorAll('.k-gps, .k-rtext, .k-live, .vf-glass, .w.display, .w.radio, .w.live, .w.status, .w.gps, .scania-obc').forEach((el) => {
+    panel.querySelectorAll('.k-gps, .k-rtext, .k-live, .vf-glass, .w.display, .w.radio_widget, .w.live, .w.status, .w.gps, .scania-obc').forEach((el) => {
       const b = box(el); if (b.w < 1 || b.h < 1) return;
       b.col = el.classList.contains('scania-obc') ? (lmCssv(panel, '--scania-accent') || '#54a9ff') : (el.classList.contains('vf-glass') ? '#46ebb9' : (lmCssv(el, '--acc') || '#7fb2ea'));
       src.screens.push(b);
@@ -2134,7 +2143,7 @@
     if (w.t === 'gauge') {
       return '<div class="dial">' + gaugeSvg(w.field) + '</div>';
     }
-    if (w.t === 'radio') {
+    if (w.t === 'radio_widget') {
       // eq: spectrum bars, shown by CSS on the classic cabs only
       return '<div class="unit"><div class="vfd">' +
         '<div class="eq" aria-hidden="true">' + '<i></i>'.repeat(9) + '</div>' +
@@ -2179,7 +2188,7 @@
     const node = document.createElement('div');
     node.className = 'w ' + w.t + (w.t === 'display' && w.h > w.w ? ' tall' : '') + (w.t === 'display' && w.field === 'trip' ? ' textual' : '') +
       // modern cabs get a flat media tile, classic cabs a cassette-era head unit
-      (w.t === 'radio' ? (STYLE_DEFS[layout().style] && STYLE_DEFS[layout().style].classic ? ' classic' : ' modern') + (w.h === 1 ? ' compact' : '') : '') +
+      (w.t === 'radio_widget' ? (STYLE_DEFS[layout().style] && STYLE_DEFS[layout().style].classic ? ' classic' : ' modern') + (w.h === 1 ? ' compact' : '') : '') +
       (w.t === 'status' && w.w <= 4 ? ' stack' : '');
     node.dataset.id = w.id;
     if (f) {
@@ -2544,7 +2553,7 @@
         continue;
       }
       if (w.t === 'plate') continue;
-      if (w.t === 'gauge' || w.t === 'radio' || w.t === 'status') node.classList.toggle('sel', S.edit && S.sel === w.id);
+      if (w.t === 'gauge' || w.t === 'radio_widget' || w.t === 'status') node.classList.toggle('sel', S.edit && S.sel === w.id);
       if (w.t === 'status') {
         const t = S.tel && S.tel.sdk ? S.tel : (S.bridge === 'demo' ? DEMO_TEL : null);
         for (const el of node.querySelectorAll('.dmg')) {
@@ -2564,7 +2573,7 @@
         node.querySelector('.needle').style.transform = 'rotate(' + deg.toFixed(1) + 'deg)';
         continue;
       }
-      if (w.t === 'radio') {
+      if (w.t === 'radio_widget') {
         const v = mediaView();
         // one-row radios have a single text line: artist and title share it
         if (w.h === 1 && v.state === '\u25b6' && v.top !== 'DEMO') v.line = v.top + ' \u2013 ' + v.line;
@@ -3086,7 +3095,7 @@
       '<button class="btn grow" data-act="pick" data-fn="display">Readout</button>' +
       '<button class="btn grow" data-act="pick" data-fn="plate">Label</button>' +
       '<button class="btn grow" data-act="pick" data-fn="gauge">Analog dial</button>' +
-      '<button class="btn grow" data-act="pick" data-fn="radio">Music player</button>' +
+      '<button class="btn grow" data-act="pick" data-fn="radio_widget">Music player</button>' +
       '<button class="btn grow" data-act="pick" data-fn="status">Damage and trip</button></div>' +
       '<input type="search" id="fnSearch" data-field="search" placeholder="Search functions" autocomplete="off"></div>' +
       '<div id="fnList" style="display:flex;flex-direction:column;gap:18px">' + functionListHtml('', placed) + '</div>',
@@ -3115,14 +3124,14 @@
       } else if (id === 'gauge') {
         const side = isFree(p, x, y, 2, 2) ? 2 : 1;
         w = { id: uid(), t: 'gauge', field: 'speed', x, y, w: side, h: side };
-      } else if (id === 'radio') {
+      } else if (id === 'radio_widget') {
         // a head unit is wide: 4x2, then 3x2, then whatever fits
         const size = isFree(p, x, y, 4, 2) ? [4, 2] : isFree(p, x, y, 3, 2) ? [3, 2] : isFree(p, x, y, 2, 1) ? [2, 1] : [1, 1];
-        w = { id: uid(), t: 'radio', x, y, w: size[0], h: size[1] };
+        w = { id: uid(), t: 'radio_widget', x, y, w: size[0], h: size[1] };
       } else if (id === 'custom') {
         w = { id: uid(), t: 'rocker', fn: 'custom', label: 'CUSTOM', icon: 'dot', keys: [], mode: 'tap', x, y, w: 1, h: 1 };
       } else {
-        w = { id: uid(), t: layout().style === 'us' && FUNCTIONS[id].latch ? 'toggle' : 'rocker', fn: id, x, y, w: 1, h: 1 };
+        w = { id: uid(), t: FUNCTIONS[id].latch ? 'toggle' : 'rocker', fn: id, x, y, w: 1, h: 1 };
       }
       p.widgets.push(w);
       save();
@@ -3155,7 +3164,7 @@
     } else if (w.t === 'gauge') {
       body += '<label class="field"><span>Dial</span><select data-field="field">' + options(GAUGE_FIELDS.map((d) => [d.id, d.name]), w.field) + '</select></label>' +
         '<p class="note">Dials follow the game through the telemetry plugin (ETS2 and ATS).</p>';
-    } else if (w.t === 'radio') {
+    } else if (w.t === 'radio_widget') {
       body += '<p class="note">Shows the track playing in the music app on the PC and sends the Windows media keys: previous, play/pause, next, volume. ' +
         'The volume keys change the whole PC volume, not only the music.</p>';
     } else {
@@ -3191,7 +3200,7 @@
       '</div></div>' +
       '<div class="row"><button class="btn grow" data-act="duplicate">Duplicate</button><button class="btn grow danger" data-act="delete">Remove</button></div>';
 
-    openSheet({ display: 'Readout', plate: 'Label', gauge: 'Analog dial', radio: 'Music player', status: 'Damage and trip' }[w.t] || 'Button', body, (act, target) => {
+    openSheet({ display: 'Readout', plate: 'Label', gauge: 'Analog dial', radio_widget: 'Music player', status: 'Damage and trip' }[w.t] || 'Button', body, (act, target) => {
       const p = page();
       if (act === 'field') {
         const key = target.dataset.field;
@@ -3235,7 +3244,7 @@
         toast('No free space on this page for a copy.');
       } else if (act === 'change-fn') {
         openPicker('Choose function', (fnId) => {
-          if (['display', 'plate', 'gauge', 'radio', 'status'].includes(fnId)) { toast('Add readouts and labels from an empty cell.'); return; }
+          if (['display', 'plate', 'gauge', 'radio_widget', 'status'].includes(fnId)) { toast('Add readouts and labels from an empty cell.'); return; }
           w.fn = fnId;
           // drop overrides that belonged to the previous function
           delete w.label; delete w.icon; delete w.led;

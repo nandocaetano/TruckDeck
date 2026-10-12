@@ -104,7 +104,7 @@
 
 /* Soviet classic: dashboard painted the pale green of ZIL and KamAZ cabs, black bakelite
    keys, cream numerals, white needles. The fascia is light, so legends on it turn dark. */
-[data-style="su"] {
+[data-style="sov_frame"] {
   --fascia-a: #93b3a0;
   --fascia-b: #6f917d;
   --cap-hi: #2d2d2d;
@@ -922,7 +922,7 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .gauge .needle { transition: none; } }
 
 /* ---- Music player (cassette-era head unit) ----------------------------------------------- */
-.radio .unit {
+.radio_widget .unit {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
@@ -939,7 +939,7 @@ button { cursor: pointer; }
     linear-gradient(180deg, #2b2d30, #131416);
   box-shadow: 0 0 0 calc(var(--u) * 0.022) var(--well), inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 calc(var(--u) * 0.03) calc(var(--u) * 0.05) rgba(0, 0, 0, 0.7);
 }
-.radio .vfd {
+.radio_widget .vfd {
   flex: 1 1 0;
   min-height: 0;
   display: flex;
@@ -954,11 +954,11 @@ button { cursor: pointer; }
   text-shadow: 0 0 calc(var(--u) * 0.06) color-mix(in srgb, var(--vfd) 60%, transparent);
   overflow: hidden;
 }
-.radio .vfd-text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: calc(var(--u) * 0.03); }
+.radio_widget .vfd-text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: calc(var(--u) * 0.03); }
 /* spectrum bars: the moving display of a 1990s head unit; they dance only while music plays */
-.radio .eq { display: none; }
-.radio.classic .eq { flex: none; display: flex; align-items: flex-end; gap: 2px; width: 24%; height: 72%; }
-.radio.classic .eq i {
+.radio_widget .eq { display: none; }
+.radio_widget.classic .eq { flex: none; display: flex; align-items: flex-end; gap: 2px; width: 24%; height: 72%; }
+.radio_widget.classic .eq i {
   flex: 1 1 0;
   height: 100%;
   transform-origin: bottom;
@@ -970,25 +970,25 @@ button { cursor: pointer; }
   animation: eq 0.7s ease-in-out infinite alternate;
   animation-play-state: paused;
 }
-.radio.classic.playing .eq i { animation-play-state: running; }
-.radio.classic .eq i:nth-child(2n) { animation-duration: 0.52s; animation-delay: -0.2s; }
-.radio.classic .eq i:nth-child(3n) { animation-duration: 0.88s; animation-delay: -0.45s; }
-.radio.classic .eq i:nth-child(4n + 1) { animation-duration: 0.63s; animation-delay: -0.1s; }
+.radio_widget.classic.playing .eq i { animation-play-state: running; }
+.radio_widget.classic .eq i:nth-child(2n) { animation-duration: 0.52s; animation-delay: -0.2s; }
+.radio_widget.classic .eq i:nth-child(3n) { animation-duration: 0.88s; animation-delay: -0.45s; }
+.radio_widget.classic .eq i:nth-child(4n + 1) { animation-duration: 0.63s; animation-delay: -0.1s; }
 @keyframes eq { from { transform: scaleY(0.15); } to { transform: scaleY(1); } }
-@media (prefers-reduced-motion: reduce) { .radio.classic .eq i { animation: none; transform: scaleY(0.5); } }
-.radio.compact .eq { width: 16%; height: 78%; }
-.radio .vfd-top { display: flex; justify-content: space-between; gap: 8px; font-size: calc(var(--u) * 0.13); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; white-space: nowrap; }
-.radio .artist { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.radio .track { font-size: calc(var(--u) * 0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.radio .track.scroll { text-overflow: clip; }
-.radio .track.scroll span { display: inline-block; padding-left: 100%; animation: marquee 14s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .radio_widget.classic .eq i { animation: none; transform: scaleY(0.5); } }
+.radio_widget.compact .eq { width: 16%; height: 78%; }
+.radio_widget .vfd-top { display: flex; justify-content: space-between; gap: 8px; font-size: calc(var(--u) * 0.13); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; white-space: nowrap; }
+.radio_widget .artist { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.radio_widget .track { font-size: calc(var(--u) * 0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.radio_widget .track.scroll { text-overflow: clip; }
+.radio_widget .track.scroll span { display: inline-block; padding-left: 100%; animation: marquee 14s linear infinite; }
 @keyframes marquee { to { transform: translateX(-100%); } }
 @media (prefers-reduced-motion: reduce) {
-  .radio .track.scroll { text-overflow: ellipsis; }
-  .radio .track.scroll span { padding-left: 0; animation: none; }
+  .radio_widget .track.scroll { text-overflow: ellipsis; }
+  .radio_widget .track.scroll span { padding-left: 0; animation: none; }
 }
-.radio .mkeys { flex: none; display: flex; gap: calc(var(--u) * 0.05); height: 34%; min-height: 26px; }
-.radio .mkey {
+.radio_widget .mkeys { flex: none; display: flex; gap: calc(var(--u) * 0.05); height: 34%; min-height: 26px; }
+.radio_widget .mkey {
   flex: 1 1 0;
   display: grid;
   place-items: center;
@@ -997,25 +997,25 @@ button { cursor: pointer; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 2px #000;
   color: #e6e9ec;
 }
-.radio .mkey svg { height: 58%; width: auto; aspect-ratio: 1; }
-.radio .mkey.down { transform: translateY(1px); filter: brightness(0.75); }
+.radio_widget .mkey svg { height: 58%; width: auto; aspect-ratio: 1; }
+.radio_widget .mkey.down { transform: translateY(1px); filter: brightness(0.75); }
 
 /* compact (one row high): one line of text over the keys */
-.radio.compact .unit { gap: calc(var(--u) * 0.04); padding: calc(var(--u) * 0.06); }
-.radio.compact .vfd-top { display: none; }
-.radio.compact .vfd { flex: 0 0 34%; }
-.radio.compact .track { font-size: calc(var(--u) * 0.16); }
-.radio.compact .mkeys { flex: 1 1 0; height: auto; min-height: 0; }
+.radio_widget.compact .unit { gap: calc(var(--u) * 0.04); padding: calc(var(--u) * 0.06); }
+.radio_widget.compact .vfd-top { display: none; }
+.radio_widget.compact .vfd { flex: 0 0 34%; }
+.radio_widget.compact .track { font-size: calc(var(--u) * 0.16); }
+.radio_widget.compact .mkeys { flex: 1 1 0; height: auto; min-height: 0; }
 
 /* modern cabs: a flat media tile, the kind a current truck's infotainment shows */
-.radio.modern .unit {
+.radio_widget.modern .unit {
   background:
     radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--ui-accent) 20%, transparent), transparent 42%),
     linear-gradient(160deg, #1b1e22, #0c0d0f);
   border-radius: calc(var(--u) * 0.14);
   box-shadow: 0 0 0 calc(var(--u) * 0.022) var(--well), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
-.radio.modern .vfd {
+.radio_widget.modern .vfd {
   background: none;
   box-shadow: none;
   color: var(--ui-fg);
@@ -1023,10 +1023,10 @@ button { cursor: pointer; }
   text-shadow: none;
   padding-inline: calc(var(--u) * 0.06);
 }
-.radio.modern .vfd-top { color: var(--ui-dim); opacity: 1; letter-spacing: 0.04em; font-size: calc(var(--u) * 0.12); }
-.radio.modern .track { font-size: calc(var(--u) * 0.19); font-weight: 600; }
-.radio.modern .mkeys { justify-content: space-between; align-items: center; }
-.radio.modern .mkey {
+.radio_widget.modern .vfd-top { color: var(--ui-dim); opacity: 1; letter-spacing: 0.04em; font-size: calc(var(--u) * 0.12); }
+.radio_widget.modern .track { font-size: calc(var(--u) * 0.19); font-weight: 600; }
+.radio_widget.modern .mkeys { justify-content: space-between; align-items: center; }
+.radio_widget.modern .mkey {
   flex: 0 1 auto;
   height: 100%;
   max-height: calc(var(--u) * 0.62);
@@ -1036,8 +1036,8 @@ button { cursor: pointer; }
   background: rgba(255, 255, 255, 0.08);
   box-shadow: none;
 }
-.radio.modern .mkey svg { height: 50%; }
-.radio.modern .mkey[data-media="media_play"] { background: var(--ui-accent); color: #1a1205; }
+.radio_widget.modern .mkey svg { height: 50%; }
+.radio_widget.modern .mkey[data-media="media_play"] { background: var(--ui-accent); color: #1a1205; }
 
 /* ---- Engraved plate -------------------------------------------------------------------- */
 .plate .cap {
@@ -2136,7 +2136,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 #panel > canvas.lightbloom { z-index: 8; mix-blend-mode: screen; }
 
 /* screen brightness (menu: Display brightness; auto dims with the cabin like a real dash) */
-#panel .k-gps.tinfo, #panel .k-rtext, #panel .k-live, #panel .vf-glass, #panel .w.display, #panel .w.radio {
+#panel .k-gps.tinfo, #panel .k-rtext, #panel .k-live, #panel .vf-glass, #panel .w.display, #panel .w.radio_widget {
   filter: brightness(var(--disp-bright, 1));
 }
 
