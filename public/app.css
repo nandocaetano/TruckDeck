@@ -708,6 +708,16 @@ button { cursor: pointer; }
 }
 .w.down .cap { transform: translateY(calc(var(--u) * 0.02)) scale(0.985); filter: brightness(0.82); }
 
+/* ---- Layout Editor bridge: a button with its own reference picture ------------------------- */
+/* The editor's asset already shows the pictogram/label baked into the art, so it replaces the
+   drawn cap wholesale instead of sitting behind the usual icon + text legend. */
+.k-kbd.has-asset .cap {
+  background: var(--asset) center / cover no-repeat;
+  box-shadow: none;
+}
+.k-kbd.has-asset .cap::before { display: none; }
+.k-kbd.has-asset .ico, .k-kbd.has-asset .lbl { display: none; }
+
 /* ---- Hazard: the one red key on the dash ----------------------------------------------- */
 .hazard .tri { width: 62%; height: 62%; display: block; }
 .hazard .tri path:first-child { fill: #b3140f; stroke: #5d0a07; stroke-width: 2; stroke-linejoin: round; }

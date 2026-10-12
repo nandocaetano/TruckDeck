@@ -147,6 +147,73 @@
     return o.zones.filter((z) => z && !z.hidden && (z.type === 'dash-obd' || z.type === 'dash-speedometer'));
   }
 
+  // The editor lets a player type any free-text functionId; this maps the ones already saved
+  // (Portuguese slugs, some with typos) to real catalog ids from FUNCTION_LIST. A functionId
+  // not found here, and not already a real catalog id, resolves to 'custom' (an inert key —
+  // see fnOf()/keysOf() in catalog.js's FUNCTIONS lookup) instead of breaking anything.
+  const ATOMIC_FN_ALIASES = {
+    subirsuspensaotraseira: 'susp_rear_up', subirsuspensaoatras: 'susp_rear_up',
+    subirsusoensaofrente: 'susp_front_up', subirsuspensaofrente: 'susp_front_up',
+    abaixarsuspensaotraseira: 'susp_rear_down', baixarsuspensaoatras: 'susp_rear_down',
+    abaixarsuspensaofrente: 'susp_front_down', baixarsuspensaofrente: 'susp_front_down',
+    resetsuspensao: 'susp_reset', seretsuspensao: 'susp_reset',
+    engate: 'trailer_attach', engatar: 'trailer_attach',
+    suspensaotrailer: 'trailer_axle',
+    espelhos: 'mirrors',
+    assistentefaixa: 'lane_assist', assitentedefaixa: 'lane_assist',
+    liga_desliga: 'engine',
+    freio_de_estacionamento: 'parking_brake', freio_estacionamento: 'parking_brake',
+    alerta: 'hazard',
+    limpadoroff: 'wipers_back', limpador_off: 'wipers_back',
+    limpador: 'wipers', limpodor: 'wipers',
+    luz: 'lights', luzalta: 'high_beam',
+    mapa: 'world_map',
+    salvar: 'quick_save',
+    enter: 'activate',
+    diminuircruzeiro: 'cruise_down', cruzeiro: 'cruise', aumentarcruzeiro: 'cruise_up',
+    diminuirfreiomotor: 'engine_brake_down',
+    ligarfreiomotor: 'engine_brake_toggle', ligadesligafreiomotor: 'engine_brake_toggle',
+    aumentarfreiomotor: 'engine_brake_up', aumentafreiomotor: 'engine_brake_up',
+    diminuirretarder: 'retarder_down', ligarretarder: 'retarder_auto', aumentarretarder: 'retarder_up',
+    freiotrailer: 'trailer_brake',
+    freioemergencia: 'emergency_brake'
+  };
+  // menu and other ids already matching FUNCTION_LIST pass through unchanged; an empty or
+  // unmapped functionId falls through to 'custom', the same inert key fnOf() already handles.
+  function resolveFn(functionId) {
+    const id = String(functionId || '');
+    if (!id) return 'custom';
+    if (ATOMIC_FN_ALIASES[id]) return ATOMIC_FN_ALIASES[id];
+    return FUNCTIONS[id] ? id : 'custom';
+  }
+
+  // A button's asset is either a shipped picture (editor ships it at skins/modern/<file>, same
+  // folder the panel background lives in) or a player-uploaded custom asset, stored once per
+  // board as a data URI in board.customAssets and referenced here by its id.
+  function resolveAtomicAsset(board, key) {
+    if (!key) return null;
+    const custom = board && Array.isArray(board.customAssets) && board.customAssets.find((a) => a && a.id === key);
+    if (custom) return custom.src || null;
+    return SKIN_PATH + 'modern/' + key;
+  }
+
+  // Reads the editor's free-position buttons for one cut, normalized to the shape widgetsOf()
+  // can drop straight into a widget list (same w.r free-position rect the dash zones use).
+  function atomicDashButtons(cut) {
+    const board = atomicBoard();
+    const mode = cut === 'P' ? 'portrait' : 'landscape';
+    const o = board && board.orientations && board.orientations[mode];
+    if (!o || !Array.isArray(o.buttons)) return [];
+    return o.buttons.filter((b) => b && !b.hidden).map((b) => ({
+      id: 'atomic-' + b.id,
+      t: 'kbd',
+      fn: resolveFn(b.functionId),
+      r: [Number(b.x) || 0, Number(b.y) || 0, Number(b.width) || 1, Number(b.height) || 1],
+      zIndex: Number(b.zIndex) || 10,
+      asset: resolveAtomicAsset(board, b.asset)
+    }));
+  }
+
   let saveTimer = null;
   function save() {
     applyPrefs();
@@ -272,12 +339,16 @@
     if (!skin) return pg.widgets || [];
     const cut = skinCut(pg);
     const zones = pg.skin === 'eu_frame' ? atomicDashZones(cut) : [];
-    const key = pg.id + cut + JSON.stringify(pg.over || {}) + JSON.stringify(zones);
+    const buttons = pg.skin === 'eu_frame' ? atomicDashButtons(cut) : [];
+    const key = pg.id + cut + JSON.stringify(pg.over || {}) + JSON.stringify(zones) + JSON.stringify(buttons);
     if (skinMemo.key !== key) {
-      // Zones from the editor replace the preset's fixed w_drive/w_media slots wholesale; the
-      // rocker keys around them stay the preset's own, untouched by the Layout Editor.
-      const base = zones.length ? skin.w.filter((w) => w.id !== 'w_drive' && w.id !== 'w_media') : skin.w;
-      const list = base.concat(zones.map(dashWidgetFromZone));
+      // Zones from the editor replace the preset's fixed w_drive/w_media slots wholesale; a
+      // saved set of buttons replaces the preset's whole fixed key grid (the upper/brakes/
+      // utility/system groups built by modernSet/modernSystem in frames.js) the same way --
+      // all or nothing, so a board with no buttons leaves the factory grid byte-for-byte stock.
+      let base = zones.length ? skin.w.filter((w) => w.id !== 'w_drive' && w.id !== 'w_media') : skin.w;
+      if (buttons.length) base = base.filter((w) => !w.g);
+      const list = base.concat(zones.map(dashWidgetFromZone)).concat(buttons);
       skinMemo = { key, list: list.map((w) => Object.assign({ sk: true }, w, (pg.over || {})[cut + ':' + w.id])) };
     }
     return skinMemo.list;
@@ -1104,12 +1175,18 @@
       const pw = parseFloat(panel.style.width) || 600, ph = parseFloat(panel.style.height) || 400;
       const kpx = Math.min(w.r[2] / 100 * pw, w.r[3] / 100 * ph);
       const wide = (w.r[2] / 100 * pw) > (w.r[3] / 100 * ph) * 1.35;   // low, wide slot: pictogram and name side by side
-      node.className = 'w sk k-kbd' + (page().skin === 'eu_frame' ? ' k-modern' : '') + ' ' + (w.k || 'rocker') + (w.mini ? ' mini' : '') + (wide ? ' wide' : '') + (mandatory ? ' mandatory-action' : '');
+      node.className = 'w sk k-kbd' + (page().skin === 'eu_frame' ? ' k-modern' : '') + ' ' + (w.k || 'rocker') + (w.mini ? ' mini' : '') + (wide ? ' wide' : '') + (mandatory ? ' mandatory-action' : '') + (w.asset ? ' has-asset' : '');
       node.dataset.led = f.led;
       node.setAttribute('role', 'button');
       node.setAttribute('aria-label', f.name === 'Custom key' ? (f.label || 'Custom key') : f.name);
       node.style.setProperty('--k', kpx.toFixed(1) + 'px');
       if (w.rad) node.style.setProperty('--cap-radius', String(w.rad));   // corners follow the slot of this frame
+      // A button bridged from the Layout Editor carries its own reference picture and the
+      // editor's own stacking order; it paints over the drawn rocker cap instead of sitting
+      // behind the usual icon + label (.has-asset in app.css), and keeps the layer order the
+      // player set for overlapping free-position buttons.
+      if (w.asset) node.style.setProperty('--asset', 'url("' + w.asset + '")');
+      if (w.zIndex) node.style.zIndex = w.zIndex;
       node.innerHTML = widgetHtml({ id: w.id, t: w.k || 'rocker', fn: w.fn });
       return node;
     }
