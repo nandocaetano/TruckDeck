@@ -53,14 +53,97 @@
     u: 60,                // cell size in px
     phase: true,          // flasher phase for hazard / indicator lamps when no game drives them
     obc: false,           // on-board computer showing instead of the panel
+    bulbUntil: 0,         // telltale bulb-check deadline (ms)
   };
+
+  // Modern (eu_frame) ignition boot sequence — logo → bulb check → gauge sweep → data reveal.
+  // Phases are driven from updateStates on the electric rising edge (~3.2s total).
+  const MODERN_BOOT = {
+    LOGO_MS: 600,
+    BULB_MS: 2000,
+    SWEEP_UP_MS: 400,
+    SWEEP_DOWN_MS: 400,
+    REVEAL_MS: 400
+  };
+  MODERN_BOOT.TOTAL_MS = MODERN_BOOT.BULB_MS + MODERN_BOOT.SWEEP_UP_MS + MODERN_BOOT.SWEEP_DOWN_MS + MODERN_BOOT.REVEAL_MS;
+  let modernBoot = { phase: 'off', at: 0 }; // off | booting | running
+  let _modernIgnPowered = null;
+
+  function modernBootElapsed() { return Date.now() - (modernBoot.at || 0); }
+  function modernBooting() { return modernBoot.phase === 'booting'; }
+  // 0..100 during sweep window; null outside (use live telemetry).
+  function modernBootSweepPct() {
+    if (!modernBooting()) return null;
+    const k = modernBootElapsed();
+    const t0 = MODERN_BOOT.BULB_MS;
+    const up = MODERN_BOOT.SWEEP_UP_MS;
+    const down = MODERN_BOOT.SWEEP_DOWN_MS;
+    if (k < t0) return 0;
+    if (k < t0 + up) return ((k - t0) / up) * 100;
+    if (k < t0 + up + down) return (1 - (k - t0 - up) / down) * 100;
+    return null;
+  }
+  function modernBootPhaseName() {
+    if (!modernBooting()) return modernBoot.phase === 'running' ? 'running' : 'off';
+    const k = modernBootElapsed();
+    if (k < MODERN_BOOT.LOGO_MS) return 'logo';
+    if (k < MODERN_BOOT.BULB_MS) return 'bulbs';
+    if (k < MODERN_BOOT.BULB_MS + MODERN_BOOT.SWEEP_UP_MS + MODERN_BOOT.SWEEP_DOWN_MS) return 'sweep';
+    return 'reveal';
+  }
+  function ensureIgnBootOverlay() {
+    if (panel.querySelector('.ign-boot')) return;
+    const host = panel.querySelector('.obd-screens');
+    if (!host) return;
+    const el = document.createElement('div');
+    el.className = 'ign-boot';
+    el.setAttribute('aria-hidden', 'true');
+    // PNG from AntiGravity when ready; inline griffin shield is the interim mark (no "Scania" word).
+    el.innerHTML =
+      '<div class="ign-boot-mark">' +
+        '<img class="ign-boot-img" src="skins/modern/dash/boot_logo.png" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.hidden=false">' +
+        '<svg class="ign-boot-svg" viewBox="0 0 120 140" hidden aria-hidden="true">' +
+          '<defs><linearGradient id="ignBootG" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0" stop-color="#f4f7fb"/><stop offset="1" stop-color="#8aa0b0"/></linearGradient></defs>' +
+          '<path fill="url(#ignBootG)" d="M60 4 108 28v40c0 36-22 62-48 72C34 130 12 104 12 68V28Z"/>' +
+          '<path fill="#0a1218" d="M60 18 96 36v30c0 28-16 48-36 56-20-8-36-28-36-56V36Z"/>' +
+          '<path fill="#18d7ef" d="M60 42c-10 8-16 18-16 30 0 8 3 14 8 19l8-8c-3-3-5-7-5-11 0-8 4-14 13-22zm0 0c10 8 16 18 16 30 0 8-3 14-8 19l-8-8c3-3 5-7 5-11 0-8-4-14-13-22z"/>' +
+          '<text x="60" y="118" text-anchor="middle" fill="#9eb0bc" font-size="11" font-family="Barlow,sans-serif" font-weight="700">V8</text>' +
+        '</svg>' +
+      '</div>';
+    host.appendChild(el);
+  }
+  function startModernBoot() {
+    if (page().skin !== 'eu_frame') return;
+    modernBoot = { phase: 'booting', at: Date.now() };
+    S.bulbUntil = Date.now() + MODERN_BOOT.BULB_MS;
+    ensureIgnBootOverlay();
+    panel.classList.add('ign-booting');
+    panel.dataset.boot = 'logo';
+  }
+  function stopModernBoot(to) {
+    modernBoot = { phase: to || 'off', at: Date.now() };
+    panel.classList.remove('ign-booting');
+    const o = panel.querySelector('.ign-boot');
+    if (o) o.remove();
+    if (to === 'running') panel.dataset.boot = 'running';
+    else delete panel.dataset.boot;
+  }
+  function tickModernBoot() {
+    if (page().skin !== 'eu_frame') { if (modernBoot.phase !== 'off') stopModernBoot('off'); return; }
+    if (!modernBooting()) return;
+    const phase = modernBootPhaseName();
+    panel.dataset.boot = phase;
+    if (modernBootElapsed() >= MODERN_BOOT.TOTAL_MS) stopModernBoot('running');
+  }
 
   // Shown on the readouts when no bridge is reachable, so the preview is not a wall of dashes.
   const DEMO_TEL = { sdk: true, dmgTruck: 7, dmgTrailer: 1, dmgCargo: 1, routeDist: 369000, routeTime: 14700, time: 1 * 1440 + 11 * 60 + 5, speed: 22.8, gear: 12, cruise: 22.2, fuel: 640, fuelCap: 1000, rpm: 1250, air: 118, retarder: 0, retSteps: 3,
     // on-board computer
     onJob: true, cargo: 'Machine parts', mass: 21500, cityFrom: 'Rotterdam', compFrom: 'EuroGoodies', cityTo: 'Lyon', compTo: 'Tradeaux', income: 18450,
     jobKm: 942, due: 2 * 1440 + 6 * 60, truck: 'Demo', model: 'Truck', odo: 184230, range: 1480, fuelAvg: 0.31, adblue: 62, adblueCap: 80,
-    oilP: 58, oilT: 96, waterT: 84, batt: 27.6, brakeT: 110, limit: 25, wear: [4, 7, 2, 5, 3], game: 1 };
+    oilP: 58, oilT: 96, waterT: 84, batt: 27.6, brakeT: 110, limit: 25, wear: [4, 7, 2, 5, 3], game: 1,
+    high: true, park: false, blinkL: false, blinkR: false, oilWarn: false, battWarn: false, lift: false, trailerLift: false };
   // Trucks report the gear as a bare number; crawler gears (C1, C2) are that same count
   // started early. "Auto" reads the gearbox size from the game, the rest pin it by hand.
   // Gearbox display layouts — these mirror the game's own "Layout do câmbio" list so a player
@@ -136,6 +219,17 @@
       try { atomicCache = JSON.parse(raw || 'null'); } catch (e) { atomicCache = null; }
     }
     return atomicCache;
+  }
+  // Shared by connect()'s initial fetch and the SSE-triggered refetch below: write the PC's
+  // atomic-layout payload into localStorage only when it actually differs, and drop the cached
+  // parse so atomicBoard() re-reads it on the next call.
+  function applyAtomicLayoutPayload(body) {
+    if (!body || body.schema !== 'desktruck.atomic-layout/v1') return false;
+    const text = JSON.stringify(body);
+    if (text === lsGet(ATOMIC_LAYOUT_KEY)) return false;
+    lsSet(ATOMIC_LAYOUT_KEY, text);
+    atomicRaw = null; // force atomicBoard() to re-parse instead of serving its old cache
+    return true;
   }
   function hasAtomicButtons() {
     const board = atomicBoard();
@@ -230,12 +324,17 @@
   function atomicButtonPicto(fnId, raw) {
     const f = FUNCTIONS[fnId];
     if (!f || fnId === 'custom' || !raw) return null;
-    return {
+    const picto = {
       icon: f.icon,
       w: Number(raw.width) || 55, h: Number(raw.height) || 55,
       ox: Number(raw.offsetX) || 0, oy: Number(raw.offsetY) || 0,
       op: Math.max(0, Math.min(1, Number(raw.opacity)))
     };
+    // Optional pictogram.color (hex). Omitted = white CSS default — no migration on old boards.
+    if (typeof raw.color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(raw.color) && raw.color.toLowerCase() !== '#ffffff') {
+      picto.color = raw.color.toLowerCase();
+    }
+    return picto;
   }
   function atomicDashButtons(cut) {
     const board = atomicBoard();
@@ -251,7 +350,7 @@
         r: [Number(b.x) || 0, Number(b.y) || 0, Number(b.width) || 1, Number(b.height) || 1],
         zIndex: Number(b.zIndex) || 10,
         asset: resolveAtomicAsset(board, b.asset),
-        picto: atomicButtonPicto(resolved, b.pictogram)
+        picto: b.pictogramHidden ? null : atomicButtonPicto(resolved, b.pictogram)
       };
     });
   }
@@ -266,9 +365,9 @@
     if (!o || !Array.isArray(o.buttons)) return '';
     return o.buttons.filter((b) => b && !b.hidden).map((b) => {
       const p = b.pictogram || {};
-      return b.id + ':' + (b.functionId || '') + ':' + (b.asset || '') + ':' + (b.zIndex || '')
+      return b.id + ':' + (b.functionId || '') + ':' + (b.asset || '') + ':' + (b.zIndex || '') + ':' + (b.pictogramHidden ? 1 : 0)
         + ':' + (b.x || 0) + ',' + (b.y || 0) + ',' + (b.width || 0) + ',' + (b.height || 0)
-        + ':' + (p.width || 0) + ',' + (p.height || 0) + ',' + (p.offsetX || 0) + ',' + (p.offsetY || 0) + ',' + (p.opacity || 0);
+        + ':' + (p.width || 0) + ',' + (p.height || 0) + ',' + (p.offsetX || 0) + ',' + (p.offsetY || 0) + ',' + (p.opacity || 0) + ',' + (p.color || '');
     }).join('|');
   }
 
@@ -597,6 +696,17 @@
     if (state === 'lost') setTimeout(connect, 3000);
   }
 
+  // Fired when the bridge broadcasts 'atomic-layout' (the Editor just saved): pulls the new
+  // board and repaints immediately, instead of waiting for this tablet's next full connect().
+  function refetchAtomicLayout() {
+    fetchJson('api/atomic-layout', { headers: { 'X-Pin': S.pin } }).then((atomicRes) => {
+      if (atomicRes && atomicRes.status === 200 && applyAtomicLayoutPayload(atomicRes.body)) {
+        preferAtomicModern();
+        renderAll();
+      }
+    }).catch(() => {});
+  }
+
   let events = null;
   function openEvents() {
     if (events) events.close();
@@ -616,9 +726,12 @@
           if ((msg.dash || manual) && !(S.tel && S.tel.paused)) {
             document.querySelectorAll('.k-sc25').forEach((n) => n._sc25 && n._sc25.step(1));
             document.querySelectorAll('.scania-obc').forEach((n) => cycleScania(n));
+            // Modern OBD (eu_frame utility) — same pad channel as S/R 2016; do not touch scania lines above.
+            document.querySelectorAll('.k-rtext.modern-utility').forEach((n) => cycleModernObd(n));
           }
         }
       }
+      else if (msg.type === 'atomic-layout') refetchAtomicLayout();
       else if (msg.type === 'error') toast(msg.msg);
     };
     events.onerror = () => {
@@ -679,16 +792,8 @@
       S.bridge = 'ok';
       // A failed fetch, a 401, or an empty/invalid body must leave the existing localStorage
       // board alone - this only ever replaces it with a validly-schemed payload from the PC.
-      let atomicChanged = false;
-      if (atomicRes && atomicRes.status === 200 && atomicRes.body
-        && atomicRes.body.schema === 'desktruck.atomic-layout/v1') {
-        const text = JSON.stringify(atomicRes.body);
-        if (text !== lsGet(ATOMIC_LAYOUT_KEY)) {
-          lsSet(ATOMIC_LAYOUT_KEY, text);
-          atomicRaw = null; // force atomicBoard() to re-parse instead of serving its old cache
-          atomicChanged = true;
-        }
-      }
+      const atomicChanged = atomicRes && atomicRes.status === 200
+        && applyAtomicLayoutPayload(atomicRes.body);
       if (validStore(res.body)) {
         // The PC copy wins: it is what every device shares.
         S.store = res.body;
@@ -1274,9 +1379,11 @@
       if (w.asset) node.style.setProperty('--asset', cssUrl(w.asset));
       if (w.zIndex) node.style.zIndex = w.zIndex;
       node.innerHTML = widgetHtml({ id: w.id, t: w.k || 'rocker', fn: w.fn });
+      if (w.asset) node.innerHTML += '<i class="hit" aria-hidden="true"></i>';
       if (w.asset && w.picto) {
         node.innerHTML += '<span class="atomic-picto" style="left:' + w.picto.ox + '%;top:' + w.picto.oy
-          + '%;width:' + w.picto.w + '%;height:' + w.picto.h + '%;opacity:' + w.picto.op + '">' + iconSvg(w.picto.icon) + '</span>';
+          + '%;width:' + w.picto.w + '%;height:' + w.picto.h + '%;opacity:' + w.picto.op
+          + (w.picto.color ? ';color:' + w.picto.color : '') + '">' + iconSvg(w.picto.icon) + '</span>';
       }
       return node;
     }
@@ -1295,10 +1402,74 @@
       if (OBC_FIELDS.has(w.field)) { node.classList.add('tap'); node.setAttribute('role', 'button'); node.setAttribute('aria-label', 'On-board computer'); }
     } else if (w.t === 'rtext') {
       node.classList.toggle('modern-utility', !!w.utility);
-      node.innerHTML = (w.utility ? '<div class="mu-head"><span></span><time></time></div>' : '') +
-        (w.two ? '<em class="freight"></em><small></small>' : '') +
-        '<b><span></span></b>' +
-        (w.two ? '<div class="rt-keys"><i data-media="media_prev" role="button" aria-label="Previous">' + iconSvg('prev') + '</i><i data-media="media_play" role="button" aria-label="Play/Pause">' + iconSvg('playpause') + '</i><i data-media="media_next" role="button" aria-label="Next">' + iconSvg('next') + '</i></div>' : '');
+      if (w.utility) {
+        const ptObd = layout().lang === 'pt';
+        const L = (en, p) => (ptObd ? p : en);
+        const tell = (flag, file) => '<i class="tell" data-flag="' + flag + '" data-src="skins/modern/obd/telltales/' + file + '"><img src="skins/modern/obd/telltales/' + file + '_off.png" alt=""></i>';
+        const cell = (key, file, unit) =>
+          '<div class="obd-cell" data-k="' + key + '"><img class="obd-ico" src="skins/modern/obd/' + file + '.png" alt="">' +
+          '<div class="obd-read"><b class="obd-val">--</b><small class="obd-unit">' + unit + '</small></div>' +
+          (key === 'fuel' || key === 'air' ? '<div class="obd-fuelbar" data-bar="' + key + '"><i></i></div>' : '') + '</div>';
+        // Text cells with a small caption (pages without dedicated PNG icons yet).
+        const textCell = (key, unit, label) =>
+          '<div class="obd-cell" data-k="' + key + '">' +
+            (label ? '<small class="obd-lbl">' + label + '</small>' : '') +
+            '<div class="obd-read"><b class="obd-val">--</b><small class="obd-unit">' + unit + '</small></div></div>';
+        const mediaKeys =
+          '<div class="obd-media-keys">' +
+            '<i data-media="media_prev" role="button" aria-label="Previous">' + iconSvg('prev') + '</i>' +
+            '<i data-media="media_play" role="button" aria-label="Play/Pause">' + iconSvg('playpause') + '</i>' +
+            '<i data-media="media_next" role="button" aria-label="Next">' + iconSvg('next') + '</i>' +
+          '</div>';
+        // .obd-body is the flex layout wrapper; .modern-utility only hosts container-type:size.
+        // Eight pages cycled by SSE pad (joystick), parity with Scania S/R OBC.
+        node.dataset.screen = '0';
+        node.innerHTML =
+          '<div class="obd-body">' +
+            '<div class="mu-head"><span></span><time></time></div>' +
+            '<div class="obd-tell-l">' + tell('high', 'high') + tell('park', 'park') + tell('blinkL', 'blink_l') + tell('blinkR', 'blink_r') + tell('oilWarn', 'oil') + tell('battWarn', 'batt') + '</div>' +
+            '<div class="obd-screens">' +
+              '<div class="obd-screen active" data-si="0"><div class="obd-core">' +
+                cell('air', 'air', 'psi') + textCell('oilP', 'bar', L('OIL P', 'ÓLEO')) +
+              '</div></div>' +
+              '<div class="obd-screen" data-si="1"><div class="obd-core">' +
+                cell('water', 'water', '\u00b0C') + textCell('oilT', '\u00b0', L('OIL T', 'ÓLEO')) +
+                textCell('brakeT', '\u00b0', L('BRAKE', 'FREIO')) + textCell('cabinT', '\u00b0', L('CABIN', 'CABINE')) +
+              '</div></div>' +
+              '<div class="obd-screen" data-si="2"><div class="obd-core">' +
+                textCell('cruise', '', L('CRUISE', 'CRUZEIRO')) + textCell('limit', '', L('LIMIT', 'LIMITE')) +
+                textCell('gear', '', L('GEAR', 'MARCHA')) + textCell('speed', '', L('SPEED', 'VEL')) +
+              '</div></div>' +
+              '<div class="obd-screen" data-si="3"><div class="obd-core">' +
+                cell('fuel', 'fuel', '%') + textCell('range', 'km', L('RANGE', 'AUTONOMIA')) +
+                textCell('consAvg', 'l/100', L('AVG', 'MÉDIA')) + textCell('consInst', 'l/h', L('INST', 'INST')) +
+              '</div></div>' +
+              '<div class="obd-screen obd-screen-media" data-si="4"><div class="obd-core obd-core-media">' +
+                '<div class="obd-cell obd-cell-media" data-k="media">' +
+                  '<span class="obd-media-ico">' + iconSvg('music') + '</span>' +
+                  '<div class="obd-read"><b class="obd-val" data-media-title>--</b></div>' +
+                  '<small class="obd-unit" data-media-artist></small>' +
+                  mediaKeys +
+                '</div>' +
+              '</div></div>' +
+              '<div class="obd-screen" data-si="5"><div class="obd-core">' +
+                textCell('odo', 'km', L('ODO', 'ODO')) + textCell('routeDist', 'km', L('LEFT', 'FALTA')) +
+                textCell('routeTime', '', L('DRIVE', 'VIAGEM')) + textCell('eta', '', 'ETA') +
+              '</div></div>' +
+            '</div>' +
+            '<div class="obd-tell-r">' + tell('lift', 'lift') + tell('trailerLift', 'trailer_lift') + '</div>' +
+            '<em class="freight"></em>' +
+            '<div class="obd-media">' +
+              '<span class="obd-media-ico">' + iconSvg('music') + '</span>' +
+              '<span class="obd-media-line"><em>Playing:</em> <b></b></span>' +
+              mediaKeys +
+            '</div>' +
+          '</div>';
+      } else {
+        node.innerHTML = (w.two ? '<em class="freight"></em><small></small>' : '') +
+          '<b><span></span></b>' +
+          (w.two ? '<div class="rt-keys"><i data-media="media_prev" role="button" aria-label="Previous">' + iconSvg('prev') + '</i><i data-media="media_play" role="button" aria-label="Play/Pause">' + iconSvg('playpause') + '</i><i data-media="media_next" role="button" aria-label="Next">' + iconSvg('next') + '</i></div>' : '');
+      }
     } else if (w.t === 'fbar') {
       node.innerHTML = '<i></i>';
     } else if (w.t === 'gps') {
@@ -1373,12 +1544,17 @@
           '<div class="vf-cap"><span></span><span></span><span></span><span></span></div>';
       } else
       if (w.hero) {
-        // wide low screen: route on top, then big speed | gear | four small values, engine-speed bar underneath
+        // Modern digital cluster (eu_frame only): vertical RPM | giant speed+gear | tele column.
+        // .spd-body mirrors .obd-body — outer node hosts container-type:size; flex/grid lives inside.
         node.classList.add('hero');
-        node.innerHTML = '<div class="ti-head"><span class="ti-dest"></span><span class="ti-clock"></span></div>' +
-          '<div class="ti-dmg"><span class="ti-di"><span class="ico">' + iconSvg('cab') + '</span><b></b></span><span class="ti-di"><span class="ico">' + iconSvg('trailer') + '</span><b></b></span><span class="ti-di"><span class="ico">' + iconSvg('cargo') + '</span><b></b></span></div>' +
-          '<div class="th-main"><div class="th-speed"><b></b><small></small></div><div class="th-gear"><small></small><b></b></div><div class="th-stats"></div></div>' +
-          '<div class="ti-rpm"><i><u></u></i><b></b></div>';
+        const tele = (k) => '<div class="ti-c" data-k="' + k + '"><span></span><b>--</b></div>';
+        node.innerHTML =
+          '<div class="spd-body">' +
+            '<div class="spd-rpm" aria-hidden="true"><i class="spd-rpm-track"><u class="spd-rpm-fill"></u></i></div>' +
+            '<div class="spd-core"><b class="spd-speed">--</b><small class="spd-unit">km/h</small><div class="spd-gear">--</div></div>' +
+            '<div class="spd-tele">' + tele('oil') + tele('batt') + tele('range') + tele('trip') + '</div>' +
+            '<div class="spd-foot"><span class="spd-time">--:--</span><span class="spd-odo">--</span></div>' +
+          '</div>';
       } else
       node.innerHTML = '<div class="ti-head"><span class="ti-dest"></span><span class="ti-clock"></span></div>' +
         '<div class="ti-dmg"><span class="ti-di"><span class="ico">' + iconSvg('cab') + '</span><b></b></span><span class="ti-di"><span class="ico">' + iconSvg('trailer') + '</span><b></b></span><span class="ti-di"><span class="ico">' + iconSvg('cargo') + '</span><b></b></span></div>' +
@@ -1532,43 +1708,150 @@
       const boxH = node.clientHeight;
       if (w.utility) {
         const d = new Date();
+        const ptU = layout().lang === 'pt';
+        const L = (en, p) => (ptU ? p : en);
+        const clockMins = (mins) => {
+          const m = ((Math.round(mins) % 1440) + 1440) % 1440;
+          return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60);
+        };
         const tm = node.querySelector('.mu-head time');
         const st = node.querySelector('.mu-head span');
-        const clock = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
-        if (tm.textContent !== clock) tm.textContent = clock;
-        const status = S.bridge === 'online' ? 'MEDIA' : (S.bridge === 'demo' ? 'DEMO' : 'OFFLINE');
-        if (st.textContent !== status) st.textContent = status;
-      }
-      // a very low, wide radio screen (tablet upright) puts the media keys beside the text
-      // instead of under it, so the three text lines get the whole height
-      const wideRt = !!w.two && node.clientWidth > boxH * 4.2;
-      node.classList.toggle('rt-wide', wideRt);
-      const rk = node.querySelector('.rt-keys');
-      if (rk) rk.style.fontSize = (boxH * (wideRt ? 0.3 : 0.17)).toFixed(1) + 'px';
-      const bEl = node.querySelector('b');
-      const span = bEl.firstChild;
-      if (w.two) {
-        // freight info line
-        const freightEl = node.querySelector('.freight');
-        const tl = curTel();
-        let freightTxt = '';
-        if (tl && tl.onJob !== false && tl.cityFrom) {
-          const cur = layout().currency || '€';
-          freightTxt = tl.cityFrom + ' → ' + tl.cityTo + ' · ' + (tl.cargo || '') +
-            (tl.income ? ' · ' + cur + (tl.income / 100).toLocaleString(undefined, { minimumFractionDigits: 0 }) : '');
+        if (tm) {
+          const clock = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+          if (tm.textContent !== clock) tm.textContent = clock;
         }
-        if (freightEl.textContent !== freightTxt) freightEl.textContent = freightTxt;
-        freightEl.style.fontSize = (boxH * (wideRt ? 0.19 : 0.13) * (w.fs || 1)).toFixed(1) + 'px';
-        // artist line
-        const artistEl = node.querySelector('small');
-        artistEl.textContent = v.top;
-        artistEl.style.fontSize = (boxH * (wideRt ? 0.21 : 0.16) * (w.fs || 1)).toFixed(1) + 'px';
-      }
-      bEl.style.fontSize = (boxH * (w.two ? (wideRt ? 0.34 : 0.26) : 0.58) * (w.fs || 1)).toFixed(1) + 'px';
-      if (span.textContent !== line) {
-        span.textContent = line;
-        bEl.classList.remove('scroll');
-        bEl.classList.toggle('scroll', span.offsetWidth > bEl.clientWidth + 2);
+        if (st) {
+          // setBridge uses 'ok'/'demo'/'pin'/'lost' — never 'online'
+          const status = S.bridge === 'ok' ? 'MEDIA' : (S.bridge === 'demo' ? 'DEMO' : 'OFFLINE');
+          if (st.textContent !== status) st.textContent = status;
+        }
+        const tl = curTel();
+        const setCell = (key, valTxt) => {
+          node.querySelectorAll('.obd-cell[data-k="' + key + '"] .obd-val').forEach((el) => {
+            if (el.textContent !== valTxt) el.textContent = valTxt;
+          });
+        };
+        const mphU = layout().units === 'mph';
+        const spdU = (ms) => Math.round(Math.abs(ms) * (mphU ? 2.23694 : 3.6));
+        const spdUnit = mphU ? 'mph' : 'km/h';
+        const distUnit = mphU ? 'mi' : 'km';
+        const toDist = (m) => mphU ? Math.round(m / 1609.34) : Math.round(m / 1000);
+        const hm = (mins) => {
+          if (!(mins > 0)) return '--';
+          const h = Math.floor(mins / 60), m = Math.round(mins % 60);
+          return h + 'h' + pad2(m);
+        };
+        setCell('water', tl && tl.waterT != null && Number.isFinite(Number(tl.waterT)) ? String(Math.round(tempNum(tl.waterT))) : '--');
+        const fuelPct = tl && tl.fuelCap > 0 ? clamp(tl.fuel / tl.fuelCap, 0, 1) * 100 : null;
+        setCell('fuel', fuelPct != null ? String(Math.round(fuelPct)) : '--');
+        const bootSweep = modernBootSweepPct();
+        node.querySelectorAll('.obd-fuelbar[data-bar="fuel"] i').forEach((fuelBar) => {
+          fuelBar.style.width = (bootSweep != null ? bootSweep : (fuelPct != null ? fuelPct : 0)) + '%';
+        });
+        setCell('odo', tl && tl.odo != null ? String(Math.round(tl.odo)) : '--');
+        setCell('air', tl && tl.air != null ? String(Math.round(tl.air)) : '--');
+        const airPct = tl && tl.air != null ? clamp(Number(tl.air) / 150, 0, 1) * 100 : null;
+        node.querySelectorAll('.obd-fuelbar[data-bar="air"] i').forEach((airBar) => {
+          airBar.style.width = (bootSweep != null ? bootSweep : (airPct != null ? airPct : 0)) + '%';
+        });
+        setCell('oilP', tl && tl.oilP != null && Number.isFinite(Number(tl.oilP)) ? (Number(tl.oilP) / 14.5038).toFixed(1) : '--');
+        setCell('cruise', tl && tl.cruise > 0.5 ? String(spdU(tl.cruise)) : L('OFF', 'DESL.'));
+        setCell('limit', tl && tl.limit > 0.5 ? String(spdU(tl.limit)) : '--');
+        setCell('speed', tl && tl.speed != null ? String(spdU(tl.speed)) : '--');
+        setCell('gear', tl ? gearLabel(tl) : '--');
+        setCell('consAvg', tl && tl.fuelAvg > 0 ? (tl.fuelAvg * 100).toFixed(1) : '--');
+        setCell('consInst', tl && tl.fuelRate != null && Number(tl.fuelRate) > 0 ? Number(tl.fuelRate).toFixed(1) : '--');
+        setCell('range', tl && tl.range > 0 ? String(mphU ? Math.round(tl.range / 1.60934) : Math.round(tl.range)) : '--');
+        setCell('oilT', tl && tl.oilT != null ? String(Math.round(tempNum(tl.oilT))) : '--');
+        setCell('brakeT', tl && tl.brakeT != null ? String(Math.round(tempNum(tl.brakeT))) : '--');
+        setCell('cabinT', tl && tl.cabinT != null ? String(Math.round(tempNum(tl.cabinT))) : '--');
+        setCell('batt', tl && tl.batt != null ? Number(tl.batt).toFixed(1) : '--');
+        const adbluePct = tl && tl.adblueCap > 0 ? Math.round(tl.adblue / tl.adblueCap * 100) : null;
+        setCell('adblue', adbluePct != null ? String(adbluePct) : '--');
+        setCell('truck', tl && tl.truck ? String(tl.truck) : '--');
+        setCell('model', tl && tl.model ? String(tl.model) : '--');
+        const wearAvg = tl && Array.isArray(tl.wear) && tl.wear.length
+          ? Math.round(tl.wear.reduce((a, b) => a + b, 0) / tl.wear.length) : null;
+        setCell('wear', wearAvg != null ? String(wearAvg) : '--');
+        setCell('gameTime', tl && tl.time != null ? clockMins(tl.time) : '--');
+        setCell('routeDist', tl && tl.routeDist > 0 ? String(toDist(tl.routeDist)) : '--');
+        setCell('routeTime', tl && tl.routeTime > 0 ? hm(tl.routeTime / 60) : '--');
+        setCell('eta', tl && tl.routeTime > 0 && tl.time != null ? clockMins(tl.time + tl.routeTime / 60) : '--');
+        node.querySelectorAll('.obd-cell[data-k="water"] .obd-unit, .obd-cell[data-k="oilT"] .obd-unit, .obd-cell[data-k="brakeT"] .obd-unit, .obd-cell[data-k="cabinT"] .obd-unit').forEach((u) => { u.textContent = tempUnit(); });
+        node.querySelectorAll('.obd-cell[data-k="cruise"] .obd-unit, .obd-cell[data-k="limit"] .obd-unit, .obd-cell[data-k="speed"] .obd-unit').forEach((u) => { u.textContent = spdUnit; });
+        node.querySelectorAll('.obd-cell[data-k="range"] .obd-unit, .obd-cell[data-k="routeDist"] .obd-unit, .obd-cell[data-k="odo"] .obd-unit').forEach((u) => { u.textContent = distUnit; });
+        const now = Date.now();
+        const bulbCheck = now < (S.bulbUntil || 0);
+        node.querySelectorAll('.tell').forEach((el) => {
+          const flag = el.dataset.flag;
+          let on = !!(tl && tl[flag]);
+          if ((flag === 'lift' || flag === 'trailerLift') && now < (S.liftFlashUntil || 0) && S.liftFlashFlag === flag) on = true;
+          if (bulbCheck) on = true; // ignition bulb check / modern boot
+          el.classList.toggle('lit', on);
+          const img = el.querySelector('img');
+          const base = el.dataset.src;
+          if (img && base) {
+            const next = base + (on ? '_on.png' : '_off.png');
+            if (!img.getAttribute('src') || !img.getAttribute('src').endsWith(on ? '_on.png' : '_off.png')) img.src = next;
+          }
+        });
+        // Keep media strip visible on tablet (was collapsed whenever S.media wasn't playing,
+        // which made the player vanish outside demo). Controls stay; empty track shows em dash.
+        const mediaEl = node.querySelector('.obd-media');
+        const mediaLive = S.bridge === 'demo' || !!(S.media && (S.media.running || S.media.playing || S.media.title || S.media.artist));
+        if (mediaEl) mediaEl.classList.remove('collapsed');
+        node.classList.remove('obd-media-collapsed');
+        const trackTxt = v.top === 'DEMO' ? (v.line || 'DEMO') : (v.line || v.top || (mediaLive ? '' : '\u2014'));
+        const artistTxt = (S.media && S.media.artist) || '';
+        const mediaLine = node.querySelector('.obd-media-line b');
+        if (mediaLine && mediaLine.textContent !== (trackTxt || '\u2014')) mediaLine.textContent = trackTxt || '\u2014';
+        const mediaTitle = node.querySelector('[data-media-title]');
+        if (mediaTitle && mediaTitle.textContent !== (trackTxt || '\u2014')) mediaTitle.textContent = trackTxt || '\u2014';
+        const mediaArtist = node.querySelector('[data-media-artist]');
+        if (mediaArtist && mediaArtist.textContent !== artistTxt) mediaArtist.textContent = artistTxt;
+        const freightEl = node.querySelector('.freight');
+        if (freightEl) {
+          let freightTxt = '';
+          if (tl && tl.onJob !== false && tl.cityFrom) {
+            const cur = layout().currency || '\u20ac';
+            freightTxt = tl.cityFrom + ' \u2192 ' + tl.cityTo + ' \u00b7 ' + (tl.cargo || '') +
+              (tl.income ? ' \u00b7 ' + cur + (tl.income / 100).toLocaleString(undefined, { minimumFractionDigits: 0 }) : '');
+          }
+          if (freightEl.textContent !== freightTxt) freightEl.textContent = freightTxt;
+        }
+      } else {
+        // Classic / non-utility rtext (media strip)
+        const wideRt = !!w.two && node.clientWidth > boxH * 4.2;
+        node.classList.toggle('rt-wide', wideRt);
+        const rk = node.querySelector('.rt-keys');
+        if (rk) rk.style.fontSize = (boxH * (wideRt ? 0.3 : 0.17)).toFixed(1) + 'px';
+        const bEl = node.querySelector('b');
+        if (bEl) {
+          const span = bEl.firstChild;
+          if (w.two) {
+            const freightEl = node.querySelector('.freight');
+            const tl = curTel();
+            let freightTxt = '';
+            if (tl && tl.onJob !== false && tl.cityFrom) {
+              const cur = layout().currency || '\u20ac';
+              freightTxt = tl.cityFrom + ' \u2192 ' + tl.cityTo + ' \u00b7 ' + (tl.cargo || '') +
+                (tl.income ? ' \u00b7 ' + cur + (tl.income / 100).toLocaleString(undefined, { minimumFractionDigits: 0 }) : '');
+            }
+            if (freightEl && freightEl.textContent !== freightTxt) freightEl.textContent = freightTxt;
+            if (freightEl) freightEl.style.fontSize = (boxH * (wideRt ? 0.19 : 0.13) * (w.fs || 1)).toFixed(1) + 'px';
+            const artistEl = node.querySelector('small');
+            if (artistEl) {
+              artistEl.textContent = v.top;
+              artistEl.style.fontSize = (boxH * (wideRt ? 0.21 : 0.16) * (w.fs || 1)).toFixed(1) + 'px';
+            }
+          }
+          bEl.style.fontSize = (boxH * (w.two ? (wideRt ? 0.34 : 0.26) : 0.58) * (w.fs || 1)).toFixed(1) + 'px';
+          if (span && span.textContent !== line) {
+            span.textContent = line;
+            bEl.classList.remove('scroll');
+            bEl.classList.toggle('scroll', span.offsetWidth > bEl.clientWidth + 2);
+          }
+        }
       }
     } else if (w.t === 'fbar') {
       const t = curTel();
@@ -1626,8 +1909,9 @@
     buzz(before === 2 ? 30 : 14);
     send('tap', keyOf('engine'));
     if (before !== 2) {
-      S.bulbUntil = Date.now() + 1500;                   // lamp check, like a real dash
-      setTimeout(updateStates, 1550);
+      S.bulbUntil = Date.now() + Math.max(1500, MODERN_BOOT.BULB_MS); // lamp check / modern boot bulbs
+      if (page().skin === 'eu_frame') startModernBoot();
+      setTimeout(updateStates, Math.max(1550, MODERN_BOOT.TOTAL_MS + 50));
       // the key is held at START while the finger is down, then springs back
       if (node) {
         node.classList.add('crank');
@@ -1794,10 +2078,10 @@
       src.dials.push(b);
     });
     // backlit symbols and legends (never the ones drawn inside a screen)
-    panel.querySelectorAll('.w .ico, .w .lbl, .k-hot .cap').forEach((el) => {
+    panel.querySelectorAll('.w .ico, .w .lbl, .w .atomic-picto, .k-hot .cap').forEach((el) => {
       if (el.closest('.k-gps, .k-rtext, .rt-keys, .k-live')) return;
       const w = el.closest('.w'); const b = box(el); if (b.w < 0.5) return;
-      b.w0 = w; b.kind = el.classList.contains('ico') ? 'ico' : el.classList.contains('lbl') ? 'lbl' : 'cap';
+      b.w0 = w; b.kind = el.classList.contains('ico') || el.classList.contains('atomic-picto') ? 'ico' : el.classList.contains('lbl') ? 'lbl' : 'cap';
       b.col = lmCssv(w, '--lamp') || '#ffb02e';
       src.keys.push(b);
     });
@@ -1939,63 +2223,89 @@
     set('time', pad2(Math.floor(m / 60)) + ':' + pad2(m % 60));
   }
 
-  // Wide, low information screen (the portrait and landscape frame panels).
+  // Smooth RPM bar toward telemetry (~10 Hz SSE) so the fill looks ~60 fps instead of stepped.
+  let rpmSmoothPct = 0;
+  let rpmSmoothRaf = 0;
+  let rpmSmoothNode = null;
+  function rpmSmoothTick() {
+    rpmSmoothRaf = 0;
+    const node = rpmSmoothNode;
+    if (!node || !node.isConnected) return;
+    const fill = node.querySelector('.spd-rpm-fill');
+    const target = Number(node.dataset.rpmTarget);
+    if (!fill || !Number.isFinite(target)) return;
+    const next = rpmSmoothPct + (target - rpmSmoothPct) * 0.28;
+    rpmSmoothPct = Math.abs(target - next) < 0.15 ? target : next;
+    fill.style.height = rpmSmoothPct.toFixed(2) + '%';
+    if (rpmSmoothPct !== target) {
+      rpmSmoothRaf = requestAnimationFrame(rpmSmoothTick);
+    }
+  }
+  function setRpmBarSmooth(node, pct) {
+    node.dataset.rpmTarget = String(pct);
+    rpmSmoothNode = node;
+    if (!rpmSmoothRaf) rpmSmoothRaf = requestAnimationFrame(rpmSmoothTick);
+  }
+
+  // Modern digital speedometer (dash-speedometer → gps/hero). Scales via CSS cq* on .spd-body —
+  // do not set node.style.fontSize here (that fought container queries on the old hero).
   function updateHeroInfo(node) {
     const pt = layout().lang === 'pt';
     const L = (en, p) => (pt ? p : en);
     const t = curTel();
     const mph = layout().units === 'mph';
-    const h = node.clientHeight;
-    const wd = node.clientWidth;
-    node.style.fontSize = Math.max(7, Math.min(h / 9.6, wd / 36)).toFixed(1) + 'px';
-    node.classList.toggle('tiny', h < 112);   // phone on its side: no room for the small captions
-    const set = (sel, html) => { const el = node.querySelector(sel); if (el.innerHTML !== html) el.innerHTML = html; };
+    const setTxt = (sel, txt) => { const el = node.querySelector(sel); if (el && el.textContent !== txt) el.textContent = txt; };
+    const setTele = (key, label, value, level) => {
+      const cell = node.querySelector('.spd-tele .ti-c[data-k="' + key + '"]');
+      if (!cell) return;
+      const span = cell.querySelector('span');
+      const b = cell.querySelector('b');
+      if (span && span.textContent !== label) span.textContent = label;
+      if (b && b.textContent !== value) b.textContent = value;
+      cell.classList.toggle('bad', level === 'bad');
+      cell.classList.toggle('warn', level === 'warn');
+    };
+    const fill = node.querySelector('.spd-rpm-fill');
+    const rpmTrack = node.querySelector('.spd-rpm');
+    // layout().rpmTrack === false → bare colored fill only (no silhouette PNG).
+    node.classList.toggle('no-rpm-track', layout().rpmTrack === false);
     if (!t) {
-      set('.ti-dest', L('Waiting for the game', 'Aguardando o jogo')); set('.ti-clock', ''); set('.ti-rpm b', '');
-      set('.th-speed b', '--'); set('.th-speed small', ''); set('.th-gear small', ''); set('.th-gear b', ''); set('.th-stats', '');
-      node.querySelector('.ti-rpm u').style.width = '0%';
-      { const db = node.querySelector('.ti-dmg'); if (db) db.querySelectorAll('.ti-di b').forEach(b => b.textContent = ''); }
+      setTxt('.spd-speed', '--');
+      setTxt('.spd-unit', mph ? 'mph' : 'km/h');
+      setTxt('.spd-gear', '--');
+      setTele('oil', L('Oil', 'Óleo'), '--');
+      setTele('batt', L('Battery', 'Bateria'), '--');
+      setTele('range', L('Range', 'Autonomia'), '--');
+      setTele('trip', L('Trip', 'Viagem'), '--');
+      setTxt('.spd-time', '--:--');
+      setTxt('.spd-odo', '--');
+      const bootSweepEmpty = modernBootSweepPct();
+      setRpmBarSmooth(node, bootSweepEmpty != null ? bootSweepEmpty : 0);
+      if (rpmTrack) rpmTrack.classList.toggle('red', bootSweepEmpty != null && bootSweepEmpty > 80);
       return;
     }
     const spd = (ms) => Math.round(Math.abs(ms) * (mph ? 2.23694 : 3.6));
     const dist = (km) => (mph ? Math.round(km * 0.621371) + ' mi' : Math.round(km) + ' km');
     const clock = (mins) => { const m = ((Math.round(mins) % 1440) + 1440) % 1440; return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60); };
-    const has = (v) => v !== undefined && v !== null && v !== '';
-    const route = t.routeDist > 0 ? dist(t.routeDist / 1000) + ' \u00b7 ' + L('arr. ', 'cheg. ') + clock(t.time + t.routeTime / 60) : panelText().noTrip;
-    set('.ti-dest', (has(t.cityTo) && t.onJob !== false ? '<b>' + esc(t.cityTo) + '</b> ' : '') + esc(route));
-    set('.ti-clock', panelText().days[Math.floor(t.time / 1440) % 7] + ' ' + clock(t.time));
-    // damage indicators bar
-    const dmgBar = node.querySelector('.ti-dmg');
-    if (dmgBar) {
-      const vals = [t.dmgTruck || 0, t.dmgTrailer || 0, t.dmgCargo || 0];
-      const spans = dmgBar.querySelectorAll('.ti-di');
-      for (let i = 0; i < 3; i++) {
-        spans[i].querySelector('b').textContent = vals[i] + '%';
-        spans[i].dataset.level = vals[i] >= 15 ? 'bad' : vals[i] >= 5 ? 'warn' : '';
-      }
-      spans[1].style.display = t.trailer === false ? 'none' : '';
-      spans[2].style.display = t.trailer === false ? 'none' : '';
-    }
+    const has = (v) => v !== undefined && v !== null && v !== '' && Number.isFinite(Number(v));
     const over = t.limit > 0.5 && Math.abs(t.speed) > t.limit * 1.06;
-    node.querySelector('.th-speed').classList.toggle('bad', over);
-    set('.th-speed b', String(spd(t.speed)));
-    set('.th-speed small', mph ? 'mph' : 'km/h');
-    set('.th-gear small', L('GEAR', 'MARCHA'));
-    set('.th-gear b', esc(gearLabel(t)));
-    const cell = (label, value, level) => '<div class="ti-c' + (level ? ' ' + level : '') + '"><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>';
-    const odo = has(t.odo) ? (mph ? Math.round(t.odo * 0.621371) + ' mi' : Math.round(t.odo) + ' km') : '--';
-    set('.th-stats',
-      cell(L('Fuel', 'Combust.'), t.fuelCap > 0 ? Math.round(t.fuel / t.fuelCap * 100) + '%' : '--', t.fuelWarn ? 'bad' : '') +
-      cell(L('Coolant', 'Água'), has(t.waterT) ? Math.round(t.waterT) + '°' : '--', t.waterWarn ? 'bad' : '') +
-      cell(L('Odometer', 'Odômetro'), odo) +
-      cell(L('Range', 'Autonomia'), t.range > 0 ? dist(t.range) : '--', t.fuelWarn ? 'bad' : '') +
-      cell(L('Air', 'Ar'), Math.round(t.air) + ' psi', t.airWarn || t.air < 65 ? 'bad' : '') +
-      cell(L('Oil', 'Óleo'), has(t.oilT) ? Math.round(t.oilT) + '°' : '--', t.oilWarn ? 'bad' : '') +
-      cell(L('Battery', 'Bateria'), has(t.batt) ? Number(t.batt).toFixed(1) + ' V' : '--', t.battWarn ? 'bad' : '') +
-      cell(L('Trip', 'Viagem'), t.routeDist > 0 ? dist(t.routeDist / 1000) : '--'));
-    node.querySelector('.ti-rpm u').style.width = clamp(t.rpm / gaugeSpec('rpm').max, 0, 1) * 100 + '%';
-    node.querySelector('.ti-rpm').classList.toggle('red', t.rpm > (gaugeSpec('rpm').bands.find(b => b[2] === 'red') || [2000])[0]);
-    set('.ti-rpm b', Math.round(t.rpm / 10) * 10 + ' rpm');
+    const speedEl = node.querySelector('.spd-speed');
+    if (speedEl) speedEl.classList.toggle('bad', over);
+    setTxt('.spd-speed', String(spd(t.speed)));
+    setTxt('.spd-unit', mph ? 'mph' : 'km/h');
+    setTxt('.spd-gear', gearLabel(t));
+    setTele('oil', L('Oil', 'Óleo'), has(t.oilT) ? Math.round(t.oilT) + '°' : '--', t.oilWarn ? 'bad' : '');
+    setTele('batt', L('Battery', 'Bateria'), has(t.batt) ? Number(t.batt).toFixed(1) + ' V' : '--', t.battWarn ? 'bad' : '');
+    setTele('range', L('Range', 'Autonomia'), t.range > 0 ? dist(t.range) : '--', t.fuelWarn ? 'bad' : '');
+    setTele('trip', L('Trip', 'Viagem'), t.routeDist > 0 ? dist(t.routeDist / 1000) : '--');
+    setTxt('.spd-time', clock(t.time));
+    setTxt('.spd-odo', has(t.odo) ? (mph ? Math.round(t.odo * 0.621371) + ' mi' : Math.round(t.odo) + ' km') : '--');
+    const rpmMax = gaugeSpec('rpm').max;
+    const bootSweep = modernBootSweepPct();
+    const rpmPct = bootSweep != null ? bootSweep : clamp(t.rpm / rpmMax, 0, 1) * 100;
+    setRpmBarSmooth(node, rpmPct);
+    const redStart = (gaugeSpec('rpm').bands.find((b) => b[2] === 'red') || [2400])[0];
+    if (rpmTrack) rpmTrack.classList.toggle('red', bootSweep != null ? bootSweep > 80 : t.rpm > redStart);
   }
 
   // What a modern cab shows on its centre display, laid out in fixed places so the eye learns
@@ -2080,6 +2390,17 @@
     if (t.fuelWarn) warn.push(L('LOW FUEL', 'COMB. BAIXO'));
     if (over) warn.push(L('SPEED', 'VELOCIDADE'));
     set('.ti-foot', (warn.length ? '<span class="ti-w">' + esc(warn.join(' · ')) + '</span>' : ''));
+  }
+
+  // ---- Modern OBD pages (eu_frame utility) — pad cycles like S/R 2016 -------------------------
+  const MODERN_OBD_SCREENS = 6;
+  function cycleModernObd(node, selected) {
+    const n = MODERN_OBD_SCREENS;
+    const cur = Number(node.dataset.screen) || 0;
+    const next = Number.isInteger(selected) && selected >= 0 && selected < n ? selected : (cur + 1) % n;
+    node.dataset.screen = String(next);
+    node.querySelectorAll('.obd-screen').forEach((s, i) => s.classList.toggle('active', i === next));
+    buzz(12);
   }
 
   // ---- Scania OBC update ---------------------------------------------------------------------
@@ -2553,6 +2874,7 @@
       if (w.t === 'sticker' && !w.mark && layout().stickers === false) continue;
       panel.appendChild(w.sk ? skinWidgetEl(w) : widgetEl(w));
     }
+    if (p.skin === 'eu_frame' && modernBooting()) ensureIgnBootOverlay();
     mountModernGrids(p);
     panel.classList.toggle('deco', !!S.deco);
     decoNodes();
@@ -2717,6 +3039,7 @@
     updateObc();
     updateExtras();
     const _isScaniaSR = page().skin === 'scania_frame';
+    const _isModern = page().skin === 'eu_frame';
     if (_isScaniaSR) {
       const _powered = !deadNow();
       if (_scanIgnPowered === false && _powered) {
@@ -2729,6 +3052,18 @@
     } else {
       _scanIgnPowered = null;
       panel.classList.remove('scania-starting', 'scania-powered');
+    }
+    // Modern digital cluster: rising edge of electrics → boot sequence (logo/bulbs/sweep/reveal).
+    if (_isModern) {
+      const _powered = ignState() > 0;
+      if (_modernIgnPowered === false && _powered) startModernBoot();
+      if (!_powered && modernBoot.phase !== 'off') stopModernBoot('off');
+      _modernIgnPowered = _powered;
+      tickModernBoot();
+      if (modernBooting()) ensureIgnBootOverlay();
+    } else if (modernBoot.phase !== 'off') {
+      stopModernBoot('off');
+      _modernIgnPowered = null;
     }
     panel.classList.toggle('unlit', panel.classList.contains('skin') && !backlit());
     // smooth cabin darkness: interpolate toward target at ~10Hz for gradual dusk/dawn
@@ -2891,6 +3226,11 @@
     const keys = keysOf(w);
     S.pressed.add(w.id);
     if (f.id === 'lights') S.lightLocal = ((S.lightLocal || 0) + 1) % 3;
+    // Suspension telltales: brief local flash, then settle to SDK lift/trailerLift state.
+    if (/^susp_/.test(f.id)) {
+      S.liftFlashUntil = Date.now() + 800;
+      S.liftFlashFlag = /rear|trailer/i.test(f.id) ? 'trailerLift' : 'lift';
+    }
     let skipSend = false;
     if (f.id === 'wipers') {
       // The game's wiper key cycles: off, 1, 2, 3, off... The app counts the steps; at the top it

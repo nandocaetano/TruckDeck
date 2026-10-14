@@ -319,26 +319,327 @@
   border: 2px solid #b9bec1;
   box-shadow: 0 0 0 2px #3c4144, 0 0 0 4px #aeb4b8, inset 0 1px 0 #fff, 0 .2em .45em #000;
 }
+/* OBD: container queries — fonts/icons/bar scale with zone size (portrait+landscape).
+   Pattern from panel.html (.button / .button-body): outer hosts container-type:size only;
+   .obd-body does the flex layout with 100cqw×100cqh so cq* never collapses the grid. */
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility {
+  --obd-cyan: #00f3ff;
+  --obd-green: #22c55e;
+  container-type: size;
+  container-name: obd;
   border: 0;
   border-radius: 2.5% / 8%;
-  background: #010203 !important;
-  box-shadow: none;
-  padding-top: 1.8em;
+  background: #0f172a !important;
+  box-shadow: inset 0 0 min(8cqw, 6cqh) rgba(0, 0, 0, .65), inset 0 0 2cqw rgba(0, 0, 0, .9);
+  padding: 0;
+  overflow: hidden;
+  color: #fff;
+  white-space: normal;
+  pointer-events: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-body {
+  box-sizing: border-box;
+  width: 100cqw;
+  height: 100cqh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 7% 11% 2%;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+/* Scale on children so cqmin resolves against .modern-utility as query container. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-core,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .freight,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-tell-l,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-tell-r {
+  font-size: clamp(8px, 2.8vmin, 28px);
+  font-size: clamp(8px, 5cqmin, 28px);
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .mu-head {
   position: absolute;
-  left: 4%; right: 4%; top: 5%;
+  left: 11%; right: 11%; top: 3%;
   display: flex;
   justify-content: space-between;
   color: #8fa9b8;
-  font: 600 .72em/1 var(--font-legend);
+  font-family: var(--font-legend);
+  font-weight: 600;
+  font-size: clamp(6px, 1.6vmin, 16px);
+  font-size: clamp(6px, 2.6cqmin, 16px);
+  line-height: 1;
   letter-spacing: .08em;
+  z-index: 2;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .mu-head time {
   color: #e9f7ff;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 0 .35em rgba(130,215,255,.55);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-core {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4% 6%;
+  align-content: center;
+  justify-items: center;
+  padding: 3%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility.obd-media-collapsed .obd-screens {
+  flex: 1 1 100%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 4%;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell .obd-read {
+  justify-content: center;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-lbl {
+  display: block;
+  color: var(--obd-cyan, #00f3ff);
+  font: 600 clamp(7px, 3.2cqmin, 14px)/1.1 var(--font-legend);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  opacity: .85;
+  margin-bottom: .15em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-core-media {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  align-content: center;
+  justify-items: stretch;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media {
+  align-items: center;
+  justify-content: center;
+  gap: .45em;
+  padding: .4em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media .obd-media-ico {
+  width: clamp(18px, 10cqmin, 36px);
+  height: clamp(18px, 10cqmin, 36px);
+  color: var(--obd-cyan);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media .obd-val {
+  font-size: clamp(12px, 7cqmin, 28px);
+  white-space: normal;
+  text-align: center;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media .obd-media-keys {
+  margin-top: .35em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-ico {
+  width: clamp(14px, 12cqmin, 48px);
+  height: clamp(14px, 12cqmin, 48px);
+  max-width: 100%;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.85)); /* sharp — was neon cyan bloom */
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-read {
+  display: flex;
+  align-items: baseline;
+  gap: .2em;
+  min-width: 0;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-val {
+  color: #fff;
+  font: 700 clamp(14px, 11cqmin, 64px)/1 var(--font-legend);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  text-shadow: 0 0 .3em rgba(255,255,255,.18);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-unit {
+  color: var(--obd-cyan);
+  font: 600 clamp(8px, 4.2cqmin, 22px)/1 var(--font-legend);
+  letter-spacing: .04em;
+  flex: 0 0 auto;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screens {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen {
+  grid-area: 1 / 1;
+  min-height: 0;
+  display: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen.active {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen .obd-core {
+  flex: 1 1 auto;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-fuelbar {
+  width: 100%;
+  height: .35em;
+  min-height: 3px;
+  margin-top: .15em;
+  border-radius: .25em;
+  background: rgba(255,255,255,.12);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-fuelbar i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--obd-cyan), var(--obd-green));
+  box-shadow: 0 0 .35em rgba(0,243,255,.55);
+  transition: width 400ms;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-tell-l,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-tell-r {
+  position: absolute;
+  top: 14%;
+  bottom: 18%;
+  width: 9%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  z-index: 2;
+  pointer-events: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-tell-l { left: 1.5%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-tell-r { right: 1.5%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell {
+  display: block;
+  width: 78%;
+  aspect-ratio: 1;
+  opacity: .55;
+  transition: opacity 120ms, filter 120ms;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell.lit {
+  opacity: 1;
+  filter: drop-shadow(0 0 .35em rgba(34,197,94,.65));
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .freight {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  margin: 0 0 .2em;
+  color: #8fa9b8;
+  font-family: var(--font-legend);
+  font-weight: 600;
+  /* font-size already set via shared cqmin rule above; keep relative line-height */
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: .45em;
+  min-height: 1.6em;
+  padding: .35em .4em;
+  border-radius: .45em;
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(0,243,255,.22);
+  transition: opacity 180ms, max-height 180ms, margin 180ms, padding 180ms;
+  max-height: 3.2em;
+  overflow: hidden;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media.collapsed {
+  opacity: 0;
+  max-height: 0;
+  min-height: 0;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-width: 0;
+  pointer-events: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-ico {
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  color: var(--obd-cyan);
+  display: grid;
+  place-items: center;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-ico svg {
+  width: 100%;
+  height: 100%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-line {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--obd-cyan);
+  font: 600 .7em/1.2 var(--font-legend);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-line em {
+  font-style: normal;
+  opacity: .75;
+  margin-right: .25em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-line b {
+  color: #e9f7ff;
+  font-weight: 700;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys {
+  flex: 0 0 auto;
+  display: flex;
+  gap: .35em;
+  align-items: center;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i {
+  width: 1.35em;
+  height: 1.35em;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #e9f7ff;
+  background: rgba(255,255,255,.06);
+  box-shadow: 0 0 0 1px rgba(0,243,255,.35);
+  cursor: pointer;
+  pointer-events: auto;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i svg {
+  width: 55%;
+  height: 55%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i[data-media="media_play"] {
+  box-shadow: 0 0 0 1.5px var(--obd-cyan), 0 0 .45em rgba(0,243,255,.55);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i.down {
+  transform: scale(.92);
 }
 
 [data-style="modern_br"] {
@@ -712,16 +1013,37 @@ button { cursor: pointer; }
 /* The editor's asset already shows the pictogram/label baked into the art, so it replaces the
    drawn cap wholesale instead of sitting behind the usual icon + text legend. */
 .k-kbd.has-asset .cap {
-  background: var(--asset) center / contain no-repeat;
+  background: var(--asset) center / 100% 100% no-repeat;
   box-shadow: none;
 }
 .k-kbd.has-asset .cap::before { display: none; }
 .k-kbd.has-asset .ico, .k-kbd.has-asset .lbl { display: none; }
 
+/* Hitbox: outer .w ignores clicks; only the inset .hit receives them so transparent PNG
+   margins (~10%) do not steal taps from overlapping neighbour boxes. Paint stays full-bleed. */
+#panel.skin .w.k-kbd.has-asset {
+  pointer-events: none;
+  padding: 0;
+}
+#panel.skin .w.k-kbd.has-asset .cap {
+  pointer-events: none;
+}
+#panel.skin .w.k-kbd.has-asset .hit {
+  position: absolute;
+  /* ~25%: rocker boxes overlap ~7.5% of stage (~24% of button width); 10% was not enough. */
+  inset: 25%;
+  z-index: 4;
+  pointer-events: auto;
+  cursor: pointer;
+}
+/* Debug overlay: outline every key's tap box so overlap/inset issues are visible on-device. */
+body.debug-hitbox .k-kbd { outline: 1px solid red; }
+body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
+
 /* Modern chrome (eu_frame) beats the generic .has-asset rule above — kill bezel/border and
-   show the editor PNG cleanly. Prefer contain so rockers/circles are not cropped. */
+   show the editor PNG cleanly. 100% 100% matches the Layout Editor object-fit:fill. */
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-kbd.has-asset .cap {
-  background: var(--asset) center / contain no-repeat;
+  background: var(--asset) center / 100% 100% no-repeat;
   background-color: transparent;
   box-shadow: none;
   border: 0;
@@ -752,7 +1074,8 @@ button { cursor: pointer; }
   width: 100%;
   height: 100%;
   color: #fff;
-  filter: drop-shadow(0 0 2px rgba(0,0,0,.85)) drop-shadow(0 0 5px rgba(0,0,0,.55));
+  /* Sharp edge only — drop soft neon bloom so symbols stay defined. */
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.9));
 }
 
 /* ---- Hazard: the one red key on the dash ----------------------------------------------- */
@@ -2182,8 +2505,10 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   position: absolute; inset: 0; width: 100%; height: 100%;
   pointer-events: none; border-radius: inherit;
 }
-#panel > canvas.lightmap { z-index: 7; mix-blend-mode: multiply; }
-#panel > canvas.lightbloom { z-index: 8; mix-blend-mode: screen; }
+/* Atomic editor keys default to z-index 10 (up to ~37). Lightmap must sit above them
+   or cabin-dark multiply never reaches Modern rockers. pointer-events:none keeps taps OK. */
+#panel > canvas.lightmap { z-index: 100; mix-blend-mode: multiply; }
+#panel > canvas.lightbloom { z-index: 101; mix-blend-mode: screen; }
 
 /* screen brightness (menu: Display brightness; auto dims with the cabin like a real dash) */
 #panel .k-gps.tinfo, #panel .k-rtext, #panel .k-live, #panel .vf-glass, #panel .w.display, #panel .w.radio_widget {
@@ -2236,6 +2561,231 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 .tinfo.hero .th-stats .ti-c b { flex: none; font-size: 1.2em; line-height: 1; }
 /* fuel / range column carries the longest values ("1480 km"): give it the extra width */
 .tinfo.hero .th-stats { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+
+/* ==== Fase 1.2 — Touch lock: informational readouts are not tap targets ================ */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-body,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell {
+  pointer-events: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media,
+#app[data-style="eu_frame"] #panel .w,
+#app[data-style="eu_frame"] #panel .k-kbd {
+  pointer-events: auto;
+}
+/* Fase 1.3 — media unificada: hide the bottom mini-strip while the dedicated Media OBD page (5) is active */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility[data-screen="5"] .obd-media {
+  display: none;
+}
+
+/* ==== Modern digital speedometer (.spd-body) — 100% cq*, no analog arc ================= */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero {
+  --hero-cyan: #18d7ef;
+  --hero-green: #35ee69;
+  --hero-red: #ff3048;
+  --hero-white: #f3f6fb;
+  --hero-line: rgba(194, 220, 235, .22);
+  container-type: size;
+  container-name: spd;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 1.8% / 3.5%;
+  background: #020509 !important;
+  box-shadow: inset 0 0 min(8cqw, 6cqh) rgba(0, 0, 0, .65), inset 0 0 2cqw rgba(0, 0, 0, .9);
+  color: var(--hero-white);
+  overflow: hidden;
+  gap: 0;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-body {
+  box-sizing: border-box;
+  width: 100cqw;
+  height: 100cqh;
+  display: grid;
+  grid-template-columns: minmax(10%, 14%) minmax(0, 1fr) minmax(22%, 30%);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 2% 2.5%;
+  padding: 5% 4% 3.5%;
+  min-width: 0;
+  min-height: 0;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-rpm {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-rpm-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: clamp(10px, 70%, 36px);
+  height: 100%;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, .04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), inset 0 0 8px rgba(0, 0, 0, .45);
+  overflow: hidden;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-rpm-fill {
+  display: block;
+  width: 100%;
+  height: 0%;
+  border-radius: inherit;
+  background: linear-gradient(to top, #22c55e 0%, #84cc16 33%, #eab308 55%, #f97316 80%, #ef4444 100%);
+  box-shadow: 0 0 .35em rgba(34, 197, 94, .28);
+  /* JS lerp drives height every frame; keep CSS transition short so it never fights rAF. */
+  transition: height 80ms linear;
+  will-change: height;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-rpm.red .spd-rpm-fill {
+  box-shadow: 0 0 .4em rgba(239, 68, 68, .4);
+}
+/* Optional: hide RPM track silhouette — only the colored fill remains on dark glass. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero.no-rpm-track .spd-rpm-track {
+  background-image: none;
+  background-color: transparent;
+  box-shadow: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-core {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-speed {
+  font: 700 clamp(28px, 28cqmin, 120px)/.9 var(--font-legend);
+  font-variant-numeric: tabular-nums;
+  color: var(--hero-white);
+  text-shadow: 0 0 .18em rgba(255, 255, 255, .22);
+  letter-spacing: -.03em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-speed.bad {
+  color: var(--hero-red);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-unit {
+  font: 600 clamp(9px, 3.8cqmin, 18px)/1 var(--font-ui);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #b8c8d2;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-gear {
+  margin-top: 2%;
+  font: 700 clamp(16px, 10cqmin, 42px)/1 var(--font-legend);
+  color: var(--hero-green);
+  text-shadow: 0 0 .45em rgba(53, 238, 105, .45);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-tele {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 2%;
+  padding-left: 4%;
+  border-left: 1px solid var(--hero-line);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-tele .ti-c {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8%;
+  min-height: 0;
+  padding: 0 2%;
+  border-bottom: 1px solid rgba(194, 220, 235, .14);
+  background: transparent;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-tele .ti-c:last-child { border-bottom: 0; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-tele .ti-c span {
+  color: #9eb0bc;
+  font: 600 clamp(7px, 2.8cqmin, 14px)/1 var(--font-ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-tele .ti-c b {
+  color: var(--hero-white);
+  font: 700 clamp(12px, 5.5cqmin, 28px)/1 var(--font-legend);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 .35em rgba(24, 215, 239, .3);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-tele .ti-c.bad b { color: var(--hero-red); }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-foot {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 0;
+  padding-top: 1.5%;
+  border-top: 1px solid var(--hero-line);
+  color: #9eb0bc;
+  font: 600 clamp(9px, 3.2cqmin, 16px)/1 var(--font-legend);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-foot .spd-time { color: #e9f7ff; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-foot .spd-odo { color: var(--hero-cyan); }
+
+/* Kill legacy hero chrome if any leftover nodes appear during hot reload */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .tinfo.hero .ti-head,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .tinfo.hero .ti-dmg,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .tinfo.hero .th-main,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .tinfo.hero .ti-rpm { display: none !important; }
+
+/* ==== Ignition boot sequence (Modern / eu_frame) ========================================= */
+#panel.skin.eu-modern .obd-screens > .ign-boot {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(2, 6, 12, .55) 0%, rgba(2, 6, 12, .15) 55%, transparent 72%);
+  opacity: 0;
+  transition: opacity 280ms ease;
+}
+#panel.skin.eu-modern.ign-booting[data-boot="logo"] .obd-screens > .ign-boot,
+#panel.skin.eu-modern.ign-booting[data-boot="bulbs"] .obd-screens > .ign-boot,
+#panel.skin.eu-modern.ign-booting[data-boot="sweep"] .obd-screens > .ign-boot { opacity: 1; }
+#panel.skin.eu-modern.ign-booting[data-boot="reveal"] .obd-screens > .ign-boot { opacity: 0; transition-duration: 400ms; }
+#panel.skin.eu-modern .ign-boot-mark {
+  width: min(22%, 160px);
+  aspect-ratio: 6 / 7;
+  filter: drop-shadow(0 0 18px rgba(24, 215, 239, .35));
+}
+#panel.skin.eu-modern .ign-boot-mark img,
+#panel.skin.eu-modern .ign-boot-mark svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+#panel.skin.eu-modern.ign-booting[data-boot="logo"] .spd-core,
+#panel.skin.eu-modern.ign-booting[data-boot="bulbs"] .spd-core,
+#panel.skin.eu-modern.ign-booting[data-boot="sweep"] .spd-core {
+  opacity: 0;
+}
+#panel.skin.eu-modern.ign-booting[data-boot="reveal"] .spd-core {
+  opacity: 1;
+  transition: opacity 400ms ease;
+}
+#panel.skin.eu-modern.ign-booting[data-boot="logo"] .spd-tele,
+#panel.skin.eu-modern.ign-booting[data-boot="bulbs"] .spd-tele {
+  opacity: .25;
+}
+#panel.skin.eu-modern.ign-booting .spd-rpm-fill,
+#panel.skin.eu-modern.ign-booting .obd-fuelbar i {
+  transition: height 80ms linear, width 80ms linear;
+}
 
 /* ==== Compound gauge (cgauge) — Scania S-series speedometer & tachometer ==== */
 .k-cgauge {
@@ -3128,6 +3678,46 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 #panel.skin .k-scania-palette .sc25-palette-current i { width:min(100%,16px); }
 #panel.skin .k-scania-palette .sc25-palette-list { top:calc(100% + 4px); }
 #panel.scania-sr.cabin-dark .k-kbd:not(.on) .cap { filter:brightness(calc(1 - .28 * var(--cabin,0))); transition:filter .35s ease; }
+/* Modern: dim the key face in cabin-dark; pictogram gets backlight instead of a hard LED dot. */
+#panel.eu-modern.cabin-dark .k-kbd:not(.on) .cap {
+  filter: brightness(calc(1 - .28 * var(--cabin, 0)));
+  transition: filter .35s ease;
+}
+#panel.eu-modern.cabin-dark.edit .k-kbd .cap { filter: none; }
+
+/* Pictogram backlight: soft amber/green when cabin is dark; stronger glow when function is ON. */
+.k-kbd .atomic-picto {
+  transition: filter .3s ease, color .3s ease;
+}
+#panel.eu-modern.cabin-dark .k-kbd:not(.on) .atomic-picto {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, #ffb060 55%, #35ff66))
+          drop-shadow(0 0 8px rgba(255, 176, 96, .35))
+          brightness(1.15);
+}
+#panel.eu-modern .k-kbd.on .atomic-picto,
+#panel.eu-modern .k-kbd.on .ico {
+  filter: drop-shadow(0 0 4px var(--led-on, #35ff66))
+          drop-shadow(0 0 10px color-mix(in srgb, var(--led-on, #35ff66) 55%, transparent))
+          brightness(1.25);
+}
+.k-kbd, .k-kbd .cap {
+  -webkit-tap-highlight-color: transparent;
+}
+/* Soft LED bar at the base — only when ON, no hard black marker when off. */
+#panel.eu-modern .k-kbd.on::after {
+  content: "";
+  position: absolute;
+  left: 28%;
+  right: 28%;
+  bottom: 7%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--led-on, #35ff66);
+  box-shadow: 0 0 4px 1px var(--led-on, #35ff66), 0 0 10px 2px color-mix(in srgb, var(--led-on, #35ff66) 45%, transparent);
+  pointer-events: none;
+  z-index: 5;
+}
+#panel.eu-modern.edit .k-kbd.on::after { display: none; }
 #panel.scania-sr.cabin-dark::before { opacity:calc(.42 - .18 * var(--cabin,0)); }
 /* Complete reusable colour-picker skin for S/R; the list stays cascaded until tapped. */
 #panel.skin .k-sc25palette .sc25-palette-current,#panel.skin .k-sc25palette .sc25-palette-option { display:flex; align-items:center; justify-content:center; padding:0; border:0; color:#eef8fa; background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
