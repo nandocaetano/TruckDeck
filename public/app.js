@@ -1216,6 +1216,24 @@
       ';background-size:' + (10000 / c[2]).toFixed(2) + '% ' + (10000 / c[3]).toFixed(2) + '%;background-position:' + bx.toFixed(3) + '% ' + by.toFixed(3) + '%"></i>';
   }
 
+  // Rocker keys with a photo asset were inset to 25% hitbox because their transparent PNG
+  // margin overlaps the neighbour key (~24% of button width) — see .has-asset .hit in app.css.
+  // A key with no other asset box within that same margin has no neighbour to steal taps from,
+  // so its hitbox can go full-size (.hit-full). Checked against the page's own widget list,
+  // in the same r = [x%, y%, w%, h%] units as w.r.
+  function pageHasNeighbor(w) {
+    const list = page().widgets || [];
+    const m = 0.25; // match the .hit inset margin
+    const ax0 = w.r[0] - w.r[2] * m, ax1 = w.r[0] + w.r[2] * (1 + m);
+    const ay0 = w.r[1] - w.r[3] * m, ay1 = w.r[1] + w.r[3] * (1 + m);
+    for (const o of list) {
+      if (o === w || !o.r || !o.asset) continue;
+      const bx0 = o.r[0], bx1 = o.r[0] + o.r[2], by0 = o.r[1], by1 = o.r[1] + o.r[3];
+      if (ax0 < bx1 && ax1 > bx0 && ay0 < by1 && ay1 > by0) return true;
+    }
+    return false;
+  }
+
   function skinWidgetEl(w) {
     const node = document.createElement('div');
     node.className = 'w sk k-' + w.t + (w.recess ? ' recess' : '');
@@ -1366,7 +1384,8 @@
       const pw = parseFloat(panel.style.width) || 600, ph = parseFloat(panel.style.height) || 400;
       const kpx = Math.min(w.r[2] / 100 * pw, w.r[3] / 100 * ph);
       const wide = (w.r[2] / 100 * pw) > (w.r[3] / 100 * ph) * 1.35;   // low, wide slot: pictogram and name side by side
-      node.className = 'w sk k-kbd' + (page().skin === 'eu_frame' ? ' k-modern' : '') + ' ' + (w.k || 'rocker') + (w.mini ? ' mini' : '') + (wide ? ' wide' : '') + (mandatory ? ' mandatory-action' : '') + (w.asset ? ' has-asset' : '');
+      const isolated = w.asset && !pageHasNeighbor(w);
+      node.className = 'w sk k-kbd' + (page().skin === 'eu_frame' ? ' k-modern' : '') + ' ' + (w.k || 'rocker') + (w.mini ? ' mini' : '') + (wide ? ' wide' : '') + (mandatory ? ' mandatory-action' : '') + (w.asset ? ' has-asset' : '') + (isolated ? ' hit-full' : '');
       node.dataset.led = f.led;
       node.setAttribute('role', 'button');
       node.setAttribute('aria-label', f.name === 'Custom key' ? (f.label || 'Custom key') : f.name);

@@ -1036,6 +1036,11 @@ button { cursor: pointer; }
   pointer-events: auto;
   cursor: pointer;
 }
+/* Key has no neighbour asset box within the 25% margin (computed in app.js, pageHasNeighbor) —
+   safe to make the full visual frame tappable instead of the inset rocker hitbox. */
+#panel.skin .w.k-kbd.has-asset.hit-full .hit {
+  inset: 0;
+}
 /* Debug overlay: outline every key's tap box so overlap/inset issues are visible on-device. */
 body.debug-hitbox .k-kbd { outline: 1px solid red; }
 body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
