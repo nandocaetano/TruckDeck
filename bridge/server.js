@@ -196,6 +196,49 @@ function broadcast(obj) {
   for (const res of sseClients) res.write(line);
 }
 
+// ---- Radio FM (PC Helper plays it, not the tablet) --------------------------------------
+// The tablet only ever sends an index into this whitelist — never an arbitrary URL — so a
+// stolen/guessed PIN cannot make this PC open attacker-controlled links.
+const RADIO_PRESETS = [
+  { name: 'Massa FM', url: 'https://stream.massafm.com.br/curitiba' },
+  { name: 'Clube FM', url: 'https://18403.live.streamtheworld.com/RADIO_CLUBE_FM_CURITIBAP.mp3' },
+  { name: 'Mundo Livre FM', url: 'https://8892.live.streamtheworld.com/MUNDOLIVRE_FM_CURITIBAP.mp3' },
+  { name: 'Jovem Pan FM', url: 'https://stream.zeno.fm/jovempancuritiba' },
+];
+let radioProc = null;
+function stopRadio() {
+  if (radioProc) {
+    const pid = radioProc.pid;
+    try { radioProc.kill(); } catch (e) {}
+    // The PowerShell host owns a WMPlayer COM object; on Windows a plain kill() doesn't always
+    // tear down the process tree, so also ask the OS directly for the PID we hold.
+    if (process.platform === 'win32' && pid) {
+      try { spawn('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' }).unref(); } catch (e) {}
+    }
+    radioProc = null;
+  }
+}
+// idx < 0 stops playback. `start` handed the URL to the browser and got blocked by autoplay,
+// so instead we keep a hidden PowerShell process alive driving Windows Media Player's COM
+// object directly — that process IS the player, so killing its PID (stopRadio above) stops
+// the stream cleanly, and a new station always stops the old one first (no overlap).
+function openRadio(idx) {
+  stopRadio();
+  const preset = RADIO_PRESETS[idx];
+  if (!preset) return true; // stop-only request
+  if (process.platform !== 'win32') { console.log('[radio] not on Windows, cannot open: ' + preset.url); return false; }
+  try {
+    const url = preset.url.replace(/'/g, "''"); // preset URLs are from our own whitelist, but escape defensively
+    const script = "$p = New-Object -ComObject WMPlayer.OCX.7; $p.settings.autoStart = $true; " +
+      "$p.URL = '" + url + "'; $p.controls.play(); while ($true) { Start-Sleep -Seconds 2 }";
+    radioProc = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', script],
+      { stdio: 'ignore', detached: true, windowsHide: true });
+    radioProc.unref();
+    console.log('[radio] opened ' + preset.name);
+    return true;
+  } catch (e) { console.log('[radio] failed to open: ' + e.message); return false; }
+}
+
 function startHelper() {
   loadDashBinding(true);
   if (process.platform !== 'win32') {
@@ -455,6 +498,14 @@ const server = http.createServer(async (req, res) => {
       if (!valid || !['tap', 'down', 'up'].includes(body.action)) { json(res, 400, { error: 'bad key' }); return; }
       handleKey(body.action, keys);
       json(res, 200, { ok: true });
+      return;
+    }
+
+    if (route === '/api/radio' && req.method === 'POST') {
+      const body = JSON.parse(await readBody(req, 256));
+      const idx = parseInt(body.idx, 10);
+      const ok = Number.isInteger(idx) && openRadio(idx);
+      json(res, ok ? 200 : 400, ok ? { ok: true } : { error: 'bad radio index' });
       return;
     }
 

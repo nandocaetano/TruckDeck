@@ -13,11 +13,16 @@
       <h1>Layout Editor <span>atómico</span></h1>
     </div>
     <div class="topbar-actions">
+      <div class="history-controls" role="group" aria-label="Histórico">
+        <button type="button" class="button button-ghost button-small" id="undoButton" title="Desfazer (Ctrl+Z)" disabled>↺</button>
+        <button type="button" class="button button-ghost button-small" id="redoButton" title="Refazer (Ctrl+Y)" disabled>↻</button>
+      </div>
       <div class="orientation-switch" role="group" aria-label="Orientação">
         <button type="button" class="orientation-button is-active" data-orientation="landscape">Landscape</button>
         <button type="button" class="orientation-button" data-orientation="portrait">Portrait</button>
       </div>
       <button type="button" class="button button-ghost" id="importButton">Importar JSON</button>
+      <button type="button" class="button button-primary" id="saveButton" title="Salvar agora no bridge (Ctrl/⌘+S)">Salvar</button>
       <button type="button" class="button button-primary" id="exportButton">Exportar JSON + CSS</button>
       <input id="importInput" type="file" accept="application/json,.json" hidden>
     </div>
@@ -121,6 +126,7 @@
           <label class="toggle-control"><input id="snapToggle" type="checkbox" checked><span class="toggle"></span><span>Snap</span></label>
           <label class="compact-field"><span>Grelha</span><input id="gridStep" type="number" min="0.25" max="10" step="0.25" value="1"><span>%</span></label>
           <label class="toggle-control"><input id="guidesToggle" type="checkbox" checked><span class="toggle"></span><span>Guias</span></label>
+          <label class="toggle-control" title="Bloqueia arrastar/redimensionar teclas; permite mover só o pictograma"><input id="lockKeysToggle" type="checkbox"><span class="toggle"></span><span>Bloquear Teclas</span></label>
           <button type="button" class="button button-small" id="copyGroupButton" title="Copiar seleção (Ctrl/⌘+C)">Copiar grupo</button>
           <button type="button" class="button button-small" id="pasteGroupButton" title="Colar grupo (Ctrl/⌘+V)">Colar grupo</button>
           <button type="button" class="button button-small" id="fitButton">Ajustar</button>
@@ -170,6 +176,7 @@
           <legend>Identidade / função</legend>
           <label class="field"><span>ID do layout</span><input id="selectedId" type="text" spellcheck="false" autocomplete="off"></label>
           <label class="field" id="functionField"><span>Função (catálogo)</span><select id="selectedFunctionId"></select></label>
+          <label class="checkbox-field" id="noPictogramField" hidden><input id="selectedNoPictogram" type="checkbox"><span>Nenhum / sem pictograma (asset já tem texto ou legenda impressa de fábrica)</span></label>
           <div id="slotFields" class="slot-fields" hidden>
             <span class="field-label">Metal 3 × 1 — função de cada interruptor</span>
             <label class="field"><span>Slot 1 (esquerda)</span><input id="selectedSlot1" type="text" placeholder="ex.: beam_high" spellcheck="false" autocomplete="off"></label>
@@ -191,15 +198,28 @@
         </fieldset>
         <fieldset id="pictogramFields" hidden>
           <legend>Pictograma automático</legend>
-          <p class="field-note">Ao escolher uma função, o pictograma oficial é sobreposto ao asset físico. Posição, tamanho e opacidade são independentes da imagem de fundo.</p>
-          <div class="coordinate-grid">
-            <label class="field"><span>Largura (%)</span><input id="selectedPictoW" type="number" min="5" max="150" step="1"></label>
-            <label class="field"><span>Altura (%)</span><input id="selectedPictoH" type="number" min="5" max="150" step="1"></label>
-            <label class="field"><span>Deslocamento X (%)</span><input id="selectedPictoX" type="number" min="-50" max="150" step="1"></label>
-            <label class="field"><span>Deslocamento Y (%)</span><input id="selectedPictoY" type="number" min="-50" max="150" step="1"></label>
+          <p class="field-note">Ancoragem rápida do ícone dentro do asset. Posição, tamanho e opacidade são independentes da imagem de fundo.</p>
+          <div class="preset-grid">
+            <button type="button" class="button button-small preset-button" data-preset="center">Centro absoluto</button>
+            <button type="button" class="button button-small preset-button" data-preset="top">Topo / visor</button>
+            <button type="button" class="button button-small preset-button" data-preset="bottom">Base / rodapé</button>
+            <button type="button" class="button button-small preset-button" data-preset="fill">Preencher</button>
           </div>
-          <label class="field"><span>Opacidade</span><input id="selectedPictoOpacity" type="number" min="0" max="1" step="0.05"></label>
-          <button type="button" class="button button-small" id="resetPictogramButton">Centrar pictograma</button>
+          <div class="coordinate-grid pictogram-style">
+            <label class="field"><span>Opacidade</span><input id="selectedPictoOpacity" type="number" min="0" max="1" step="0.05"></label>
+            <label class="field"><span>Cor</span><input id="selectedPictoColor" type="color" value="#ffffff" title="Cor do pictograma (branco = padrão)"></label>
+          </div>
+          <button type="button" class="button button-small button-accent" id="applyPictoColorButton">Aplicar cor</button>
+          <details class="fine-tune">
+            <summary>Ajuste fino (avançado)</summary>
+            <div class="coordinate-grid">
+              <label class="field"><span>Largura (%)</span><input id="selectedPictoW" type="number" min="5" max="150" step="1"></label>
+              <label class="field"><span>Altura (%)</span><input id="selectedPictoH" type="number" min="5" max="150" step="1"></label>
+              <label class="field"><span>Deslocamento X (%)</span><input id="selectedPictoX" type="number" min="-50" max="150" step="1"></label>
+              <label class="field"><span>Deslocamento Y (%)</span><input id="selectedPictoY" type="number" min="-50" max="150" step="1"></label>
+            </div>
+            <button type="button" class="button button-small" id="resetPictogramButton">Centrar pictograma</button>
+          </details>
         </fieldset>
         <div class="size-actions">
           <button type="button" class="button button-small" id="copySizeButton">Copiar tamanho</button>

@@ -54,6 +54,9 @@
     phase: true,          // flasher phase for hazard / indicator lamps when no game drives them
     obc: false,           // on-board computer showing instead of the panel
     bulbUntil: 0,         // telltale bulb-check deadline (ms)
+    radioMode: lsGet('truckdeck.radioMode') === '1',       // OBD page 5 media mode: false = local/Spotify, true = Radio FM
+    radioIdx: parseInt(lsGet('truckdeck.radioIdx') || '0', 10) || 0,
+    radioPlaying: false,  // whether the PC Helper was last told to open the FM stream (audio plays on the PC, never on the tablet)
   };
 
   // Modern (eu_frame) ignition boot sequence — logo → bulb check → gauge sweep → data reveal.
@@ -102,7 +105,8 @@
     // PNG from AntiGravity when ready; inline griffin shield is the interim mark (no "Scania" word).
     el.innerHTML =
       '<div class="ign-boot-mark">' +
-        '<video class="ign-boot-vid" src="skins/modern/dash/boot_v8.mp4" muted playsinline ' +
+        '<video class="ign-boot-vid" src="skins/modern/dash/boot_v8.mp4" muted playsinline autoplay disablepictureinpicture ' +
+          'style="pointer-events:none;object-fit:contain" ' +
           'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'\'"></video>' +
         '<img class="ign-boot-img" src="skins/modern/dash/boot_logo.png" alt="" style="display:none" onerror="this.style.display=\'none\';this.nextElementSibling.hidden=false">' +
         '<svg class="ign-boot-svg" viewBox="0 0 120 140" hidden aria-hidden="true">' +
@@ -124,7 +128,13 @@
     panel.classList.add('ign-booting');
     panel.dataset.boot = 'logo';
     const vid = panel.querySelector('.ign-boot-vid');
-    if (vid) { try { vid.currentTime = 0; vid.play().catch(function () {}); } catch (e) {} }
+    if (vid) {
+      // The UI reveal is driven by the video's own 'ended' event, not a fixed timer, so the
+      // OBD content never appears while boot_v8.mp4 is still on screen. TOTAL_MS in
+      // tickModernBoot() stays only as a fallback if the video errors or never fires 'ended'.
+      vid.addEventListener('ended', function () { stopModernBoot('running'); }, { once: true });
+      try { vid.currentTime = 0; vid.play().catch(function () {}); } catch (e) {}
+    }
   }
   function stopModernBoot(to) {
     modernBoot = { phase: to || 'off', at: Date.now() };
@@ -151,6 +161,10 @@
     vid.src = 'skins/modern/dash/shutdown_v8.mp4';
     vid.muted = true;
     vid.playsInline = true;
+    vid.autoplay = true;
+    vid.setAttribute('disablepictureinpicture', '');
+    vid.style.pointerEvents = 'none';
+    vid.style.objectFit = 'contain';
     vid.setAttribute('aria-hidden', 'true');
     vid.addEventListener('ended', stopModernShutdown);
     vid.addEventListener('error', stopModernShutdown);
@@ -162,7 +176,9 @@
     if (!modernBooting()) return;
     const phase = modernBootPhaseName();
     panel.dataset.boot = phase;
-    if (modernBootElapsed() >= MODERN_BOOT.TOTAL_MS) stopModernBoot('running');
+    // Fallback only: the normal path is the video's 'ended' listener in startModernBoot().
+    // This fires solely if boot_v8.mp4 fails to load/play, so the UI is never stuck hidden.
+    if (modernBootElapsed() >= MODERN_BOOT.TOTAL_MS + 4000) stopModernBoot('running');
   }
 
   // Shown on the readouts when no bridge is reachable, so the preview is not a wall of dashes.
@@ -429,7 +445,7 @@
   // the player's own, not a panel's: they live once in store.prefs and are copied onto every panel
   // (the rest of the app keeps reading them from the panel). Changing one on any panel changes it
   // on all of them, and a panel added later starts with the same settings.
-  const GLOBAL_KEYS = ['lang', 'units', 'temp', 'gearCrawlers', 'lights', 'cabin', 'brightness', 'names', 'autoRotate'];
+  const GLOBAL_KEYS = ['lang', 'units', 'temp', 'gearCrawlers', 'lights', 'cabin', 'brightness', 'names', 'autoRotate', 'obdTheme'];
   function ensurePrefs() {
     const st = S.store;
     let migrated = false;
@@ -459,8 +475,9 @@
       st.prefs = { lang: ['pt', 'de', 'es', 'fr'].includes(a.lang) ? a.lang : 'en', units: a.units === 'mph' ? 'mph' : 'kmh',
         gearCrawlers: gearboxKey(a.gearCrawlers), lights: a.lights || 'auto', cabin: a.cabin || 'off', brightness: a.brightness || 'auto',
         temp: a.temp === 'f' ? 'f' : 'c',
-        names: a.names || 'show', autoRotate: a.autoRotate !== false, binds };
+        names: a.names || 'show', autoRotate: a.autoRotate !== false, obdTheme: a.obdTheme || 'v8-blue', binds };
     }
+    if (!st.prefs.obdTheme) st.prefs.obdTheme = 'v8-blue';   // devices set up before the OBD theme engine shipped
     // One-off: auto-rotate was left switched off on devices set up while the vertical panels were being
     // reworked, which keeps the horizontal art on an upright screen. Turn it back on once; the player can
     // still switch it off again in the menu.
@@ -475,6 +492,7 @@
       for (const k of GLOBAL_KEYS) l[k] = pr[k];
       l.binds = Object.assign({}, pr.binds);
     }
+    app.dataset.obdTheme = pr.obdTheme || 'v8-blue';
   }
   function setPref(key, value) { S.store.prefs[key] = value; save(); }
 
@@ -1506,6 +1524,7 @@
                 '<div class="obd-core obd-core-cons">' + textCell('consAvg', 'l/100', L('AVG', 'MÉDIA')) + textCell('consInst', 'l/h', L('INST', 'INST')) + '</div>' +
                 '<div class="obd-core obd-core-media">' +
                   '<div class="obd-cell obd-cell-media" data-k="media">' +
+                    '<button type="button" class="obd-media-mode" data-radio-toggle aria-label="' + L('Media source', 'Fonte de mídia') + '">LOCAL</button>' +
                     '<span class="obd-media-ico">' + iconSvg('music') + '</span>' +
                     '<div class="obd-read"><b class="obd-val" data-media-title>--</b></div>' +
                     '<small class="obd-unit" data-media-artist></small>' +
@@ -1609,7 +1628,7 @@
         node.innerHTML =
           '<div class="spd-body">' +
             '<div class="spd-rpm" aria-hidden="true"><i class="spd-rpm-track"><u class="spd-rpm-fill"></u></i></div>' +
-            '<div class="spd-core"><b class="spd-speed">--</b><small class="spd-unit">km/h</small><div class="spd-gear">--</div><div class="spd-limit"><small>LIMIT</small><b></b></div></div>' +
+            '<div class="spd-core"><b class="spd-speed">--</b><small class="spd-unit">km/h</small><div class="spd-gear">--</div><div class="spd-limit"><b></b></div></div>' +
             '<div class="spd-tele">' + tele('oil') + tele('batt') + tele('range') + tele('trip') + '</div>' +
             '<div class="spd-foot"><span class="spd-time">--:--</span><span class="spd-odo">--</span></div>' +
           '</div>';
@@ -1870,10 +1889,22 @@
         const artistTxt = (S.media && S.media.artist) || '';
         const mediaLine = node.querySelector('.obd-media-line b');
         if (mediaLine && mediaLine.textContent !== (trackTxt || '\u2014')) mediaLine.textContent = trackTxt || '\u2014';
+        // Page 5's own player: Local/Spotify mirrors the PC bridge; Radio FM shows the current
+        // preset instead and ignores the bridge's "now playing" text entirely.
+        const radioOn = !!S.radioMode;
+        const modeBtn = node.querySelector('[data-radio-toggle]');
+        if (modeBtn) {
+          const btnTxt = radioOn ? 'FM' : 'LOCAL';
+          if (modeBtn.textContent !== btnTxt) modeBtn.textContent = btnTxt;
+        }
+        const mediaCell = node.querySelector('.obd-cell-media');
+        if (mediaCell) mediaCell.classList.toggle('radio-mode', radioOn);
+        const titleTxt = radioOn ? radioPreset().name : (trackTxt || '\u2014');
+        const artistTxtFinal = radioOn ? (radioPreset().freq + ' MHz') : artistTxt;
         const mediaTitle = node.querySelector('[data-media-title]');
-        if (mediaTitle && mediaTitle.textContent !== (trackTxt || '\u2014')) mediaTitle.textContent = trackTxt || '\u2014';
+        if (mediaTitle && mediaTitle.textContent !== titleTxt) mediaTitle.textContent = titleTxt;
         const mediaArtist = node.querySelector('[data-media-artist]');
-        if (mediaArtist && mediaArtist.textContent !== artistTxt) mediaArtist.textContent = artistTxt;
+        if (mediaArtist && mediaArtist.textContent !== artistTxtFinal) mediaArtist.textContent = artistTxtFinal;
         const freightEl = node.querySelector('.freight');
         if (freightEl) {
           let freightTxt = '';
@@ -2377,6 +2408,8 @@
       const hasLimit = t.limit > 0.5;
       limitEl.classList.toggle('show', hasLimit);
       limitEl.classList.toggle('bad', over);
+      // Pulses red only while actually speeding past a known limit (not just "close to it").
+      limitEl.classList.toggle('over-limit', hasLimit && Math.abs(t.speed) > t.limit);
       const limB = limitEl.querySelector('b');
       if (limB && hasLimit) { const txt = String(spd(t.limit)); if (limB.textContent !== txt) limB.textContent = txt; }
     }
@@ -2746,6 +2779,43 @@
 
   // ---- Music player ------------------------------------------------------------------------
   const MEDIA_KEYS = [['media_prev', 'prev'], ['media_play', 'playpause'], ['media_next', 'next'], ['vol_down', 'voldown'], ['vol_up', 'volup']];
+
+  // ---- Web Radio FM (OBD page 5 only) -------------------------------------------------------
+  // A small built-in set of streaming stations. Prev/next cycle through them and the player
+  // switches its single <audio> element's source; Local/Spotify mode is untouched and still
+  // relays its transport keys to the PC bridge as before.
+  const RADIO_PRESETS = [
+    { name: 'Massa FM', freq: '97.7', url: 'https://stream.massafm.com.br/curitiba' },
+    { name: 'Clube FM', freq: '101.5', url: 'https://18403.live.streamtheworld.com/RADIO_CLUBE_FM_CURITIBAP.mp3' },
+    { name: 'Mundo Livre FM', freq: '93.9', url: 'https://8892.live.streamtheworld.com/MUNDOLIVRE_FM_CURITIBAP.mp3' },
+    { name: 'Jovem Pan FM', freq: '103.9', url: 'https://stream.zeno.fm/jovempancuritiba' },
+  ];
+  // The tablet never plays the FM stream itself — it only tells the PC Helper (bridge/server.js)
+  // which preset index to open, so the audio comes out of the same speakers/headset as the game.
+  function radioPreset() { return RADIO_PRESETS[S.radioIdx] || RADIO_PRESETS[0]; }
+  function radioSendIdx(idx) {
+    if (S.bridge !== 'ok') return;
+    fetch('api/radio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Pin': S.pin },
+      body: JSON.stringify({ idx: idx }),
+    }).catch(function () {});
+  }
+  function radioSetIdx(i) {
+    S.radioIdx = ((i % RADIO_PRESETS.length) + RADIO_PRESETS.length) % RADIO_PRESETS.length;
+    lsSet('truckdeck.radioIdx', String(S.radioIdx));
+    if (S.radioMode && S.radioPlaying) radioSendIdx(S.radioIdx);
+  }
+  function radioCycle(dir) { radioSetIdx((S.radioIdx || 0) + dir); }
+  function radioTogglePlay() {
+    S.radioPlaying = !S.radioPlaying;
+    radioSendIdx(S.radioPlaying ? S.radioIdx : -1);
+  }
+  function radioSetMode(on) {
+    S.radioMode = on;
+    lsSet('truckdeck.radioMode', on ? '1' : '0');
+    if (!on && S.radioPlaying) { S.radioPlaying = false; radioSendIdx(-1); }
+  }
 
   function mediaView() {
     const text = panelText();
@@ -3532,11 +3602,30 @@
     if (!node) return;
     // frame-method panels: only kbd buttons and media keys respond to touch
     const _fw = findWidget(node.dataset.id);
-    if (_fw && _fw.sk && skinOf(page()) && skinOf(page()).frame && _fw.t !== 'kbd' && _fw.t !== 'gps' && !ev.target.closest('[data-media]')) return;
+    if (_fw && _fw.sk && skinOf(page()) && skinOf(page()).frame && _fw.t !== 'kbd' && _fw.t !== 'gps' && !ev.target.closest('[data-media]') && !ev.target.closest('[data-radio-toggle]')) return;
     ev.preventDefault();
+    // OBD page 5's Local/Spotify vs Radio FM switch
+    const radioToggle = ev.target.closest('[data-radio-toggle]');
+    if (radioToggle) {
+      radioSetMode(!S.radioMode);
+      buzz(12);
+      return;
+    }
     // the music player has its own keys inside one widget
     const mediaKey = ev.target.closest('[data-media]');
     if (mediaKey) {
+      // While the OBD page-5 player is in Radio FM mode, its transport keys cycle stations
+      // locally instead of reaching the PC bridge (there is nothing there to skip).
+      if (S.radioMode && mediaKey.closest('.obd-cell-media')) {
+        const act = mediaKey.dataset.media;
+        if (act === 'media_prev') radioCycle(-1);
+        else if (act === 'media_next') radioCycle(1);
+        else if (act === 'media_play') radioTogglePlay();
+        mediaKey.classList.add('down');
+        setTimeout(() => mediaKey.classList.remove('down'), 140);
+        buzz(12);
+        return;
+      }
       send('tap', [mediaKey.dataset.media]);
       mediaKey.classList.add('down');
       setTimeout(() => mediaKey.classList.remove('down'), 140);
@@ -4082,6 +4171,11 @@
       '<label class="field"><span>Display brightness</span><select data-field="brightness">' + options([
         ['auto', 'Auto'], ['100', '100%'], ['80', '80%'], ['60', '60%'], ['40', '40%'], ['20', '20%'],
       ], pr.brightness || 'auto') + '</select></label>' +
+      '<label class="field"><span>OBD cluster theme</span><select data-field="obdTheme">' + options([
+        ['v8-blue', 'V8 Blue'], ['scania-white', 'Scania White'], ['classic-amber', 'Classic Amber'],
+        ['emerald-green', 'Emerald Green'], ['red-line', 'Red Line'], ['cyber-neon', 'Cyber Neon'], ['monochrome', 'Monochrome'],
+        ['reggae-roots', 'Reggae Roots'],
+      ], pr.obdTheme || 'v8-blue') + '</select></label>' +
       check('autoRotate', 'Switch between vertical and horizontal when the screen turns', pr.autoRotate !== false) +
       '<div class="row"><button class="btn grow" data-act="keys">Key setup</button><button class="btn grow" data-act="transfer">Export / import</button></div>' +
       '<p class="note">These stay the same on every panel, including the ones you add later.</p></div>' +

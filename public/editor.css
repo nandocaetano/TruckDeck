@@ -100,15 +100,30 @@ button { color: inherit; }
 .guide-line.horizontal { left: 0; right: 0; height: 1px; }
 .stage-items { z-index: 10; }
 .layout-element { position: absolute; min-width: 5px; min-height: 5px; pointer-events: auto; user-select: none; touch-action: none; cursor: move; }
-.layout-element.button-element { border: 1px solid transparent; }
+/* Buttons: outer box paints full asset; clicks only hit the inset .hit so transparent PNG
+   margins do not steal neighbours (same 25% inset as the live app). */
+.layout-element.button-element { border: 1px solid transparent; pointer-events: none; }
 .layout-element.button-element img { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+.layout-element.button-element .hit {
+  position: absolute;
+  /* ~25%: rocker boxes in atomic-layout overlap ~7.5% of stage (~24% of button width). */
+  inset: 25%;
+  z-index: 3;
+  pointer-events: auto;
+  cursor: move;
+}
 .pictogram-overlay { position: absolute; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.pictogram-overlay svg { width: 100%; height: 100%; color: #fff; filter: drop-shadow(0 0 2px rgba(0,0,0,.85)) drop-shadow(0 0 5px rgba(0,0,0,.55)); }
+.pictogram-overlay.is-editable { pointer-events: auto; cursor: move; z-index: 3; outline: 1px dashed rgba(228, 174, 87, .55); }
+.pictogram-overlay .pictogram-resize { right: -2px; bottom: -2px; }
+.pictogram-overlay svg { width: 100%; height: 100%; color: #fff; filter: drop-shadow(0 1px 1px rgba(0,0,0,.9)); pointer-events: none; }
+.layout-element.button-element.is-key-locked { cursor: default; }
+.layout-element.button-element.is-key-locked .hit { cursor: default; }
+body.keys-locked .layout-element.button-element.is-selected { outline-color: #7dd3fc; }
 .layout-element.zone-element { display: grid; place-items: center; border: 1px dashed var(--accent-2); border-radius: 3px; background: repeating-linear-gradient(135deg, rgba(117,199,192,.12) 0 8px, rgba(117,199,192,.03) 8px 16px); color: var(--accent-2); font-size: clamp(7px, 1vw, 11px); font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .element-caption { position: absolute; z-index: 2; left: 3px; top: 100%; margin-top: 3px; padding: 2px 4px; border-radius: 3px; background: rgba(7,10,13,.84); color: var(--text); font-size: 8px; line-height: 1.2; white-space: nowrap; pointer-events: none; }
-.layout-element.is-selected { z-index: 60; outline: 1px solid var(--accent); outline-offset: 2px; filter: drop-shadow(0 0 6px rgba(228,174,87,.5)); }
+.layout-element.is-selected { z-index: 60; outline: 2px solid var(--accent); outline-offset: 0; box-shadow: 0 0 0 1px rgba(0,0,0,.55); }
 .layout-element.zone-element.is-selected { outline-color: var(--accent-2); }
-.resize-handle { position: absolute; right: -5px; bottom: -5px; width: 10px; height: 10px; border: 1px solid #111; border-radius: 2px; background: var(--accent); cursor: nwse-resize; }
+.resize-handle { position: absolute; right: 0; bottom: 0; width: 10px; height: 10px; border: 1px solid #111; border-radius: 2px; background: var(--accent); cursor: nwse-resize; pointer-events: auto; z-index: 4; }
 .slot-divider { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,.55); pointer-events: none; z-index: 1; }
 .drop-hint { position: absolute; inset: 45% 0 auto; display: grid; justify-items: center; gap: 4px; color: rgba(255,255,255,.6); text-align: center; pointer-events: none; transition: opacity .18s; }
 .drop-hint span { padding: 7px 10px; border: 1px dashed rgba(255,255,255,.3); border-radius: 5px; background: rgba(0,0,0,.35); font-size: 11px; }
@@ -129,6 +144,7 @@ button { color: inherit; }
 .layers-empty { padding: 14px; color: var(--muted); font-size: 10px; text-align: center; }
 .layout-element.is-layer-hidden { opacity: .25; pointer-events: none; }
 .inspector { min-height: 0; }
+.empty-inspector[hidden] { display: none; }
 .empty-inspector { display: grid; justify-items: center; align-content: center; flex: 1; padding: 24px; color: var(--muted); text-align: center; }
 .empty-inspector strong { margin-top: 12px; color: var(--text); font-size: 12px; }
 .empty-inspector p { max-width: 180px; margin: 7px 0; font-size: 10px; line-height: 1.45; }
@@ -153,6 +169,15 @@ legend { padding: 0 6px 0 0; color: var(--accent); font-size: 9px; font-weight: 
 .unit-row { justify-content: space-between; }
 .unit-row select { width: 130px; }
 .coordinate-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+.checkbox-field[hidden] { display: none; }
+.checkbox-field { display: flex; align-items: flex-start; gap: 7px; margin-top: 9px; color: var(--muted); font-size: 10px; line-height: 1.4; cursor: pointer; }
+.checkbox-field input { flex: 0 0 auto; width: auto; margin-top: 2px; }
+.preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 2px 0 10px; }
+.preset-grid .button { width: 100%; }
+.fine-tune summary { cursor: pointer; color: var(--accent-2); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 9px; }
+.fine-tune summary::marker { color: var(--accent-2); }
+.history-controls { display: flex; gap: 4px; }
+.history-controls .button:disabled { opacity: .35; cursor: default; transform: none; }
 .size-actions { justify-content: stretch; margin: 4px 0 15px; }
 .size-actions .button { flex: 1; }
 .inspector-actions { justify-content: space-between; align-items: flex-end; padding-top: 10px; border-top: 1px solid var(--line); }

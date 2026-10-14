@@ -25,6 +25,15 @@
     'dash-obd': { label: 'Tela OBD', defaultSize: [38, 15] },
     'dash-speedometer': { label: 'Velocímetro', defaultSize: [22, 15] }
   };
+  // Anchor presets for the pictogram box (width/height/offsetX/offsetY, % of the button's own
+  // rect) -- replaces hand-tuned X/Y for the common cases; opacity is preserved from whatever the
+  // button already had, see applyPictogramPreset().
+  const PICTOGRAM_PRESETS = {
+    center: { width: 32, height: 32, offsetX: 34, offsetY: 34 },
+    top: { width: 32, height: 28, offsetX: 34, offsetY: 6 },
+    bottom: { width: 32, height: 28, offsetX: 34, offsetY: 58 },
+    fill: { width: 90, height: 90, offsetX: 5, offsetY: 5 }
+  };
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -50,6 +59,11 @@
   let customAssets = [];
   let state = initialState();
   let needsSeedPush = false;
+  let historyStack = [];
+  let redoStack = [];
+  const HISTORY_LIMIT = 50;
+  // Editor-only tool state (A–E editMode symbols): not persisted in atomic-layout.json.
+  let buttonsLocked = false;
 
   function hasSlots(asset) { return asset === 'btn-3x1-metal.png'; }
   function normalizeSlots(slots) {
@@ -172,29 +186,63 @@
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushToServer, 600);
   }
-  function pushToServer() {
+  // Used by both the 600ms autosave and the explicit Salvar button. Autosave stays quiet on
+  // success (it fires on every edit, announcing each one would drown out real messages) but
+  // always reports a failure -- a silently-ignored res.ok used to make "PIN wrong" or "bridge
+  // offline" look identical to "saved fine", which is what made the tablet desync invisible.
+  async function pushToServer() {
     const text = JSON.stringify({ ...state, customAssets });
-    fetch('/api/atomic-layout', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Pin': resolvePin() },
-      body: text
-    }).catch(() => { /* offline: localStorage cache keeps the board, next persist() retries */ });
+    try {
+      const res = await fetch('/api/atomic-layout', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Pin': resolvePin() },
+        body: text
+      });
+      if (!res.ok) {
+        announce(res.status === 401
+          ? 'PIN incorreto ou ausente - o bridge recusou o salvamento.'
+          : 'Falha ao salvar no bridge (HTTP ' + res.status + ').');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      announce('Bridge inacessível - alterações ficaram só neste navegador.');
+      return false;
+    }
+  }
+  async function saveNow() {
+    clearTimeout(pushTimer);
+    writeLocal();
+    announce('Salvando...');
+    const ok = await pushToServer();
+    if (ok) announce('Salvo no bridge.');
   }
 
-  // Default pictogram box: centered, at 55% of the button's own size — legible over a physical
-  // asset photo (e.g. the black rocker key) without covering its edges or printed markings.
-  function defaultPictogram() { return { width: 55, height: 55, offsetX: 22.5, offsetY: 22.5, opacity: 0.92 }; }
+  // Default pictogram box: centered at ~32% of the button — glanceable without covering the
+  // rocker bezel. offset = (100 - size) / 2 keeps the icon centred when size changes.
+  function defaultPictogram() { return { width: 32, height: 32, offsetX: 34, offsetY: 34, opacity: 0.92 }; }
   const numOr = (value, fallback) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
+  // Optional hex color on pictogram (A–E schema). Omitted / #ffffff = current white default — no migration.
+  function normalizePictoColor(raw) {
+    if (raw == null || raw === '') return undefined;
+    const s = String(raw).trim();
+    if (!/^#[0-9A-Fa-f]{6}$/.test(s)) return undefined;
+    if (s.toLowerCase() === '#ffffff') return undefined;
+    return s.toLowerCase();
+  }
   function normalizePictogram(raw) {
     const base = defaultPictogram();
     if (!raw || typeof raw !== 'object') return base;
-    return {
+    const out = {
       width: clamp(numOr(raw.width, base.width), 5, 150),
       height: clamp(numOr(raw.height, base.height), 5, 150),
       offsetX: clamp(numOr(raw.offsetX, base.offsetX), -50, 150),
       offsetY: clamp(numOr(raw.offsetY, base.offsetY), -50, 150),
       opacity: clamp(numOr(raw.opacity, base.opacity), 0, 1)
     };
+    const color = normalizePictoColor(raw.color);
+    if (color) out.color = color;
+    return out;
   }
   // The catalog function this button performs, or null for a custom/blank id (see catalog.js's
   // FUNCTIONS, the same source presets and the key-setup screen already read).
@@ -212,6 +260,7 @@
       label: String(item.label || def.label),
       functionId: String(item.functionId || ''),
       pictogram: normalizePictogram(item.pictogram),
+      pictogramHidden: Boolean(item.pictogramHidden),
       slots: hasSlots(asset) ? normalizeSlots(item.slots) : undefined,
       x: clamp(Number(item.x) || 10, 0, 99),
       y: clamp(Number(item.y) || 10, 0, 99),
@@ -239,9 +288,55 @@
     };
   }
 
-  function persist() {
+  function writeLocal() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, customAssets })); } catch (error) { /* private browsing */ }
+  }
+  function persist() {
+    writeLocal();
     schedulePush();
+  }
+
+  // Snapshot-based undo/redo: the whole editable state is small JSON (buttons/zones per
+  // orientation + settings + customAssets), so a command pattern would be overkill. Call
+  // pushHistory() BEFORE a mutation (so the stack holds pre-change states); any new action
+  // clears the redo stack, matching standard editor undo semantics.
+  function snapshotForHistory() { return JSON.stringify({ state, customAssets }); }
+  function pushHistory() {
+    historyStack.push(snapshotForHistory());
+    if (historyStack.length > HISTORY_LIMIT) historyStack.shift();
+    redoStack = [];
+    refreshHistoryButtons();
+  }
+  function restoreSnapshot(json) {
+    const data = JSON.parse(json);
+    const keptSelection = selection;
+    state = data.state;
+    customAssets = data.customAssets || [];
+    // Keep whatever was selected if it still exists post-restore (e.g. undoing a property edit
+    // should leave the same button selected, showing the reverted value) -- only drop entries
+    // whose element the undo/redo itself added or removed.
+    selection = keptSelection.filter((entry) => findElement(entry.kind, entry.id));
+    persist(); renderCustomAssetTools(); render();
+  }
+  function undo() {
+    if (!historyStack.length) return;
+    redoStack.push(snapshotForHistory());
+    restoreSnapshot(historyStack.pop());
+    refreshHistoryButtons();
+    announce('Ação desfeita.');
+  }
+  function redo() {
+    if (!redoStack.length) return;
+    historyStack.push(snapshotForHistory());
+    restoreSnapshot(redoStack.pop());
+    refreshHistoryButtons();
+    announce('Ação refeita.');
+  }
+  function refreshHistoryButtons() {
+    const undoButton = $('#undoButton');
+    const redoButton = $('#redoButton');
+    if (undoButton) undoButton.disabled = !historyStack.length;
+    if (redoButton) redoButton.disabled = !redoStack.length;
   }
 
   function currentBoard() { return state.orientations[orientation]; }
@@ -254,6 +349,7 @@
     renderCustomAssetTools();
     setOrientation('landscape');
     render();
+    refreshHistoryButtons();
     window.addEventListener('keydown', handleKeydown);
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
@@ -269,6 +365,16 @@
     $('#snapToggle').addEventListener('change', (event) => { state.snap = event.target.checked; persist(); render(); });
     $('#guidesToggle').addEventListener('change', (event) => { state.guides = event.target.checked; persist(); render(); });
     $('#gridStep').addEventListener('change', (event) => { state.gridStep = clamp(Number(event.target.value) || 1, .25, 10); event.target.value = state.gridStep; persist(); render(); });
+    const lockToggle = $('#lockKeysToggle');
+    if (lockToggle) {
+      lockToggle.checked = buttonsLocked;
+      lockToggle.addEventListener('change', (event) => {
+        buttonsLocked = !!event.target.checked;
+        document.body.classList.toggle('keys-locked', buttonsLocked);
+        renderStage();
+        announce(buttonsLocked ? 'Teclas bloqueadas — arraste só o pictograma.' : 'Teclas desbloqueadas.');
+      });
+    }
     $('#fitButton').addEventListener('click', () => { $('.canvas-scroll').scrollTo({ top: 0, left: 0, behavior: 'smooth' }); announce('Prancheta ajustada à área visível.'); });
     $('#clearButton').addEventListener('click', clearOrientation);
     $('#deleteButton').addEventListener('click', deleteSelection);
@@ -278,11 +384,28 @@
     $('#pasteGroupButton').addEventListener('click', pasteClipboard);
     $('#exportButton').addEventListener('click', exportAll);
     $('#importButton').addEventListener('click', () => $('#importInput').click());
+    $('#saveButton').addEventListener('click', saveNow);
     $('#importInput').addEventListener('change', importReport);
+    $('#undoButton').addEventListener('click', undo);
+    $('#redoButton').addEventListener('click', redo);
     $('#selectedFunctionId').innerHTML = buildFunctionOptionsHtml();
-    ['selectedId', 'selectedLabel', 'selectedSlot1', 'selectedSlot2', 'selectedSlot3'].forEach((id) => $('#' + id).addEventListener('input', updateSelectedMetadata));
+    ['selectedId', 'selectedLabel', 'selectedSlot1', 'selectedSlot2', 'selectedSlot3'].forEach((id) => {
+      const field = $('#' + id);
+      field.addEventListener('input', updateSelectedMetadata);
+      field.addEventListener('blur', () => { metadataHistorySettled = true; });
+    });
     $('#selectedFunctionId').addEventListener('change', () => { updateSelectedMetadata(); renderPictogramFields(primarySelected() && primarySelected().item); renderStage(); });
+    $('#selectedNoPictogram').addEventListener('change', updateSelectedNoPictogram);
+    $$('.preset-button').forEach((button) => button.addEventListener('click', () => applyPictogramPreset(button.dataset.preset)));
     ['selectedPictoW', 'selectedPictoH', 'selectedPictoX', 'selectedPictoY', 'selectedPictoOpacity'].forEach((id) => $('#' + id).addEventListener('change', updateSelectedPictogram));
+    // Color: save on input (live), change (picker close), and explicit Aplicar — was only on change and felt unconfirmed.
+    const colorInput = $('#selectedPictoColor');
+    if (colorInput) {
+      colorInput.addEventListener('input', updateSelectedPictogram);
+      colorInput.addEventListener('change', updateSelectedPictogram);
+    }
+    const applyColorBtn = $('#applyPictoColorButton');
+    if (applyColorBtn) applyColorBtn.addEventListener('click', () => { updateSelectedPictogram(); announce('Cor do pictograma aplicada.'); });
     $('#resetPictogramButton').addEventListener('click', resetPictogram);
     ['selectedX', 'selectedY', 'selectedW', 'selectedH'].forEach((id) => $('#' + id).addEventListener('change', updateSelectedCoordinates));
     $('#selectedUnit').addEventListener('change', renderInspector);
@@ -338,6 +461,7 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
+      pushHistory();
       const id = 'custom-' + uid('asset');
       const label = file.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'Botão personalizado';
       customAssets.push({ id, label, src: reader.result, defaultSize: [8, 8] });
@@ -350,6 +474,7 @@
 
   function removeCustomAsset(id) {
     if (!window.confirm('Remover este ativo personalizado da paleta? Botões já posicionados com ele continuam a existir, mas sem a imagem na paleta.')) return;
+    pushHistory();
     customAssets = customAssets.filter((asset) => asset.id !== id);
     persist(); renderCustomAssetTools(); announce('Ativo personalizado removido da paleta.');
   }
@@ -404,17 +529,28 @@
         img.src = assetImageSrc(item.asset);
         img.alt = item.label || item.asset;
         node.appendChild(img);
+        const hit = document.createElement('span');
+        hit.className = 'hit';
+        node.appendChild(hit);
         const f = fnOf(item);
-        if (f) {
+        if (f && !item.pictogramHidden) {
           const picto = item.pictogram || defaultPictogram();
           const overlay = document.createElement('span');
-          overlay.className = 'pictogram-overlay';
+          overlay.className = 'pictogram-overlay' + (buttonsLocked ? ' is-editable' : '');
+          overlay.dataset.pictogram = 'true';
           overlay.style.left = picto.offsetX + '%';
           overlay.style.top = picto.offsetY + '%';
           overlay.style.width = picto.width + '%';
           overlay.style.height = picto.height + '%';
           overlay.style.opacity = String(picto.opacity);
+          if (picto.color) overlay.style.color = picto.color;
           overlay.innerHTML = iconSvg(f.icon);
+          if (buttonsLocked && isSelected(kind, item.id)) {
+            const pictoHandle = document.createElement('span');
+            pictoHandle.className = 'resize-handle pictogram-resize';
+            pictoHandle.dataset.pictogramResize = 'true';
+            overlay.appendChild(pictoHandle);
+          }
           node.appendChild(overlay);
         }
       } else {
@@ -425,11 +561,15 @@
         caption.className = 'element-caption';
         caption.textContent = item.functionId ? item.id + ' · ' + item.functionId : item.id;
         node.appendChild(caption);
-        const handle = document.createElement('span');
-        handle.className = 'resize-handle';
-        handle.dataset.resize = 'true';
-        node.appendChild(handle);
+        // Button resize handle only when keys are unlocked (lock = edit symbols only).
+        if (!(buttonsLocked && kind === 'button')) {
+          const handle = document.createElement('span');
+          handle.className = 'resize-handle';
+          handle.dataset.resize = 'true';
+          node.appendChild(handle);
+        }
       }
+      if (buttonsLocked && kind === 'button') node.classList.add('is-key-locked');
       node.addEventListener('pointerdown', (event) => startElementPointer(event, kind, item.id));
       node.addEventListener('dblclick', (event) => { event.preventDefault(); selectOnly({ kind, id: item.id }); copySelectedSize(); });
       root.appendChild(node);
@@ -482,6 +622,7 @@
   function toggleHidden(kind, id) {
     const entry = findElement(kind, id);
     if (!entry) return;
+    pushHistory();
     entry.item.hidden = !entry.item.hidden;
     persist(); render();
     announce((entry.item.hidden ? 'Ocultado na prancheta: ' : 'Visível na prancheta: ') + (entry.item.label || entry.item.id));
@@ -506,14 +647,35 @@
     else if (!isSelected(kind, id)) selectOnly({ kind, id });
     const entry = findElement(kind, id);
     if (!entry) return;
+    const onPicto = !!(event.target.closest && event.target.closest('[data-pictogram]'));
+    const pictoResize = !!(event.target.dataset && event.target.dataset.pictogramResize);
+    // Locked keys: button move/resize blocked; only pictogram drag/resize allowed.
+    if (buttonsLocked && kind === 'button' && !onPicto && !pictoResize) {
+      renderInspector();
+      return;
+    }
+    if (!buttonsLocked && kind === 'button' && onPicto && !event.target.dataset.resize) {
+      // Unlocked: clicking the symbol still moves the whole key (overlay has pointer-events only when locked).
+    }
     const rect = $('#stage').getBoundingClientRect();
     const positions = selection.map((selected) => {
       const found = findElement(selected.kind, selected.id);
       return found ? { ...selected, x: found.item.x, y: found.item.y, width: found.item.width, height: found.item.height } : null;
     }).filter(Boolean);
+    let mode = event.target.dataset.resize ? 'resize' : 'move';
+    let pictoStart = null;
+    if (buttonsLocked && kind === 'button' && (onPicto || pictoResize)) {
+      const picto = entry.item.pictogram || defaultPictogram();
+      pictoStart = { offsetX: picto.offsetX, offsetY: picto.offsetY, width: picto.width, height: picto.height };
+      mode = pictoResize ? 'pictogram-resize' : 'pictogram-move';
+    }
+    const buttonRect = event.currentTarget.getBoundingClientRect();
     dragState = {
-      mode: event.target.dataset.resize ? 'resize' : 'move',
-      kind, id, startX: event.clientX, startY: event.clientY, rect, positions, guides: []
+      mode,
+      kind, id, startX: event.clientX, startY: event.clientY, rect, positions, guides: [],
+      historyPushed: false,
+      pictoStart,
+      buttonRect
     };
     $('#stage').classList.add('is-dragging');
     renderInspector();
@@ -525,7 +687,30 @@
     const dy = (event.clientY - dragState.startY) / dragState.rect.height * 100;
     const primary = dragState.positions.find((entry) => entry.kind === dragState.kind && entry.id === dragState.id);
     if (!primary) return;
-    if (dragState.mode === 'resize') {
+    if (!dragState.historyPushed) { pushHistory(); dragState.historyPushed = true; }
+    if (dragState.mode === 'pictogram-move' || dragState.mode === 'pictogram-resize') {
+      const item = findElement(dragState.kind, dragState.id);
+      if (!item || !dragState.pictoStart || !dragState.buttonRect) return;
+      const bx = dragState.buttonRect.width || 1;
+      const by = dragState.buttonRect.height || 1;
+      const ddx = (event.clientX - dragState.startX) / bx * 100;
+      const ddy = (event.clientY - dragState.startY) / by * 100;
+      const cur = item.item.pictogram || defaultPictogram();
+      if (dragState.mode === 'pictogram-resize') {
+        item.item.pictogram = normalizePictogram({
+          ...cur,
+          width: dragState.pictoStart.width + ddx,
+          height: dragState.pictoStart.height + ddy
+        });
+      } else {
+        item.item.pictogram = normalizePictogram({
+          ...cur,
+          offsetX: dragState.pictoStart.offsetX + ddx,
+          offsetY: dragState.pictoStart.offsetY + ddy
+        });
+      }
+      dragState.guides = [];
+    } else if (dragState.mode === 'resize') {
       const item = findElement(dragState.kind, dragState.id);
       if (!item) return;
       item.item.width = clamp(primary.width + dx, .2, 100 - item.item.x);
@@ -653,26 +838,33 @@
 
   function renderPictogramFields(item) {
     const fieldset = $('#pictogramFields');
+    const noPictogramField = $('#noPictogramField');
     const f = fnOf(item);
-    if (!item || !f) { fieldset.hidden = true; return; }
-    fieldset.hidden = false;
+    if (!item || !f) { fieldset.hidden = true; noPictogramField.hidden = true; return; }
+    noPictogramField.hidden = false;
+    $('#selectedNoPictogram').checked = Boolean(item.pictogramHidden);
+    fieldset.hidden = Boolean(item.pictogramHidden);
+    if (fieldset.hidden) return;
     const picto = item.pictogram || defaultPictogram();
     $('#selectedPictoW').value = picto.width;
     $('#selectedPictoH').value = picto.height;
     $('#selectedPictoX').value = picto.offsetX;
     $('#selectedPictoY').value = picto.offsetY;
     $('#selectedPictoOpacity').value = picto.opacity;
+    $('#selectedPictoColor').value = picto.color || '#ffffff';
   }
 
   function updateSelectedPictogram() {
     const primary = primarySelected();
     if (!primary || primary.kind !== 'button' || !fnOf(primary.item)) return;
+    pushHistory();
     primary.item.pictogram = normalizePictogram({
       width: $('#selectedPictoW').value,
       height: $('#selectedPictoH').value,
       offsetX: $('#selectedPictoX').value,
       offsetY: $('#selectedPictoY').value,
-      opacity: $('#selectedPictoOpacity').value
+      opacity: $('#selectedPictoOpacity').value,
+      color: $('#selectedPictoColor').value
     });
     persist(); renderStage();
   }
@@ -680,8 +872,30 @@
   function resetPictogram() {
     const primary = primarySelected();
     if (!primary || primary.kind !== 'button' || !fnOf(primary.item)) return;
+    pushHistory();
     primary.item.pictogram = defaultPictogram();
     persist(); render();
+  }
+
+  // Independent of functionId: the button still performs its action, it just skips drawing the
+  // catalog icon on top -- for carcaças/imagens that already print their own text/symbol.
+  function updateSelectedNoPictogram() {
+    const primary = primarySelected();
+    if (!primary || primary.kind !== 'button' || !fnOf(primary.item)) return;
+    pushHistory();
+    primary.item.pictogramHidden = $('#selectedNoPictogram').checked;
+    persist(); render();
+  }
+
+  function applyPictogramPreset(name) {
+    const preset = PICTOGRAM_PRESETS[name];
+    const primary = primarySelected();
+    if (!preset || !primary || primary.kind !== 'button' || !fnOf(primary.item)) return;
+    pushHistory();
+    const current = primary.item.pictogram || defaultPictogram();
+    primary.item.pictogram = normalizePictogram({ ...preset, opacity: current.opacity, color: current.color });
+    persist(); render();
+    announce('Ancoragem aplicada: ' + name + '.');
   }
 
   function displayValues(item, unit) {
@@ -692,9 +906,14 @@
     return { x: round(item.x, 3), y: round(item.y, 3), width: round(item.width, 3), height: round(item.height, 3) };
   }
 
+  // Bound to 'input' (fires every keystroke) -- pushHistory() only on the first keystroke of an
+  // editing session, or undo would need one press per character. metadataHistorySettled resets
+  // on blur (see bindControls) so the next edit starts a fresh checkpoint.
+  let metadataHistorySettled = true;
   function updateSelectedMetadata() {
     const primary = primarySelected();
     if (!primary) return;
+    if (metadataHistorySettled) { pushHistory(); metadataHistorySettled = false; }
     const previousId = primary.item.id;
     const id = $('#selectedId').value.trim();
     if (id && !allElements().some(({ item }) => item.id === id && item !== primary.item)) primary.item.id = id;
@@ -707,6 +926,7 @@
   function updateSelectedCoordinates() {
     const primary = primarySelected();
     if (!primary) return;
+    pushHistory();
     const unit = $('#selectedUnit').value;
     const bg = OFFICIAL[orientation];
     const value = (id, size) => {
@@ -729,6 +949,7 @@
 
   function applyCopiedSize() {
     if (!copiedSize) { announce('Nenhum tamanho copiado ainda.'); return; }
+    pushHistory();
     const targets = selectedItems().filter(({ kind }) => kind === 'button');
     targets.forEach(({ item }) => { item.width = clamp(copiedSize.width, .2, 100 - item.x); item.height = clamp(copiedSize.height, .2, 100 - item.y); });
     persist(); render(); announce('Tamanho aplicado a ' + targets.length + ' botão(ões).');
@@ -737,6 +958,7 @@
   function addButton(asset, x, y) {
     const def = getAssetDef(asset);
     if (!def) return;
+    pushHistory();
     const number = currentBoard().buttons.length + 1;
     const [width, height] = def.defaultSize;
     const id = uniqueElementId(asset.replace('.png', '') + '-' + number);
@@ -746,6 +968,7 @@
 
   function addZone(type, x, y) {
     if (!DASHBOARDS[type]) return;
+    pushHistory();
     const number = currentBoard().zones.filter((zone) => zone.type === type).length + 1;
     const [width, height] = DASHBOARDS[type].defaultSize;
     const id = uniqueElementId(type + '-' + number);
@@ -783,11 +1006,13 @@
 
   function clearOrientation() {
     if (!window.confirm('Remover todos os botões e zonas desta orientação?')) return;
+    pushHistory();
     state.orientations[orientation] = { buttons: [], zones: [] }; selection = []; persist(); render(); announce('Orientação limpa.');
   }
 
   function deleteSelection() {
     if (!selection.length) return;
+    pushHistory();
     const ids = new Set(selection.map((entry) => entry.id));
     currentBoard().buttons = currentBoard().buttons.filter((item) => !ids.has(item.id));
     currentBoard().zones = currentBoard().zones.filter((item) => !ids.has(item.id));
@@ -802,12 +1027,18 @@
     if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); deleteSelection(); }
     if (mod && event.shiftKey && key === 'c') { event.preventDefault(); copySelectedSize(); return; }
     if (mod && event.shiftKey && key === 'v') { event.preventDefault(); applyCopiedSize(); return; }
+    if (mod && event.shiftKey && key === 'z') { event.preventDefault(); redo(); return; }
+    if (mod && key === 'z') { event.preventDefault(); undo(); return; }
+    if (mod && key === 'y') { event.preventDefault(); redo(); return; }
     if (mod && key === 'c') { event.preventDefault(); copySelectionToClipboard(); }
     if (mod && key === 'v') { event.preventDefault(); pasteClipboard(); }
     if (mod && key === 'd') { event.preventDefault(); duplicateSelection(); }
+    if (mod && key === 's') { event.preventDefault(); saveNow(); }
   }
 
   function duplicateSelection() {
+    if (!selectedItems().length) return;
+    pushHistory();
     const copies = selectedItems().map(({ kind, item }) => kind === 'button' ? normalizeButton({ ...item, id: uniqueElementId(item.id + '-copy'), x: item.x + 2, y: item.y + 2 }) : normalizeZone({ ...item, id: uniqueElementId(item.id + '-copy'), x: item.x + 2, y: item.y + 2 }));
     copies.forEach((item) => (item.asset ? currentBoard().buttons : currentBoard().zones).push(item));
     selection = copies.map((item) => ({ kind: item.asset ? 'button' : 'zone', id: item.id }));
@@ -824,6 +1055,7 @@
 
   function pasteClipboard() {
     if (!clipboard || !clipboard.length) { announce('Área de transferência vazia.'); return; }
+    pushHistory();
     clipboardPasteCount += 1;
     const offset = clipboardPasteCount * 2;
     const copies = clipboard.map(({ kind, item }) => {
@@ -858,7 +1090,7 @@
   function exportElement(item, kind, mode) {
     const bg = OFFICIAL[mode];
     const result = { id: item.id, type: kind, label: item.label, position: { unit: 'percent', x: round(item.x), y: round(item.y), width: round(item.width), height: round(item.height) }, pixels: { x: round(item.x / 100 * bg.width, 2), y: round(item.y / 100 * bg.height, 2), width: round(item.width / 100 * bg.width, 2), height: round(item.height / 100 * bg.height, 2) }, zIndex: item.zIndex || 1 };
-    if (kind === 'button') Object.assign(result, { asset: item.asset, functionId: item.functionId || '', pictogram: item.pictogram || defaultPictogram(), slots: Array.isArray(item.slots) ? item.slots : undefined });
+    if (kind === 'button') Object.assign(result, { asset: item.asset, functionId: item.functionId || '', pictogram: item.pictogram || defaultPictogram(), pictogramHidden: Boolean(item.pictogramHidden), slots: Array.isArray(item.slots) ? item.slots : undefined });
     else result.dashboard = item.type;
     return result;
   }
@@ -906,6 +1138,7 @@
     reader.onload = () => {
       try {
         const report = JSON.parse(reader.result);
+        pushHistory();
         if (Array.isArray(report.customAssets)) {
           report.customAssets.forEach((item) => {
             if (!item || typeof item.id !== 'string' || typeof item.src !== 'string') return;
@@ -923,7 +1156,7 @@
           const source = report.orientations && report.orientations[mode];
           if (!source) return;
           state.orientations[mode] = {
-            buttons: (source.buttons || []).map((item) => normalizeButton({ id: item.id, asset: item.asset, label: item.label, functionId: item.functionId, pictogram: item.pictogram, slots: item.slots, ...(item.position || {}) })),
+            buttons: (source.buttons || []).map((item) => normalizeButton({ id: item.id, asset: item.asset, label: item.label, functionId: item.functionId, pictogram: item.pictogram, pictogramHidden: item.pictogramHidden, slots: item.slots, ...(item.position || {}) })),
             zones: (source.zones || []).map((item) => normalizeZone({ id: item.id, type: item.dashboard || item.type, label: item.label, ...(item.position || {}) }))
           };
         });
