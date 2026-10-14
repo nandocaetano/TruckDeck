@@ -761,6 +761,9 @@
       }
       else if (msg.type === 'atomic-layout') refetchAtomicLayout();
       else if (msg.type === 'error') toast(msg.msg);
+      else if (msg.type === 'localAction' && msg.action === 'obd_page_next') {
+        document.querySelectorAll('.k-rtext.modern-utility').forEach((n) => cycleModernObd(n));
+      }
     };
     events.onerror = () => {
       // EventSource retries by itself; only the status pill needs to know.

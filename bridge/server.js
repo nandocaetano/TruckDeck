@@ -12,6 +12,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
+const { SECONDARY_KEYBINDS } = require('./keybinds');
 
 const PORT = Number(process.env.TRUCKDECK_PORT) || 8765;
 // When packaged into a single .exe (pkg / Node SEA), __dirname is a virtual path INSIDE the
@@ -240,6 +241,17 @@ function startHelper() {
           console.log('[dash] Display button pressed: cluster screen +1');
         }
         broadcast(msg);
+      } else if (msg.type === 'hotkey') {
+        // A physical PC keyboard/numpad combo (Ctrl+Shift+F1..F12, Numpad1..9) does the same
+        // thing a tablet tap would: either press the game's own bound key, or — for actions
+        // that live only in the tablet UI (OBD paging, media, theme) — tell the tablet to run
+        // it locally. See bridge/keybinds.js for the table.
+        const bind = SECONDARY_KEYBINDS[msg.combo];
+        if (bind && bind.gameKeys) {
+          handleKey('tap', bind.gameKeys);
+        } else if (bind && bind.localAction) {
+          broadcast({ type: 'localAction', action: bind.localAction });
+        }
       } else if (msg.type === 'ready') {
         helperReady = true;
         console.log('[input] Helper ready.');
@@ -464,12 +476,15 @@ const server = http.createServer(async (req, res) => {
           return n;
         };
         const before = bindCount(prev), after = bindCount(incoming);
-        if (before > 0 && after === 0) {
+        // Catches both a total wipe (after === 0) and a partial one (a stale/desynced save
+        // replacing most, but not all, bindings) -- losing half a hand-built setup silently
+        // is just as bad as losing all of it.
+        if (before > 0 && after < before * 0.5) {
           const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
           const keep = LAYOUTS_FILE.replace(/\.json$/, '') + '.' + stamp + '.bak.json';
           try {
             fs.copyFileSync(LAYOUTS_FILE, keep);
-            console.log('[layouts] Incoming save has 0 key bindings but the saved file had '
+            console.log('[layouts] Incoming save has ' + after + ' key bindings but the saved file had '
               + before + '. Previous file kept as ' + path.basename(keep) + '.');
           } catch (e) { console.log('[layouts] Could not keep a backup: ' + e.message); }
         }
@@ -512,12 +527,15 @@ const server = http.createServer(async (req, res) => {
           return n;
         };
         const before = buttonCount(prev), after = buttonCount(incoming);
-        if (before > 0 && after === 0) {
+        // Same reasoning as layouts.json above: a save that drops from e.g. 26 buttons to 5
+        // (an empty/half-drawn board overwriting a finished one) is the exact failure mode
+        // that cost the board on 2026-10-13 -- "not zero" was never a safe signal on its own.
+        if (before > 0 && after < before * 0.5) {
           const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
           const keep = ATOMIC_LAYOUT_FILE.replace(/\.json$/, '') + '.' + stamp + '.bak.json';
           try {
             fs.copyFileSync(ATOMIC_LAYOUT_FILE, keep);
-            console.log('[atomic-layout] Incoming save has 0 buttons but the saved file had '
+            console.log('[atomic-layout] Incoming save has ' + after + ' buttons but the saved file had '
               + before + '. Previous file kept as ' + path.basename(keep) + '.');
           } catch (e) { console.log('[atomic-layout] Could not keep a backup: ' + e.message); }
         }
@@ -525,6 +543,10 @@ const server = http.createServer(async (req, res) => {
 
       fs.writeFileSync(ATOMIC_LAYOUT_FILE + '.tmp', text);
       fs.renameSync(ATOMIC_LAYOUT_FILE + '.tmp', ATOMIC_LAYOUT_FILE);
+      // Tell every connected tablet/painel to refetch: without this they only pick up an
+      // editor save on their next full connect()/reload, which is what made saves on the
+      // PC look like they "didn't reach" the tablet.
+      broadcast({ type: 'atomic-layout', at: Date.now() });
       json(res, 200, { ok: true });
       return;
     }

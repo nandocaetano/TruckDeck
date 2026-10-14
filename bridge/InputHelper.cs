@@ -70,6 +70,7 @@ namespace TruckDeck
         private const uint KEYEVENTF_KEYUP = 0x0002;
         private const uint KEYEVENTF_SCANCODE = 0x0008;
 
+        [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int vKey);
         [DllImport("user32.dll")] private static extern bool SetProcessDPIAware();
         [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
         [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
@@ -741,6 +742,43 @@ namespace TruckDeck
             }
         }
 
+        // ---- Secondary keybinds (physical PC keyboard) --------------------------------------
+        // A numpad / second keyboard plugged into the PC should trigger the same panel actions
+        // as the tablet, even while the game has focus. GetAsyncKeyState polling (not a global
+        // hook) is enough here because the combos are PC-only shortcuts nobody else binds, and
+        // it needs no admin rights. Only the rising edge (not-held -> held) is reported, exactly
+        // like PadLoop reports button presses and never a held state.
+        private const int VK_CONTROL = 0x11;
+        private const int VK_SHIFT = 0x10;
+        private const int VK_F1 = 0x70;   // F1..F12 are consecutive VK codes
+        private const int VK_NUMPAD0 = 0x60; // NUMPAD0..NUMPAD9 are consecutive VK codes
+
+        private static bool IsDown(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
+
+        private static void KeyboardLoop()
+        {
+            // one flag per combo this helper watches: 12 Ctrl+Shift+F-keys + 9 numpad digits
+            bool[] lastF = new bool[12];
+            bool[] lastNum = new bool[10];
+            while (true)
+            {
+                bool mod = IsDown(VK_CONTROL) && IsDown(VK_SHIFT);
+                for (int i = 0; i < 12; i++)
+                {
+                    bool down = mod && IsDown(VK_F1 + i);
+                    if (down && !lastF[i]) Emit("{\"type\":\"hotkey\",\"combo\":\"ctrl+shift+f" + (i + 1) + "\"}");
+                    lastF[i] = down;
+                }
+                for (int i = 1; i <= 9; i++)
+                {
+                    bool down = IsDown(VK_NUMPAD0 + i);
+                    if (down && !lastNum[i]) Emit("{\"type\":\"hotkey\",\"combo\":\"numpad" + i + "\"}");
+                    lastNum[i] = down;
+                }
+                Thread.Sleep(30);
+            }
+        }
+
         // ---- Entry point -------------------------------------------------------------------
         public static void Run()
         {
@@ -757,6 +795,9 @@ namespace TruckDeck
             Thread pad = new Thread(PadLoop);
             pad.IsBackground = true;
             pad.Start();
+            Thread kb = new Thread(KeyboardLoop);
+            kb.IsBackground = true;
+            kb.Start();
 
             Emit("{\"type\":\"ready\"}");
 
