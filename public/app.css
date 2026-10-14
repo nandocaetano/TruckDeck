@@ -425,9 +425,11 @@
   justify-items: stretch;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: .45em;
+  gap: .55em;
   padding: .4em;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media .obd-media-ico {
@@ -442,6 +444,7 @@
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media .obd-media-keys {
   margin-top: .35em;
+  width: 100%;
 }
 /* Local/Spotify ↔ Radio FM switch, top-right corner of the page-5 player cell */
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-mode {
@@ -640,10 +643,17 @@
   font-weight: 700;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   display: flex;
-  gap: .35em;
+  gap: .9em;
   align-items: center;
+  justify-content: space-between;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i[data-media="vol_down"],
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i[data-media="vol_up"] {
+  width: 1.6em;
+  height: 1.6em;
+  opacity: .75;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i {
   width: 2.03em;

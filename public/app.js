@@ -132,7 +132,12 @@
       // The UI reveal is driven by the video's own 'ended' event, not a fixed timer, so the
       // OBD content never appears while boot_v8.mp4 is still on screen. TOTAL_MS in
       // tickModernBoot() stays only as a fallback if the video errors or never fires 'ended'.
-      vid.addEventListener('ended', function () { stopModernBoot('running'); }, { once: true });
+      // A short black pause after the clip ends (systems "waking up") feels more OEM than an
+      // instant cut straight from the last video frame into a fully lit panel.
+      vid.addEventListener('ended', function () {
+        vid.style.visibility = 'hidden';
+        setTimeout(function () { stopModernBoot('running'); }, 1800);
+      }, { once: true });
       try { vid.currentTime = 0; vid.play().catch(function () {}); } catch (e) {}
     }
   }
@@ -1485,9 +1490,11 @@
             '<div class="obd-read"><b class="obd-val">--</b><small class="obd-unit">' + unit + '</small></div></div>';
         const mediaKeys =
           '<div class="obd-media-keys">' +
+            '<i data-media="vol_down" role="button" aria-label="Volume down">' + iconSvg('voldown') + '</i>' +
             '<i data-media="media_prev" role="button" aria-label="Previous">' + iconSvg('prev') + '</i>' +
             '<i data-media="media_play" role="button" aria-label="Play/Pause">' + iconSvg('playpause') + '</i>' +
             '<i data-media="media_next" role="button" aria-label="Next">' + iconSvg('next') + '</i>' +
+            '<i data-media="vol_up" role="button" aria-label="Volume up">' + iconSvg('volup') + '</i>' +
           '</div>';
         // Telltale rendered as inline SVG (no PNG asset yet) reusing the .tell-green/.tell-blue
         // palette already defined for .k-tell elsewhere in app.css.
@@ -2790,31 +2797,22 @@
     { name: 'Mundo Livre FM', freq: '93.9', url: 'https://8892.live.streamtheworld.com/MUNDOLIVRE_FM_CURITIBAP.mp3' },
     { name: 'Jovem Pan FM', freq: '103.9', url: 'https://stream.zeno.fm/jovempancuritiba' },
   ];
-  // The tablet never plays the FM stream itself — it only tells the PC Helper (bridge/server.js)
-  // which preset index to open, so the audio comes out of the same speakers/headset as the game.
+  // Playback is ETS2's own in-game radio now — the tablet only taps the same media_* / vol_*
+  // virtual keys as every other dash button (see send('tap', ...) below), through the normal
+  // bridge/server.js SendInput path. The name/freq list here is a local display label only;
+  // for it to match what's actually playing, add these stations to ETS2's own
+  // live_streams.sii and bind its Multimedia controls (Options > Controls) to the media keys.
   function radioPreset() { return RADIO_PRESETS[S.radioIdx] || RADIO_PRESETS[0]; }
-  function radioSendIdx(idx) {
-    if (S.bridge !== 'ok') return;
-    fetch('api/radio', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Pin': S.pin },
-      body: JSON.stringify({ idx: idx }),
-    }).catch(function () {});
-  }
   function radioSetIdx(i) {
     S.radioIdx = ((i % RADIO_PRESETS.length) + RADIO_PRESETS.length) % RADIO_PRESETS.length;
     lsSet('truckdeck.radioIdx', String(S.radioIdx));
-    if (S.radioMode && S.radioPlaying) radioSendIdx(S.radioIdx);
   }
   function radioCycle(dir) { radioSetIdx((S.radioIdx || 0) + dir); }
-  function radioTogglePlay() {
-    S.radioPlaying = !S.radioPlaying;
-    radioSendIdx(S.radioPlaying ? S.radioIdx : -1);
-  }
+  function radioTogglePlay() { S.radioPlaying = !S.radioPlaying; }
   function radioSetMode(on) {
     S.radioMode = on;
     lsSet('truckdeck.radioMode', on ? '1' : '0');
-    if (!on && S.radioPlaying) { S.radioPlaying = false; radioSendIdx(-1); }
+    if (!on && S.radioPlaying) S.radioPlaying = false;
   }
 
   function mediaView() {
@@ -3614,13 +3612,15 @@
     // the music player has its own keys inside one widget
     const mediaKey = ev.target.closest('[data-media]');
     if (mediaKey) {
-      // While the OBD page-5 player is in Radio FM mode, its transport keys cycle stations
-      // locally instead of reaching the PC bridge (there is nothing there to skip).
+      // While the OBD page-5 player is in Radio FM mode, prev/next also walk the local display
+      // label (name/freq) — but every key, including play and volume, still taps through to
+      // the game's own native radio via the same bridge path as any other dash button.
       if (S.radioMode && mediaKey.closest('.obd-cell-media')) {
         const act = mediaKey.dataset.media;
         if (act === 'media_prev') radioCycle(-1);
         else if (act === 'media_next') radioCycle(1);
         else if (act === 'media_play') radioTogglePlay();
+        send('tap', [act]);
         mediaKey.classList.add('down');
         setTimeout(() => mediaKey.classList.remove('down'), 140);
         buzz(12);
