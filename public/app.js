@@ -67,6 +67,7 @@
   };
   MODERN_BOOT.TOTAL_MS = MODERN_BOOT.BULB_MS + MODERN_BOOT.SWEEP_UP_MS + MODERN_BOOT.SWEEP_DOWN_MS + MODERN_BOOT.REVEAL_MS;
   let modernBoot = { phase: 'off', at: 0 }; // off | booting | running
+  let modernShuttingDown = false;
   let _modernIgnPowered = null;
 
   function modernBootElapsed() { return Date.now() - (modernBoot.at || 0); }
@@ -101,7 +102,9 @@
     // PNG from AntiGravity when ready; inline griffin shield is the interim mark (no "Scania" word).
     el.innerHTML =
       '<div class="ign-boot-mark">' +
-        '<img class="ign-boot-img" src="skins/modern/dash/boot_logo.png" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.hidden=false">' +
+        '<video class="ign-boot-vid" src="skins/modern/dash/boot_v8.mp4" muted playsinline ' +
+          'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'\'"></video>' +
+        '<img class="ign-boot-img" src="skins/modern/dash/boot_logo.png" alt="" style="display:none" onerror="this.style.display=\'none\';this.nextElementSibling.hidden=false">' +
         '<svg class="ign-boot-svg" viewBox="0 0 120 140" hidden aria-hidden="true">' +
           '<defs><linearGradient id="ignBootG" x1="0" y1="0" x2="0" y2="1">' +
             '<stop offset="0" stop-color="#f4f7fb"/><stop offset="1" stop-color="#8aa0b0"/></linearGradient></defs>' +
@@ -120,6 +123,8 @@
     ensureIgnBootOverlay();
     panel.classList.add('ign-booting');
     panel.dataset.boot = 'logo';
+    const vid = panel.querySelector('.ign-boot-vid');
+    if (vid) { try { vid.currentTime = 0; vid.play().catch(function () {}); } catch (e) {} }
   }
   function stopModernBoot(to) {
     modernBoot = { phase: to || 'off', at: Date.now() };
@@ -128,6 +133,29 @@
     if (o) o.remove();
     if (to === 'running') panel.dataset.boot = 'running';
     else delete panel.dataset.boot;
+  }
+  function stopModernShutdown() {
+    modernShuttingDown = false;
+    panel.classList.remove('ign-shutting-down');
+    const o = panel.querySelector('.ign-shutdown');
+    if (o) o.remove();
+  }
+  function startModernShutdown() {
+    if (modernShuttingDown || page().skin !== 'eu_frame') return;
+    modernShuttingDown = true;
+    panel.classList.add('ign-shutting-down');
+    const host = panel.querySelector('.obd-screens');
+    if (!host || host.querySelector('.ign-shutdown')) return;
+    const vid = document.createElement('video');
+    vid.className = 'ign-shutdown';
+    vid.src = 'skins/modern/dash/shutdown_v8.mp4';
+    vid.muted = true;
+    vid.playsInline = true;
+    vid.setAttribute('aria-hidden', 'true');
+    vid.addEventListener('ended', stopModernShutdown);
+    vid.addEventListener('error', stopModernShutdown);
+    host.appendChild(vid);
+    try { vid.play().catch(function () {}); } catch (e) {}
   }
   function tickModernBoot() {
     if (page().skin !== 'eu_frame') { if (modernBoot.phase !== 'off') stopModernBoot('off'); return; }
@@ -1903,12 +1931,23 @@
 
   // ---- Ignition key (classic panels) ---------------------------------------------------------
   // One barrel, three taps, like turning a real key: electrics, start, everything off.
-  // 0 = off, 1 = electrics on, 2 = engine running. The game says which when it is connected;
-  // otherwise the app keeps count itself.
+  // 0 = off, 1 = electrics on, 2 = engine running, 3 = stalled. The game says which when
+  // it is connected; otherwise the app keeps count itself.
   let ignLocal = 0;
+  // Stall has no dedicated SDK field: electrics stay on but rpm drops to 0 after the engine
+  // has actually been running (electric-but-never-run is just the pre-start idle, not a stall).
+  let ignWasRunning = false;
   function ignState() {
     const t = S.tel && S.tel.sdk ? S.tel : null;
-    return t ? (t.engine ? 2 : t.electric ? 1 : 0) : ignLocal;
+    if (!t) return ignLocal;
+    if (t.engine) { ignWasRunning = true; return 2; }
+    if (t.electric) {
+      const stalled = ignWasRunning && (Number(t.rpm) || 0) === 0;
+      if (!stalled) ignWasRunning = false;
+      return stalled ? 3 : 1;
+    }
+    ignWasRunning = false;
+    return 0;
   }
   // How a truck is started, and what the game allows:
   //   real cab : key to ON (electrics: dash lights up, every warning lamp shows for a moment),
@@ -3077,12 +3116,15 @@
       const _powered = ignState() > 0;
       if (_modernIgnPowered === false && _powered) startModernBoot();
       if (!_powered && modernBoot.phase !== 'off') stopModernBoot('off');
+      if (_modernIgnPowered === true && !_powered) startModernShutdown();
+      if (_powered && modernShuttingDown) stopModernShutdown();
       _modernIgnPowered = _powered;
       tickModernBoot();
       if (modernBooting()) ensureIgnBootOverlay();
     } else if (modernBoot.phase !== 'off') {
       stopModernBoot('off');
       _modernIgnPowered = null;
+      stopModernShutdown();
     }
     panel.classList.toggle('unlit', panel.classList.contains('skin') && !backlit());
     // smooth cabin darkness: interpolate toward target at ~10Hz for gradual dusk/dawn
