@@ -19,7 +19,7 @@ const SECONDARY_KEYBINDS = {
   'ctrl+shift+f5': { gameKeys: ['p'] },     // wipers
   'ctrl+shift+f6': { gameKeys: ['o'] },     // beacon
   'ctrl+shift+f7': { gameKeys: ['y'] },     // trailer_axle ("trailer lift")
-  // ctrl+shift+f8 ("cabin light") left unbound: catalog.js has no interior-light function yet.
+  'ctrl+shift+f8': { gameKeys: ['num.'] },  // cabin_light (assign in-game: Key Options)
   'ctrl+shift+f9': { gameKeys: ['space'] }, // parking_brake
   'ctrl+shift+f10': { gameKeys: ['z'] },    // engine_brake_toggle
   'ctrl+shift+f11': { gameKeys: ['u'] },    // lift_axle

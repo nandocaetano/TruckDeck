@@ -31,6 +31,7 @@ const ICONS = {
   axle: '<circle cx="7" cy="17" r="3"/><circle cx="17" cy="17" r="3"/><path d="M12 13V4M9 7l3-3 3 3"/>',
   taxle: '<path d="M3 5h18v6H3z"/><circle cx="8" cy="17" r="3"/><circle cx="16" cy="17" r="3"/><path d="M12 20v-6M10.5 15.5L12 14l1.5 1.5"/>',
   diff: '<path d="M4 12h16M4 8v8M20 8v8"/><path d="M9 9l6 6M15 9l-6 6"/>',
+  cabin: '<path d="M4 20V9l8-5 8 5v11z"/><path d="M4 13h16"/><circle cx="12" cy="17" r="2"/>',
   // Low-fuel telltale: the pump-and-hose shape used on cluster warning lamps.
   fuelpump: '<path d="M4 20V5.5A1.5 1.5 0 0 1 5.5 4h6A1.5 1.5 0 0 1 13 5.5V20"/><path d="M3 20h11"/><path d="M5.5 7.5h6v4h-6z"/><path d="M13 10h3.5a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 0 1.5 1.5A1.5 1.5 0 0 0 21 16V9l-2.5-2.5"/>',
   // Battery telltale: case, terminals and the +/- pair, as the cluster lamp draws it.
@@ -132,10 +133,10 @@ const FUNCTION_LIST = [
   fn('parking_brake', 'engine', 'Parking brake', 'PARK\nBRAKE', 'parking', ['space'], { latch: true, tel: 'park', led: 'red' }),
   fn('engine_brake', 'engine', 'Engine brake (hold)', 'ENG BRAKE', 'engbrake', ['b'], { mode: 'hold', tel: 'motorBrake', led: 'amber' }),
   fn('engine_brake_toggle', 'engine', 'Engine brake toggle', 'ENG BRAKE', 'engbrake', ['z'], { bind: true, latch: true, tel: 'motorBrake', led: 'amber' }),
-  fn('engine_brake_up', 'engine', 'Engine brake increase', 'JAKE\u00a0+', 'engbrake', ['shift', 'b'], { bind: true, led: 'amber' }),
-  fn('engine_brake_down', 'engine', 'Engine brake decrease', 'JAKE\u00a0\u2212', 'engbrake', ['ctrl', 'b'], { bind: true, led: 'amber' }),
-  fn('retarder_up', 'engine', 'Retarder increase', 'RET\u00a0+', 'retarder', [';'], { tel: 'retarderOn', led: 'amber' }),
-  fn('retarder_down', 'engine', 'Retarder decrease', 'RET\u00a0−', 'retarder', ["'"], { led: 'amber' }),
+  fn('engine_brake_up', 'engine', 'Engine brake increase', 'JAKE\u00a0+', 'plus', ['shift', 'b'], { bind: true, led: 'amber' }),
+  fn('engine_brake_down', 'engine', 'Engine brake decrease', 'JAKE\u00a0\u2212', 'minus', ['ctrl', 'b'], { bind: true, led: 'amber' }),
+  fn('retarder_up', 'engine', 'Retarder increase', 'RET\u00a0+', 'plus', [';'], { tel: 'retarderOn', led: 'amber' }),
+  fn('retarder_down', 'engine', 'Retarder decrease', 'RET\u00a0−', 'minus', ["'"], { led: 'amber' }),
   fn('retarder_auto', 'engine', 'Automatic retarder', 'AUTO\nRETARDER', 'retauto', ['num-'], { bind: true, latch: true, led: 'amber' }),
   fn('lane_assist', 'engine', 'Lane keeping assist', 'LANE\nASSIST', 'lane', ['num/'], { bind: true, latch: true, led: 'green' }),
   fn('emergency_brake', 'engine', 'Emergency braking', 'EMERG.\nBRAKE', 'emergency', ['num*'], { bind: true, latch: true, led: 'red' }),
@@ -153,6 +154,7 @@ const FUNCTION_LIST = [
   fn('air_horn', 'lights', 'Air horn (hold)', 'AIR HORN', 'airhorn', ['n'], { mode: 'hold', led: 'white' }),
   fn('wipers', 'lights', 'Wipers faster', 'WIPERS', 'wiper', ['p'], { latch: true, tel: 'wipers', led: 'amber' }),
   fn('wipers_back', 'lights', 'Wipers off', 'WIPERS OFF', 'wiper', ['p'], {}),   // runs the cycling key until the wipers stop (see wiperOff in app.js)
+  fn('cabin_light', 'lights', 'Cabin interior light', 'CABIN\nLIGHT', 'cabin', ['num.'], { bind: true, latch: true }),
 
   // Cruise control
   fn('cruise', 'cruise', 'Cruise control', 'CRUISE', 'cruise', ['c'], { latch: true, tel: 'cruiseOn', led: 'green' }),
@@ -218,7 +220,7 @@ const FUNCTION_LIST = [
   fn('ra_prev', 'hud', 'Route advisor: previous page', 'PREV', 'prev', ['delete'], { bind: true }),
 
   // Game
-  fn('activate', 'game', 'Activate / confirm', 'ENTER', 'check', ['enter']),
+  fn('activate', 'game', 'Activate / confirm', 'ENTER', 'check', ['enter'], { mode: 'hold' }),
   fn('menu', 'game', 'Menu / cancel', 'MENU', 'menu', ['esc']),
   // Arrow keys move through menus, the Route Advisor mouse mode and seat adjustment. The game
   // also uses them as a second set of driving keys, so on the road they steer.

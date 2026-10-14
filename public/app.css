@@ -641,6 +641,153 @@
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i.down {
   transform: scale(.92);
 }
+/* ==== Fase 3 — 5-page OBD restructure (Pressure / Temperatures / Cruise / Fuel / Consumption) === */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-ptitle {
+  flex: 0 0 auto;
+  text-align: center;
+  color: var(--obd-cyan);
+  font: 700 clamp(7px, 3.4cqmin, 15px)/1.3 var(--font-legend);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-shadow: 0 0 .4em rgba(0,243,255,.4);
+  margin-bottom: .1em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-core-cruise {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cruise-gfx {
+  grid-column: 1 / 3;
+  position: relative;
+  width: 60%;
+  aspect-ratio: 2.4 / 1;
+  margin: 0 auto;
+  opacity: .35;
+  transition: opacity 300ms;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cruise-gfx.active {
+  opacity: 1;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .ocg-truck {
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 26%; height: 55%;
+  transform: translateX(-50%);
+  background: currentColor;
+  border-radius: 12% 12% 4% 4%;
+  color: #4b5a66;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cruise-gfx.active .ocg-truck {
+  color: var(--obd-green);
+  box-shadow: 0 0 .6em rgba(34,197,94,.65);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .ocg-ring {
+  position: absolute;
+  left: 50%; bottom: 2%;
+  transform: translateX(-50%);
+  border: .12em solid #3a4854;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transition: border-color 300ms;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cruise-gfx.active .ocg-ring {
+  border-color: var(--obd-green);
+  border-bottom-color: transparent;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .ocg-r1 { width: 46%; height: 23%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .ocg-r2 { width: 68%; height: 34%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .ocg-r3 { width: 90%; height: 45%; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen[data-si="3"] .obd-core {
+  flex: 1 1 auto;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen[data-si="3"] .freight {
+  flex: 0 0 auto;
+}
+/* The marquee animation replays once per page-entry, triggered by re-adding this class in JS
+   (removing it first forces a reflow so the same class can restart the animation). */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .freight.marquee-once {
+  display: inline-block;
+  max-width: 100%;
+  animation: obd-marquee-once 7s linear;
+}
+@keyframes obd-marquee-once {
+  0%, 10% { transform: translateX(0); }
+  90%, 100% { transform: translateX(calc(-1 * max(0px, 100% - 1px))); }
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen-media.active {
+  gap: 2%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-core-cons {
+  flex: 0 0 42%;
+  grid-template-rows: 1fr;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen-media .obd-core-media {
+  flex: 1 1 58%;
+}
+/* Luzes verde/azul novas (bulbo de presença, farol baixo) — vetor inline, sem asset PNG ainda. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell-svg svg {
+  width: 100%;
+  height: 100%;
+  color: #3a4854;
+  transition: color 120ms, filter 120ms;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell-svg.lit.tell-green svg {
+  color: #5bd47d;
+  filter: drop-shadow(0 0 .4em rgba(75,210,112,.5));
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell-svg.lit.tell-blue svg {
+  color: #76baff;
+  filter: drop-shadow(0 0 .4em rgba(90,170,255,.5));
+}
+/* Damage bars (Truck/Trailer/Cargo) fill the OBD's free margin, same %-bar language as the
+   Damage & trip widget's .sbar/.sgroup pattern. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4%;
+  margin: .2em 0;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: .3em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg-bar.hidden {
+  visibility: hidden;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg-bar small {
+  flex: 0 0 auto;
+  font: 600 .55em/1 var(--font-legend);
+  letter-spacing: .05em;
+  color: #8fa9b8;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg-bar u {
+  flex: 1 1 auto;
+  display: block;
+  height: .3em;
+  min-width: 0;
+  border-radius: .2em;
+  background: rgba(255,255,255,.12);
+  overflow: hidden;
+  text-decoration: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg-bar u b {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--obd-green);
+  transition: width 400ms, background 200ms;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg-bar.warn u b {
+  background: #e2b35f;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg-bar.bad u b {
+  background: #ee6262;
+}
 
 [data-style="modern_br"] {
   --fascia-a: #24211d;
@@ -2585,8 +2732,9 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 #app[data-style="eu_frame"] #panel .k-kbd {
   pointer-events: auto;
 }
-/* Fase 1.3 — media unificada: hide the bottom mini-strip while the dedicated Media OBD page (5) is active */
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility[data-screen="5"] .obd-media {
+/* Fase 1.3 / Fase 3 — media unificada: hide the bottom mini-strip while the dedicated
+   Consumption & Media OBD page (index 4 of 5, 0-based) is active, avoiding a duplicate player. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility[data-screen="4"] .obd-media {
   display: none;
 }
 
@@ -2663,6 +2811,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   box-shadow: none;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-core {
+  position: relative;
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
@@ -2694,6 +2843,38 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   font: 700 clamp(16px, 10cqmin, 42px)/1 var(--font-legend);
   color: var(--hero-green);
   text-shadow: 0 0 .45em rgba(53, 238, 105, .45);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-limit {
+  position: absolute;
+  right: 4%;
+  bottom: 3%;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  padding: .3em .55em;
+  border-radius: 999px;
+  border: .18em solid #d33;
+  background: #f2f2f2;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-limit.show {
+  display: flex;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-limit small {
+  font: 700 clamp(5px, 2.2cqmin, 9px)/1 var(--font-ui);
+  letter-spacing: .08em;
+  color: #333;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-limit b {
+  font: 700 clamp(9px, 5cqmin, 18px)/1.1 var(--font-legend);
+  color: #111;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-limit.bad {
+  border-color: var(--hero-red);
+  background: #fff0f0;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-limit.bad b {
+  color: var(--hero-red);
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-tele {
   grid-column: 3;

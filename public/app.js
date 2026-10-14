@@ -1459,7 +1459,7 @@
         const cell = (key, file, unit) =>
           '<div class="obd-cell" data-k="' + key + '"><img class="obd-ico" src="skins/modern/obd/' + file + '.png" alt="">' +
           '<div class="obd-read"><b class="obd-val">--</b><small class="obd-unit">' + unit + '</small></div>' +
-          (key === 'fuel' || key === 'air' ? '<div class="obd-fuelbar" data-bar="' + key + '"><i></i></div>' : '') + '</div>';
+          (key === 'fuel' || key === 'air' || key === 'air2' ? '<div class="obd-fuelbar" data-bar="' + key + '"><i></i></div>' : '') + '</div>';
         // Text cells with a small caption (pages without dedicated PNG icons yet).
         const textCell = (key, unit, label) =>
           '<div class="obd-cell" data-k="' + key + '">' +
@@ -1471,44 +1471,52 @@
             '<i data-media="media_play" role="button" aria-label="Play/Pause">' + iconSvg('playpause') + '</i>' +
             '<i data-media="media_next" role="button" aria-label="Next">' + iconSvg('next') + '</i>' +
           '</div>';
+        // Telltale rendered as inline SVG (no PNG asset yet) reusing the .tell-green/.tell-blue
+        // palette already defined for .k-tell elsewhere in app.css.
+        const tellSvg = (flag, color, svgPath) =>
+          '<i class="tell tell-svg tell-' + color + '" data-flag="' + flag + '"><svg viewBox="0 0 20 20">' + svgPath + '</svg></i>';
+        const bulbSvg = '<circle cx="10" cy="10" r="6" fill="currentColor"/>';
+        const beamSvg = '<path d="M2 7h9l5 3-5 3H2z" fill="currentColor"/>';
+        const ptitle = (txt) => '<div class="obd-ptitle">' + txt + '</div>';
         // .obd-body is the flex layout wrapper; .modern-utility only hosts container-type:size.
-        // Eight pages cycled by SSE pad (joystick), parity with Scania S/R OBC.
+        // Five pages, 1:1 parity with the Scania S/R 2016 cluster layout Fernando specified.
         node.dataset.screen = '0';
         node.innerHTML =
           '<div class="obd-body">' +
             '<div class="mu-head"><span></span><time></time></div>' +
-            '<div class="obd-tell-l">' + tell('high', 'high') + tell('park', 'park') + tell('blinkL', 'blink_l') + tell('blinkR', 'blink_r') + tell('oilWarn', 'oil') + tell('battWarn', 'batt') + '</div>' +
+            '<div class="obd-tell-l">' +
+              tellSvg('parking', 'green', bulbSvg) + tellSvg('low', 'green', beamSvg) + tell('high', 'high') +
+              tell('park', 'park') + tell('blinkL', 'blink_l') + tell('blinkR', 'blink_r') + tell('oilWarn', 'oil') + tell('battWarn', 'batt') +
+            '</div>' +
             '<div class="obd-screens">' +
-              '<div class="obd-screen active" data-si="0"><div class="obd-core">' +
-                cell('air', 'air', 'psi') + textCell('oilP', 'bar', L('OIL P', 'ÓLEO')) +
+              '<div class="obd-screen active" data-si="0">' + ptitle(L('PRESSURE', 'PRESSÃO')) + '<div class="obd-core">' +
+                cell('air', 'air', 'psi') + cell('air2', 'air', 'psi') + textCell('oilP', 'bar', L('OIL P', 'ÓLEO')) +
               '</div></div>' +
-              '<div class="obd-screen" data-si="1"><div class="obd-core">' +
-                cell('water', 'water', '\u00b0C') + textCell('oilT', '\u00b0', L('OIL T', 'ÓLEO')) +
-                textCell('brakeT', '\u00b0', L('BRAKE', 'FREIO')) + textCell('cabinT', '\u00b0', L('CABIN', 'CABINE')) +
+              '<div class="obd-screen" data-si="1">' + ptitle(L('TEMPERATURES', 'TEMPERATURAS')) + '<div class="obd-core">' +
+                cell('water', 'water', '°C') + textCell('oilT', '°', L('OIL T', 'ÓLEO')) +
               '</div></div>' +
-              '<div class="obd-screen" data-si="2"><div class="obd-core">' +
-                textCell('cruise', '', L('CRUISE', 'CRUZEIRO')) + textCell('limit', '', L('LIMIT', 'LIMITE')) +
-                textCell('gear', '', L('GEAR', 'MARCHA')) + textCell('speed', '', L('SPEED', 'VEL')) +
+              '<div class="obd-screen" data-si="2">' + ptitle(L('CRUISE CONTROL', 'CRUZEIRO')) + '<div class="obd-core obd-core-cruise">' +
+                '<div class="obd-cruise-gfx" aria-hidden="true"><i class="ocg-truck"></i><i class="ocg-ring ocg-r1"></i><i class="ocg-ring ocg-r2"></i><i class="ocg-ring ocg-r3"></i></div>' +
+                textCell('cruise', '', L('CRUISE SET', 'CRUZEIRO')) + textCell('retarder', '', L('RETARDER', 'RETARDER')) +
               '</div></div>' +
-              '<div class="obd-screen" data-si="3"><div class="obd-core">' +
-                cell('fuel', 'fuel', '%') + textCell('range', 'km', L('RANGE', 'AUTONOMIA')) +
-                textCell('consAvg', 'l/100', L('AVG', 'MÉDIA')) + textCell('consInst', 'l/h', L('INST', 'INST')) +
-              '</div></div>' +
-              '<div class="obd-screen obd-screen-media" data-si="4"><div class="obd-core obd-core-media">' +
-                '<div class="obd-cell obd-cell-media" data-k="media">' +
-                  '<span class="obd-media-ico">' + iconSvg('music') + '</span>' +
-                  '<div class="obd-read"><b class="obd-val" data-media-title>--</b></div>' +
-                  '<small class="obd-unit" data-media-artist></small>' +
-                  mediaKeys +
+              '<div class="obd-screen" data-si="3">' + ptitle(L('FUEL & DISTANCE', 'COMBUSTÍVEL')) + '<div class="obd-core">' +
+                cell('fuel', 'fuel', 'l') + textCell('range', 'km', L('RANGE', 'AUTONOMIA')) +
+              '</div><em class="freight"></em></div>' +
+              '<div class="obd-screen obd-screen-media" data-si="4">' + ptitle(L('CONSUMPTION', 'CONSUMO')) +
+                '<div class="obd-core obd-core-cons">' + textCell('consAvg', 'l/100', L('AVG', 'MÉDIA')) + textCell('consInst', 'l/h', L('INST', 'INST')) + '</div>' +
+                '<div class="obd-core obd-core-media">' +
+                  '<div class="obd-cell obd-cell-media" data-k="media">' +
+                    '<span class="obd-media-ico">' + iconSvg('music') + '</span>' +
+                    '<div class="obd-read"><b class="obd-val" data-media-title>--</b></div>' +
+                    '<small class="obd-unit" data-media-artist></small>' +
+                    mediaKeys +
+                  '</div>' +
                 '</div>' +
-              '</div></div>' +
-              '<div class="obd-screen" data-si="5"><div class="obd-core">' +
-                textCell('odo', 'km', L('ODO', 'ODO')) + textCell('routeDist', 'km', L('LEFT', 'FALTA')) +
-                textCell('routeTime', '', L('DRIVE', 'VIAGEM')) + textCell('eta', '', 'ETA') +
-              '</div></div>' +
+              '</div>' +
             '</div>' +
             '<div class="obd-tell-r">' + tell('lift', 'lift') + tell('trailerLift', 'trailer_lift') + '</div>' +
-            '<em class="freight"></em>' +
+            '<div class="obd-dmg">' + ['dmgTruck', 'dmgTrailer', 'dmgCargo'].map((k) =>
+              '<i class="obd-dmg-bar" data-dmg="' + k + '"><small></small><u><b></b></u></i>').join('') + '</div>' +
             '<div class="obd-media">' +
               '<span class="obd-media-ico">' + iconSvg('music') + '</span>' +
               '<span class="obd-media-line"><em>Playing:</em> <b></b></span>' +
@@ -1601,7 +1609,7 @@
         node.innerHTML =
           '<div class="spd-body">' +
             '<div class="spd-rpm" aria-hidden="true"><i class="spd-rpm-track"><u class="spd-rpm-fill"></u></i></div>' +
-            '<div class="spd-core"><b class="spd-speed">--</b><small class="spd-unit">km/h</small><div class="spd-gear">--</div></div>' +
+            '<div class="spd-core"><b class="spd-speed">--</b><small class="spd-unit">km/h</small><div class="spd-gear">--</div><div class="spd-limit"><small>LIMIT</small><b></b></div></div>' +
             '<div class="spd-tele">' + tele('oil') + tele('batt') + tele('range') + tele('trip') + '</div>' +
             '<div class="spd-foot"><span class="spd-time">--:--</span><span class="spd-odo">--</span></div>' +
           '</div>';
@@ -1785,36 +1793,31 @@
         const spdU = (ms) => Math.round(Math.abs(ms) * (mphU ? 2.23694 : 3.6));
         const spdUnit = mphU ? 'mph' : 'km/h';
         const distUnit = mphU ? 'mi' : 'km';
-        const toDist = (m) => mphU ? Math.round(m / 1609.34) : Math.round(m / 1000);
-        const hm = (mins) => {
-          if (!(mins > 0)) return '--';
-          const h = Math.floor(mins / 60), m = Math.round(mins % 60);
-          return h + 'h' + pad2(m);
-        };
         setCell('water', tl && tl.waterT != null && Number.isFinite(Number(tl.waterT)) ? String(Math.round(tempNum(tl.waterT))) : '--');
+        // Fuel & Distance page shows the level in litres (Fernando's spec), not percent;
+        // the bar fill still tracks the tank fraction.
         const fuelPct = tl && tl.fuelCap > 0 ? clamp(tl.fuel / tl.fuelCap, 0, 1) * 100 : null;
-        setCell('fuel', fuelPct != null ? String(Math.round(fuelPct)) : '--');
+        setCell('fuel', tl && tl.fuelCap > 0 ? String(Math.round(tl.fuel)) : '--');
         const bootSweep = modernBootSweepPct();
         node.querySelectorAll('.obd-fuelbar[data-bar="fuel"] i').forEach((fuelBar) => {
           fuelBar.style.width = (bootSweep != null ? bootSweep : (fuelPct != null ? fuelPct : 0)) + '%';
         });
-        setCell('odo', tl && tl.odo != null ? String(Math.round(tl.odo)) : '--');
         setCell('air', tl && tl.air != null ? String(Math.round(tl.air)) : '--');
+        setCell('air2', tl && tl.air != null ? String(Math.round(tl.air)) : '--');
         const airPct = tl && tl.air != null ? clamp(Number(tl.air) / 150, 0, 1) * 100 : null;
-        node.querySelectorAll('.obd-fuelbar[data-bar="air"] i').forEach((airBar) => {
+        node.querySelectorAll('.obd-fuelbar[data-bar="air"] i, .obd-fuelbar[data-bar="air2"] i').forEach((airBar) => {
           airBar.style.width = (bootSweep != null ? bootSweep : (airPct != null ? airPct : 0)) + '%';
         });
         setCell('oilP', tl && tl.oilP != null && Number.isFinite(Number(tl.oilP)) ? (Number(tl.oilP) / 14.5038).toFixed(1) : '--');
         setCell('cruise', tl && tl.cruise > 0.5 ? String(spdU(tl.cruise)) : L('OFF', 'DESL.'));
-        setCell('limit', tl && tl.limit > 0.5 ? String(spdU(tl.limit)) : '--');
-        setCell('speed', tl && tl.speed != null ? String(spdU(tl.speed)) : '--');
-        setCell('gear', tl ? gearLabel(tl) : '--');
+        setCell('retarder', tl ? tl.retarder + '/' + tl.retSteps : '--');
+        // Decorative rear-of-truck/distance-ring graphic: static art, only its glow state is real,
+        // lighting up whenever cruise control is actually engaged (Fernando's spec, no ACC telemetry exists).
+        node.querySelectorAll('.obd-cruise-gfx').forEach((g) => g.classList.toggle('active', !!(tl && tl.cruise > 0.5)));
         setCell('consAvg', tl && tl.fuelAvg > 0 ? (tl.fuelAvg * 100).toFixed(1) : '--');
         setCell('consInst', tl && tl.fuelRate != null && Number(tl.fuelRate) > 0 ? Number(tl.fuelRate).toFixed(1) : '--');
         setCell('range', tl && tl.range > 0 ? String(mphU ? Math.round(tl.range / 1.60934) : Math.round(tl.range)) : '--');
         setCell('oilT', tl && tl.oilT != null ? String(Math.round(tempNum(tl.oilT))) : '--');
-        setCell('brakeT', tl && tl.brakeT != null ? String(Math.round(tempNum(tl.brakeT))) : '--');
-        setCell('cabinT', tl && tl.cabinT != null ? String(Math.round(tempNum(tl.cabinT))) : '--');
         setCell('batt', tl && tl.batt != null ? Number(tl.batt).toFixed(1) : '--');
         const adbluePct = tl && tl.adblueCap > 0 ? Math.round(tl.adblue / tl.adblueCap * 100) : null;
         setCell('adblue', adbluePct != null ? String(adbluePct) : '--');
@@ -1824,12 +1827,24 @@
           ? Math.round(tl.wear.reduce((a, b) => a + b, 0) / tl.wear.length) : null;
         setCell('wear', wearAvg != null ? String(wearAvg) : '--');
         setCell('gameTime', tl && tl.time != null ? clockMins(tl.time) : '--');
-        setCell('routeDist', tl && tl.routeDist > 0 ? String(toDist(tl.routeDist)) : '--');
-        setCell('routeTime', tl && tl.routeTime > 0 ? hm(tl.routeTime / 60) : '--');
-        setCell('eta', tl && tl.routeTime > 0 && tl.time != null ? clockMins(tl.time + tl.routeTime / 60) : '--');
-        node.querySelectorAll('.obd-cell[data-k="water"] .obd-unit, .obd-cell[data-k="oilT"] .obd-unit, .obd-cell[data-k="brakeT"] .obd-unit, .obd-cell[data-k="cabinT"] .obd-unit').forEach((u) => { u.textContent = tempUnit(); });
-        node.querySelectorAll('.obd-cell[data-k="cruise"] .obd-unit, .obd-cell[data-k="limit"] .obd-unit, .obd-cell[data-k="speed"] .obd-unit').forEach((u) => { u.textContent = spdUnit; });
-        node.querySelectorAll('.obd-cell[data-k="range"] .obd-unit, .obd-cell[data-k="routeDist"] .obd-unit, .obd-cell[data-k="odo"] .obd-unit').forEach((u) => { u.textContent = distUnit; });
+        node.querySelectorAll('.obd-cell[data-k="water"] .obd-unit, .obd-cell[data-k="oilT"] .obd-unit').forEach((u) => { u.textContent = tempUnit(); });
+        node.querySelectorAll('.obd-cell[data-k="cruise"] .obd-unit').forEach((u) => { u.textContent = spdUnit; });
+        node.querySelectorAll('.obd-cell[data-k="range"] .obd-unit').forEach((u) => { u.textContent = distUnit; });
+        // Damage bars (Truck/Trailer/Cargo) fill the OBD's free space, matching the .sbar
+        // percentage-bar convention already used by the Damage & trip widget.
+        const dmgLbl = { dmgTruck: L('TRUCK', 'CAMIÃO'), dmgTrailer: L('TRAILER', 'TRAILER'), dmgCargo: L('CARGO', 'CARGA') };
+        node.querySelectorAll('.obd-dmg-bar').forEach((bar) => {
+          const k = bar.dataset.dmg;
+          const hidden = k !== 'dmgTruck' && tl && tl.trailer === false;
+          const v = tl && !hidden ? (tl[k] || 0) : null;
+          const lbl = bar.querySelector('small');
+          const fillB = bar.querySelector('u b');
+          if (lbl && lbl.textContent !== dmgLbl[k]) lbl.textContent = dmgLbl[k];
+          if (fillB) fillB.style.width = (v != null ? v : 0) + '%';
+          bar.classList.toggle('bad', v != null && v >= 15);
+          bar.classList.toggle('warn', v != null && v >= 5 && v < 15);
+          bar.classList.toggle('hidden', !!hidden);
+        });
         const now = Date.now();
         const bulbCheck = now < (S.bulbUntil || 0);
         node.querySelectorAll('.tell').forEach((el) => {
@@ -2334,6 +2349,8 @@
       setTxt('.spd-speed', '--');
       setTxt('.spd-unit', mph ? 'mph' : 'km/h');
       setTxt('.spd-gear', '--');
+      const limitElEmpty = node.querySelector('.spd-limit');
+      if (limitElEmpty) limitElEmpty.classList.remove('show', 'bad');
       setTele('oil', L('Oil', 'Óleo'), '--');
       setTele('batt', L('Battery', 'Bateria'), '--');
       setTele('range', L('Range', 'Autonomia'), '--');
@@ -2355,6 +2372,14 @@
     setTxt('.spd-speed', String(spd(t.speed)));
     setTxt('.spd-unit', mph ? 'mph' : 'km/h');
     setTxt('.spd-gear', gearLabel(t));
+    const limitEl = node.querySelector('.spd-limit');
+    if (limitEl) {
+      const hasLimit = t.limit > 0.5;
+      limitEl.classList.toggle('show', hasLimit);
+      limitEl.classList.toggle('bad', over);
+      const limB = limitEl.querySelector('b');
+      if (limB && hasLimit) { const txt = String(spd(t.limit)); if (limB.textContent !== txt) limB.textContent = txt; }
+    }
     setTele('oil', L('Oil', 'Óleo'), has(t.oilT) ? Math.round(t.oilT) + '°' : '--', t.oilWarn ? 'bad' : '');
     setTele('batt', L('Battery', 'Bateria'), has(t.batt) ? Number(t.batt).toFixed(1) + ' V' : '--', t.battWarn ? 'bad' : '');
     setTele('range', L('Range', 'Autonomia'), t.range > 0 ? dist(t.range) : '--', t.fuelWarn ? 'bad' : '');
@@ -2454,13 +2479,19 @@
   }
 
   // ---- Modern OBD pages (eu_frame utility) — pad cycles like S/R 2016 -------------------------
-  const MODERN_OBD_SCREENS = 6;
+  const MODERN_OBD_SCREENS = 5;
   function cycleModernObd(node, selected) {
     const n = MODERN_OBD_SCREENS;
     const cur = Number(node.dataset.screen) || 0;
     const next = Number.isInteger(selected) && selected >= 0 && selected < n ? selected : (cur + 1) % n;
     node.dataset.screen = String(next);
     node.querySelectorAll('.obd-screen').forEach((s, i) => s.classList.toggle('active', i === next));
+    // Fuel & Distance page (index 3): replay the Origin/Destination/Cargo marquee once per visit,
+    // never while the page is sitting idle on screen.
+    if (next === 3 && cur !== 3) {
+      const freightEl = node.querySelector('.obd-screen[data-si="3"] .freight');
+      if (freightEl) { freightEl.classList.remove('marquee-once'); void freightEl.offsetWidth; freightEl.classList.add('marquee-once'); }
+    }
     buzz(12);
   }
 
@@ -3303,7 +3334,13 @@
       if ((S.wipLvl || 0) >= 3) skipSend = true; else S.wipLvl = (S.wipLvl || 0) + 1;
     }
     if (f.id === 'wipers_back') { S.latched.wipers = false; skipSend = true; wiperOff(); }   // off also releases the "on" key
-    if (skipSend) { /* handled above */ } else if (f.mode === 'hold') send('down', keys); else send('tap', keys);
+    let holdKeepalive = null;
+    if (skipSend) { /* handled above */ } else if (f.mode === 'hold') {
+      send('down', keys);
+      // Keep the PC-side watchdog (15s safety auto-release) alive for long holds
+      // such as refueling, where filling the tank can take well over 15s.
+      holdKeepalive = setInterval(() => { if (S.pressed.has(w.id)) send('down', keys); }, 5000);
+    } else send('tap', keys);
     // Without live telemetry for this function, remember the toggle ourselves.
     if (f.latch && (!f.tel || telValue(f.tel) === undefined)) {
       const key = f.id === 'custom' ? w.id : f.id;
@@ -3318,6 +3355,7 @@
       node.removeEventListener('lostpointercapture', release);
       if (!S.pressed.has(w.id)) return;
       S.pressed.delete(w.id);
+      if (holdKeepalive) { clearInterval(holdKeepalive); holdKeepalive = null; }
       if (f.mode === 'hold') send('up', keys);
       updateStates();
     };

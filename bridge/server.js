@@ -308,7 +308,12 @@ function handleKey(action, keys) {
     pressCombo(keys);
     setTimeout(() => releaseCombo(keys), TAP_MS);
   } else if (action === 'down') {
-    if (heldCombos.has(id)) return; // already held, ignore repeat
+    if (heldCombos.has(id)) {
+      // keepalive from the client: refresh the watchdog instead of dropping the repeat
+      clearTimeout(heldCombos.get(id).timer);
+      heldCombos.get(id).timer = setTimeout(() => handleKey('up', keys), HOLD_TIMEOUT_MS);
+      return;
+    }
     pressCombo(keys);
     heldCombos.set(id, { keys, timer: setTimeout(() => handleKey('up', keys), HOLD_TIMEOUT_MS) });
   } else if (action === 'up') {
