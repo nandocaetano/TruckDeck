@@ -1471,9 +1471,9 @@
       return node;
     }
     if (w.t === 'sgauge') {
-      // Real dial cut from the photo (empty face); the app draws its figures and the needle.
+      // Real dial photo (face, numerals and bezel baked in); the app only draws the needle on top.
       node.className = 'w sk k-sgauge k-vgauge' + (w.small ? ' small' : '');
-      node.innerHTML = '<div class="sg">' + sovGaugeSvg(w.field) + '</div>';
+      node.innerHTML = '<div class="sg sg-' + w.field + '">' + sovGaugeSvg(w.field) + '</div>';
       return node;
     }
     if (w.t === 'spr') {

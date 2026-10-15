@@ -2678,22 +2678,16 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   mix-blend-mode: screen;
   overflow: hidden;
 }
-/* sov_frame: aged glass/bakelite patina — fine scratch streaks, corner grime, worn vignette — CSS only, no asset */
-[data-style="sov_frame"] .k-sgauge .sg {
-  background:
-    radial-gradient(circle at 18% 22%, rgba(130, 100, 45, 0.16) 0%, transparent 38%),
-    radial-gradient(circle at 82% 78%, rgba(100, 80, 35, 0.14) 0%, transparent 42%),
-    var(--dial-bezel);
-  background-blend-mode: multiply, multiply, normal;
-}
-[data-style="sov_frame"] .k-sgauge .sg::before {
-  background:
-    repeating-conic-gradient(from 12deg, rgba(255, 255, 255, 0.03) 0deg 1.4deg, transparent 1.4deg 7deg),
-    radial-gradient(circle at 50% 50%, transparent 52%, rgba(0, 0, 0, 0.55) 100%),
-    radial-gradient(circle at 22% 16%, rgba(205, 185, 140, 0.08) 0%, transparent 32%),
-    radial-gradient(circle at 78% 86%, rgba(165, 140, 95, 0.09) 0%, transparent 36%),
-    radial-gradient(circle at 48% 40%, var(--dial-face) 0%, #040404 85%);
-}
+/* sov_frame: real photographed dial faces (bezel, patina, numerals baked in) replace the CSS/SVG plate.
+   The app only overlays the moving needle + pivot cap; .nums/.unit stay in the DOM (hidden) so the
+   non-photo skins sharing .k-sgauge keep their original vector rendering untouched. */
+[data-style="sov_frame"] .k-sgauge .sg-speed { background: center / cover no-repeat url(skins/sov/btn/sov_dial_speed.png); }
+[data-style="sov_frame"] .k-sgauge .sg-rpm   { background: center / cover no-repeat url(skins/sov/btn/sov_dial_rpm.png); }
+[data-style="sov_frame"] .k-sgauge .sg-fuel  { background: center / cover no-repeat url(skins/sov/btn/sov_dial_fuel.png); }
+[data-style="sov_frame"] .k-sgauge .sg-air   { background: center / cover no-repeat url(skins/sov/btn/sov_dial_air.png); }
+[data-style="sov_frame"] .k-sgauge .sg[class*="sg-"]::before { content: none; }
+[data-style="sov_frame"] .k-sgauge .sg[class*="sg-"] .nums,
+[data-style="sov_frame"] .k-sgauge .sg[class*="sg-"] .unit { display: none; }
 .k-sgauge svg { display: block; width: 100%; height: 100%; position: relative; }
 .k-sgauge .nums text { fill: #e9e6da; font: 600 13px var(--font-legend); text-anchor: middle; }
 .k-sgauge.small .nums text { font-size: 16px; }
