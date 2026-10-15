@@ -3654,7 +3654,7 @@
     if (!node) return;
     // frame-method panels: only kbd buttons and media keys respond to touch
     const _fw = findWidget(node.dataset.id);
-    if (_fw && _fw.sk && skinOf(page()) && skinOf(page()).frame && _fw.t !== 'kbd' && _fw.t !== 'gps' && !ev.target.closest('[data-media]')) return;
+    if (_fw && _fw.sk && skinOf(page()) && skinOf(page()).frame && _fw.t !== 'kbd' && _fw.t !== 'spr' && _fw.t !== 'gps' && !ev.target.closest('[data-media]')) return;
     ev.preventDefault();
     // the music player has its own keys inside one widget
     const mediaKey = ev.target.closest('[data-media]');
