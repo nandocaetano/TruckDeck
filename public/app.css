@@ -2778,6 +2778,31 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 /* hazard triangle on the square key: its glyph fills the whole icon box (the others leave a margin) and a triangle's weight sits low, so it read as too big and off-centre. Shrunk to the size of its neighbours and lifted to the optical centre of the key face. */
 #panel.skin .k-spr.s-sq .ico.i-hazard { transform: translate(-2%, -5%) scale(0.84); }
 
+/* ---- sov_frame: photographed bakelite/chrome caps replace the CSS gradient caps (776266f).
+   Vector fallback (.k-spr gradients above) stays untouched for other skins (e.g. scania). ---- */
+#app[data-style="sov_frame"] .k-spr.s-key .pic,
+#app[data-style="sov_frame"] .k-spr.s-tog .pic,
+#app[data-style="sov_frame"] .k-spr.s-sq .pic,
+#app[data-style="sov_frame"] .k-spr.s-push .pic,
+#app[data-style="sov_frame"] .k-spr.s-lamp .pic {
+  background-color: transparent; background-size: contain; background-position: center; background-repeat: no-repeat; box-shadow: none;
+}
+#app[data-style="sov_frame"] .k-spr.s-key .pic { background-image: url('skins/sov/btn/sov_key.png'); }
+#app[data-style="sov_frame"] .k-spr.s-key .pic::after { display: none; } /* photo already has the real keyhole cut */
+#app[data-style="sov_frame"] .k-spr.s-tog .pic { background-image: url('skins/sov/btn/sov_tog.png'); }
+#app[data-style="sov_frame"] .k-spr.s-tog .pic::before { display: none; } /* photo already has the lever arm */
+/* flipping the whole photo (old gradient trick) would mirror the printed VKL/VYKL plate upside down;
+   swap for a press/brightness cue that keeps the label legible in both states */
+#app[data-style="sov_frame"] .k-spr.s-tog.on .pic { transform: translateY(-6%); filter: brightness(1.12); }
+#app[data-style="sov_frame"] .k-spr.s-sq .pic { background-image: url('skins/sov/btn/sov_sq.png'); }
+#app[data-style="sov_frame"] .k-spr.s-push .pic { background-image: url('skins/sov/btn/sov_push.png'); }
+/* lamps: real lens photo as the base layer; the existing glow overlay (.pic::after) and its --lv
+   brightness formula stay exactly as in 776266f, now drawn over a photo instead of a gradient disc */
+#app[data-style="sov_frame"] .k-spr.s-lamp .pic { background-image: url('skins/sov/btn/sov_lamp_red.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-g .pic { background-image: url('skins/sov/btn/sov_lamp_green.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-b .pic { background-image: url('skins/sov/btn/sov_lamp_blue.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-a .pic { background-image: url('skins/sov/btn/sov_lamp_amber.png'); }
+
 /* ════════════════════════════════════════════════════════════════════════════
    Dark cabin mode: everything dark except the instrument light sources.
    The panel looks like you're sitting in a truck cabin at night.
