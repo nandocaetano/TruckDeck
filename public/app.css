@@ -2676,9 +2676,10 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 .k-sgauge .hub2 { fill: #b8bcc0; }
 
 /* switches, buttons, lamps */
-#panel.skin .k-spr { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0; pointer-events: auto; cursor: pointer; }
+#panel.skin .k-spr { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0; pointer-events: none; cursor: pointer; }
 #panel.skin .k-spr.passive { pointer-events: none; cursor: default; }
-.k-spr .pic { position: relative; flex: none; display: block; height: var(--ph); aspect-ratio: var(--pa); max-width: 100%; background: center / contain no-repeat; transition: transform 70ms, filter 70ms; }
+.k-spr .pic { position: relative; flex: none; display: block; height: var(--ph); aspect-ratio: var(--pa); max-width: 100%; background: center / contain no-repeat; transition: transform 70ms, filter 70ms; pointer-events: auto; }
+#panel.skin .k-spr.passive .pic { pointer-events: none; }
 .k-spr.s-sq .pic { background-image: url("skins/sov/sq_off.png"); }
 .k-spr.s-sq.on .pic { background-image: url("skins/sov/sq_on.png"); }
 .k-spr.s-tog .pic { background-image: url("skins/sov/tog.png"); }
