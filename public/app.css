@@ -2678,7 +2678,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   mix-blend-mode: screen;
   overflow: hidden;
 }
-.k-sgauge svg { display: block; width: 100%; height: 100%; }
+.k-sgauge svg { display: block; width: 100%; height: 100%; position: relative; }
 .k-sgauge .nums text { fill: #e9e6da; font: 600 11px var(--font-legend); text-anchor: middle; }
 .k-sgauge.small .nums text { font-size: 14px; }
 .k-sgauge .unit { fill: #b9b5a6; font: 600 7.5px var(--font-legend); text-anchor: middle; letter-spacing: 0.08em; }
