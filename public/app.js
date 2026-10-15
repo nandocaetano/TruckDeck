@@ -136,7 +136,7 @@
       // instant cut straight from the last video frame into a fully lit panel.
       vid.addEventListener('ended', function () {
         vid.style.visibility = 'hidden';
-        setTimeout(function () { stopModernBoot('running'); }, 1800);
+        setTimeout(function () { stopModernBoot('running'); }, 1500);
       }, { once: true });
       try { vid.currentTime = 0; vid.play().catch(function () {}); } catch (e) {}
     }
@@ -695,10 +695,12 @@
     return t[key];
   }
 
-  // 0 = lights off, 1 = parking / dash lighting, 2 = low beam (from the game; else counted here)
+  // 0 = off, 1 = auto, 2 = parking/dash, 3 = low beam. The SDK only reports parking/low-beam
+  // booleans (no "auto" flag exists in ETS2 telemetry), so live truth collapses to 3 stages;
+  // the 4-stage dial only shows while unpowered by telemetry (S.lightLocal, e.g. demo/offline).
   function lightStage() {
     const t = S.tel && S.tel.sdk ? S.tel : null;
-    return t ? (t.low ? 2 : t.parking ? 1 : 0) : (S.lightLocal || 0);
+    return t ? (t.low ? 3 : t.parking ? 2 : 0) : (S.lightLocal || 0);
   }
 
   function isOn(w) {
@@ -1510,8 +1512,8 @@
           '<div class="obd-body">' +
             '<div class="mu-head"><span></span><time></time></div>' +
             '<div class="obd-tell-l">' +
-              tellSvg('parking', 'green', bulbSvg) + tellSvg('low', 'green', beamSvg) + tell('high', 'high') +
-              tell('park', 'park') + tell('blinkL', 'blink_l') + tell('blinkR', 'blink_r') + tell('oilWarn', 'oil') + tell('battWarn', 'batt') +
+              tellSvg('parking', 'green', bulbSvg) + tellSvg('low', 'green', beamSvg) +
+              tell('park', 'park') + tell('blinkL', 'blink_l') + tell('blinkR', 'blink_r') +
             '</div>' +
             '<div class="obd-screens">' +
               '<div class="obd-screen active" data-si="0">' + ptitle(L('PRESSURE', 'PRESSÃO')) + '<div class="obd-core">' +
@@ -1540,7 +1542,10 @@
                 '</div>' +
               '</div>' +
             '</div>' +
-            '<div class="obd-tell-r">' + tell('lift', 'lift') + tell('trailerLift', 'trailer_lift') + '</div>' +
+            '<div class="obd-tell-r">' +
+              tell('high', 'high') + tell('oilWarn', 'oil') + tell('battWarn', 'batt') +
+              tell('lift', 'lift') + tell('trailerLift', 'trailer_lift') +
+            '</div>' +
             '<div class="obd-dmg">' + ['dmgTruck', 'dmgTrailer', 'dmgCargo'].map((k) =>
               '<i class="obd-dmg-bar" data-dmg="' + k + '"><small></small><u><b></b></u></i>').join('') + '</div>' +
             '<div class="obd-media">' +
@@ -3397,7 +3402,7 @@
     }
     const keys = keysOf(w);
     S.pressed.add(w.id);
-    if (f.id === 'lights') S.lightLocal = ((S.lightLocal || 0) + 1) % 3;
+    if (f.id === 'lights') S.lightLocal = ((S.lightLocal || 0) + 1) % 4;
     // Suspension telltales: brief local flash, then settle to SDK lift/trailerLift state.
     if (/^susp_/.test(f.id)) {
       S.liftFlashUntil = Date.now() + 800;

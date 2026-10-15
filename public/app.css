@@ -564,7 +564,7 @@
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell.lit {
   opacity: 1;
-  filter: drop-shadow(0 0 .12em rgba(34,197,94,.55));
+  filter: drop-shadow(0 0 .06em rgba(34,197,94,.4));
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell img {
   display: block;
@@ -1133,8 +1133,9 @@ button { cursor: pointer; }
 .w[data-led="amber"] { --lamp: var(--lamp-amber); }
 .w[data-led="red"] { --lamp: var(--lamp-red); }
 .w[data-led="blue"] { --lamp: var(--lamp-blue); }
-.w[data-stage="1"] { --lamp: var(--lamp-amber); }
-.w[data-stage="2"] { --lamp: var(--lamp-green); }
+.w[data-stage="1"] { --lamp: var(--lamp-blue); }
+.w[data-stage="2"] { --lamp: var(--lamp-amber); }
+.w[data-stage="3"] { --lamp: var(--lamp-green); }
 .w[data-led="white"] { --lamp: var(--lamp-white); }
 
 .cap {
@@ -2899,7 +2900,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   gap: 1.5%;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-speed {
-  font: 700 clamp(42px, 42cqmin, 180px)/.9 var(--font-legend);
+  font: 700 clamp(38px, 38cqmin, 162px)/.9 var(--font-legend);
   font-variant-numeric: tabular-nums;
   color: var(--hero-white);
   text-shadow: 0 0 .18em rgba(255, 255, 255, .22);
@@ -3018,6 +3019,10 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   font-variant-numeric: tabular-nums;
   letter-spacing: .04em;
 }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-foot .spd-time,
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-foot .spd-odo {
+  font-size: clamp(18px, 6.4cqmin, 32px);
+}
 #app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-foot .spd-time { color: #e9f7ff; }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-foot .spd-odo { color: var(--hero-cyan); }
 
@@ -3036,7 +3041,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(2, 6, 12, .55) 0%, rgba(2, 6, 12, .15) 55%, transparent 72%);
+  background: #000;
   opacity: 0;
   transition: opacity 280ms ease;
 }
@@ -3067,7 +3072,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   height: 100%;
   object-fit: contain;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(2, 6, 12, .55) 0%, rgba(2, 6, 12, .15) 55%, transparent 72%);
+  background: #000;
   opacity: 0;
   transition: opacity 280ms ease;
 }
@@ -3801,10 +3806,10 @@ video::-webkit-media-controls-start-playback-button {
 .k-tell .tell-ico { display:flex; width:100%; height:100%; align-items:center; justify-content:center; color:#e5e9ed; transition:opacity .16s ease,filter .16s ease,color .16s ease; }
 .k-tell .tell-ico svg { width:80%; height:80%; }
 .k-tell.off .tell-ico { opacity:.19; filter:none; }
-.k-tell.tell-green:not(.off) .tell-ico { color:#5bd47d; filter:drop-shadow(0 0 3px rgba(75,210,112,.42)); }
-.k-tell.tell-blue:not(.off) .tell-ico { color:#76baff; filter:drop-shadow(0 0 3px rgba(90,170,255,.4)); }
-.k-tell.tell-red:not(.off) .tell-ico { color:#ee6262; filter:drop-shadow(0 0 3px rgba(235,72,72,.4)); }
-.k-tell.tell-amber:not(.off) .tell-ico { color:#e2b35f; filter:drop-shadow(0 0 3px rgba(222,166,69,.35)); }
+.k-tell.tell-green:not(.off) .tell-ico { color:#5bd47d; filter:drop-shadow(0 0 2px rgba(75,210,112,.34)); }
+.k-tell.tell-blue:not(.off) .tell-ico { color:#76baff; filter:drop-shadow(0 0 2px rgba(90,170,255,.32)); }
+.k-tell.tell-red:not(.off) .tell-ico { color:#ee6262; filter:drop-shadow(0 0 2px rgba(235,72,72,.32)); }
+.k-tell.tell-amber:not(.off) .tell-ico { color:#e2b35f; filter:drop-shadow(0 0 2px rgba(222,166,69,.28)); }
 
 /* Scania on-board computer: stronger hierarchy, neutral LCD colors and aligned values. */
 .scania-obc { container-type:inline-size; padding:4.5% 5%; gap:4%; color:#e3e7ea; font-family:'Barlow Condensed','Arial Narrow',sans-serif; }
