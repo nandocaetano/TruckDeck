@@ -2789,19 +2789,39 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 }
 #app[data-style="sov_frame"] .k-spr.s-key .pic { background-image: url('skins/sov/btn/sov_key.png'); }
 #app[data-style="sov_frame"] .k-spr.s-key .pic::after { display: none; } /* photo already has the real keyhole cut */
-#app[data-style="sov_frame"] .k-spr.s-tog .pic { background-image: url('skins/sov/btn/sov_tog.png'); }
+/* multi-stage toggle: down/mid/up photos swapped by state class instead of one flat photo + transform.
+   .mid is wired for a future tri-state fn (catalog.js is 100% binary today; no fn sets it yet). */
+#app[data-style="sov_frame"] .k-spr.s-tog .pic { background-image: url('skins/sov/btn/sov_tog_down.png'); }
+#app[data-style="sov_frame"] .k-spr.s-tog.on .pic { background-image: url('skins/sov/btn/sov_tog_up.png'); }
+#app[data-style="sov_frame"] .k-spr.s-tog.mid .pic { background-image: url('skins/sov/btn/sov_tog_mid.png'); }
 #app[data-style="sov_frame"] .k-spr.s-tog .pic::before { display: none; } /* photo already has the lever arm */
-/* flipping the whole photo (old gradient trick) would mirror the printed VKL/VYKL plate upside down;
-   swap for a press/brightness cue that keeps the label legible in both states */
-#app[data-style="sov_frame"] .k-spr.s-tog.on .pic { transform: translateY(-6%); filter: brightness(1.12); }
 #app[data-style="sov_frame"] .k-spr.s-sq .pic { background-image: url('skins/sov/btn/sov_sq.png'); }
 #app[data-style="sov_frame"] .k-spr.s-push .pic { background-image: url('skins/sov/btn/sov_push.png'); }
-/* lamps: real lens photo as the base layer; the existing glow overlay (.pic::after) and its --lv
-   brightness formula stay exactly as in 776266f, now drawn over a photo instead of a gradient disc */
-#app[data-style="sov_frame"] .k-spr.s-lamp .pic { background-image: url('skins/sov/btn/sov_lamp_red.png'); }
-#app[data-style="sov_frame"] .k-spr.s-lamp.c-g .pic { background-image: url('skins/sov/btn/sov_lamp_green.png'); }
-#app[data-style="sov_frame"] .k-spr.s-lamp.c-b .pic { background-image: url('skins/sov/btn/sov_lamp_blue.png'); }
-#app[data-style="sov_frame"] .k-spr.s-lamp.c-a .pic { background-image: url('skins/sov/btn/sov_lamp_amber.png'); }
+/* lamps: dedicated off/on lens photos replace the single photo + flat-color glow overlay.
+   Two separate state classes drive "on" art: updateKey() sets .on on latch/telltales (parking,
+   hazard, blinkers...); the engine-lamp flicker timer sets .engl.lit + --lv instead, never .on.
+   Both must be matched or those two groups get stuck on OFF art. --lv formulas (.pic::after,
+   lines below) are untouched, just now layered over the "on" photo instead of a gradient disc. */
+#app[data-style="sov_frame"] .k-spr.s-lamp .pic { background-image: url('skins/sov/btn/sov_lamp_red_off.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.on .pic,
+#app[data-style="sov_frame"] .k-spr.s-lamp.engl.lit .pic { background-image: url('skins/sov/btn/sov_lamp_red_on.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-g .pic { background-image: url('skins/sov/btn/sov_lamp_green_off.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-g.on .pic,
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-g.engl.lit .pic { background-image: url('skins/sov/btn/sov_lamp_green_on.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-b .pic { background-image: url('skins/sov/btn/sov_lamp_blue_off.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-b.on .pic,
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-b.engl.lit .pic { background-image: url('skins/sov/btn/sov_lamp_blue_on.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-a .pic { background-image: url('skins/sov/btn/sov_lamp_amber_off.png'); }
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-a.on .pic,
+#app[data-style="sov_frame"] .k-spr.s-lamp.c-a.engl.lit .pic { background-image: url('skins/sov/btn/sov_lamp_amber_on.png'); }
+
+/* physical volume: real photos read as flat pins at native scale; bump presence + cast shadow
+   onto the panel base so they don't look glued on. Hitbox (the .k-spr wrapper) is untouched. */
+#app[data-style="sov_frame"] .k-spr.s-tog .pic,
+#app[data-style="sov_frame"] .k-spr.s-lamp .pic {
+  transform: scale(1.3);
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.65));
+}
 
 /* ════════════════════════════════════════════════════════════════════════════
    Dark cabin mode: everything dark except the instrument light sources.
