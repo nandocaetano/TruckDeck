@@ -2335,10 +2335,12 @@
       const cx = d.x + d.w / 2, cy = d.y + d.h / 2, r = Math.min(d.w, d.h) / 2;
       if (d.sov) {
         const gl = parseFloat(d.el.style.getPropertyValue('--glow')) || 0;
-        if (gl <= 0.01) continue;
-        // Soviet gauges: warm amber pool, enough to read the face but not a floodlight
-        m.globalAlpha = Math.min(1, 0.7 * gl); m.fillStyle = 'rgb(255, 196, 128)';
+        // Soviet gauges: warm amber pool, enough to read the face but not a floodlight.
+        // Even unlit (gl≈0) keep a faint base disc so numerals don't vanish into the night lightmap.
+        m.globalAlpha = gl > 0.01 ? Math.min(1, 0.7 * gl) : 0.4;
+        m.fillStyle = 'rgb(255, 196, 128)';
         m.beginPath(); m.arc(cx, cy + r * 0.05, r * 0.82, 0, Math.PI * 2); m.fill();
+        if (gl <= 0.01) continue;
         lmGlow(m, '#ff9a3c', r * 0.8, 0.4 * gl, lmDisc(cx, cy + r * 0.15, r * 0.6));
         lmGlow(m, '#ffb85c', r * 1.2, 0.12 * gl, lmDisc(cx, cy, r * 0.7));
         lmGlow(bl, '#ff9a3c', r * 0.6, 0.18 * gl, lmDisc(cx, cy + r * 0.15, r * 0.5));
@@ -2393,6 +2395,7 @@
     for (const ch of String(text).toUpperCase()) {
       if (ch === ':') { out += '<svg class="col" viewBox="0 0 4 20"><circle cx="2" cy="6.5" r="1"/><circle cx="2" cy="13.5" r="1"/></svg>'; continue; }
       const on = SEG7[ch] === undefined ? '' : SEG7[ch];
+      if (ch === ' ') { out += '<svg class="col" viewBox="0 0 12 20"></svg>'; continue; }
       out += '<svg viewBox="0 0 12 20">' + 'abcdefg'.split('').map((k) => '<path' + (on.indexOf(k) >= 0 ? ' class="on"' : '') + ' d="' + SEG_PATH[k] + '"/>').join('') + '</svg>';
     }
     return out;
