@@ -2015,17 +2015,20 @@
   // the finger is down and springs back), press 3 = engine off, then electrics off.
   let ignTried = 0;   // when "electrics" was last sent without the game reacting
   function pressIgn(node) {
-    // One cycle only: the engine key starts the truck (the game brings the electrics up by itself)
-    // and the same key stops it. The lamp shows the result: running = green.
+    // Two real cycles, like turning a physical key: OFF -> ELECTRICS (tap 'electrics', boot
+    // video) -> ENGINE START (tap 'engine', no video, key springs back from START) -> OFF
+    // (both keys released, shutdown video). The boot/shutdown video itself is never started
+    // here: updateStates() already watches ignState() for the 0 <-> powered edge and drives it.
     const l = layout();
     const keyOf = (id) => l.binds[id] || FUNCTIONS[id].keys;
     const before = ignState();
-    buzz(before === 2 ? 30 : 14);
-    send('tap', keyOf('engine'));
-    if (before !== 2) {
-      S.bulbUntil = Date.now() + Math.max(1500, MODERN_BOOT.BULB_MS); // lamp check / modern boot bulbs
-      if (page().skin === 'eu_frame') startModernBoot();
-      setTimeout(updateStates, Math.max(1550, MODERN_BOOT.TOTAL_MS + 50));
+    buzz(before === 0 ? 14 : 30);
+    if (before === 0) {
+      send('tap', keyOf('electrics'));
+      ignLocal = 1;
+      if (!S.tel || !S.tel.sdk) S.latched.engine = false;
+    } else if (before === 1 || before === 3) {
+      send('tap', keyOf('engine'));
       // the key is held at START while the finger is down, then springs back
       if (node) {
         node.classList.add('crank');
@@ -2033,9 +2036,15 @@
         node.addEventListener('pointerup', back); node.addEventListener('pointercancel', back); node.addEventListener('pointerleave', back);
         setTimeout(back, 1200);
       }
+      ignLocal = 2;
+      if (!S.tel || !S.tel.sdk) S.latched.engine = true;
+    } else {
+      // stage 2 (running): engine off, then electrics off — same order as turning the key back
+      send('tap', keyOf('engine'));
+      setTimeout(() => send('tap', keyOf('electrics')), 120);
+      ignLocal = 0;
+      if (!S.tel || !S.tel.sdk) S.latched.engine = false;
     }
-    ignLocal = before === 2 ? 0 : 2;
-    if (!S.tel || !S.tel.sdk) S.latched.engine = ignLocal === 2;
     S.ignUsed = true;
     updateStates();
   }
@@ -3354,7 +3363,7 @@
     if (wipBusy) return;
     wipBusy = true;
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-    const cycle = ['p'], slower = ['ctrl', 'p'];
+    const cycle = layout().binds.wipers || FUNCTIONS.wipers.keys, slower = ['ctrl', 'p'];
     try {
       if (telValue('wipers') === undefined) {
         // no telemetry: use the count of "faster" presses (4 positions in the cycle)

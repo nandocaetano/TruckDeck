@@ -128,11 +128,11 @@ function fn(id, cat, name, label, icon, keys, extra) {
 
 const FUNCTION_LIST = [
   // Engine & brakes
-  fn('engine', 'engine', 'Start / stop engine', 'START\nSTOP', 'power', ['e'], { latch: true, tel: 'engine' }),
+  fn('engine', 'engine', 'Start / stop engine', 'START\nSTOP', 'power', ['ctrl', 'shift', 'f1'], { bind: true, latch: true, tel: 'engine' }),
   fn('electrics', 'engine', 'Ignition (electrics)', 'IGNITION', 'key', ['insert'], { bind: true, latch: true, tel: 'electric', led: 'amber' }),
-  fn('parking_brake', 'engine', 'Parking brake', 'PARK\nBRAKE', 'parking', ['space'], { latch: true, tel: 'park', led: 'red' }),
+  fn('parking_brake', 'engine', 'Parking brake', 'PARK\nBRAKE', 'parking', ['ctrl', 'shift', 'f2'], { bind: true, latch: true, tel: 'park', led: 'red' }),
   fn('engine_brake', 'engine', 'Engine brake (hold)', 'ENG BRAKE', 'engbrake', ['b'], { mode: 'hold', tel: 'motorBrake', led: 'amber' }),
-  fn('engine_brake_toggle', 'engine', 'Engine brake toggle', 'ENG BRAKE', 'engbrake', ['z'], { bind: true, latch: true, tel: 'motorBrake', led: 'amber' }),
+  fn('engine_brake_toggle', 'engine', 'Engine brake toggle', 'ENG BRAKE', 'engbrake', ['ctrl', 'shift', 'f8'], { bind: true, latch: true, tel: 'motorBrake', led: 'amber' }),
   fn('engine_brake_up', 'engine', 'Engine brake increase', 'JAKE\u00a0+', 'plus', ['shift', 'b'], { bind: true, led: 'amber' }),
   fn('engine_brake_down', 'engine', 'Engine brake decrease', 'JAKE\u00a0\u2212', 'minus', ['ctrl', 'b'], { bind: true, led: 'amber' }),
   fn('retarder_up', 'engine', 'Retarder increase', 'RET\u00a0+', 'plus', [';'], { tel: 'retarderOn', led: 'amber' }),
@@ -143,35 +143,35 @@ const FUNCTION_LIST = [
   fn('trailer_brake', 'engine', 'Trailer brake (hold)', 'TRAILER\nBRAKE', 'brake', ['x'], { bind: true, mode: 'hold', led: 'red' }),
 
   // Lights & signals
-  fn('lights', 'lights', 'Light modes', 'LIGHTS', 'lowbeam', ['l'], { latch: true, tel: 'lightsOn' }),
-  fn('high_beam', 'lights', 'High beam', 'HIGH BEAM', 'highbeam', ['k'], { latch: true, tel: 'high', led: 'blue' }),
+  fn('lights', 'lights', 'Light modes', 'LIGHTS', 'lowbeam', ['ctrl', 'shift', 'f3'], { bind: true, latch: true, tel: 'lightsOn' }),
+  fn('high_beam', 'lights', 'High beam', 'HIGH BEAM', 'highbeam', ['ctrl', 'shift', 'f4'], { bind: true, latch: true, tel: 'high', led: 'blue' }),
   fn('light_horn', 'lights', 'Flash headlights (hold)', 'FLASH', 'flash', ['j'], { mode: 'hold', led: 'blue' }),
-  fn('beacon', 'lights', 'Beacon', 'BEACON', 'beacon', ['o'], { latch: true, tel: 'beacon', led: 'amber' }),
-  fn('hazard', 'lights', 'Hazard lights', 'HAZARD', 'hazard', ['f'], { latch: true, tel: 'hazard', led: 'red' }),
+  fn('beacon', 'lights', 'Beacon', 'BEACON', 'beacon', ['ctrl', 'shift', 'f11'], { bind: true, latch: true, tel: 'beacon', led: 'amber' }),
+  fn('hazard', 'lights', 'Hazard lights', 'HAZARD', 'hazard', ['ctrl', 'shift', 'f6'], { bind: true, latch: true, tel: 'hazard', led: 'red' }),
   fn('blinker_left', 'lights', 'Left indicator', 'LEFT', 'left', ['['], { latch: true, tel: 'blinkL' }),
   fn('blinker_right', 'lights', 'Right indicator', 'RIGHT', 'right', [']'], { latch: true, tel: 'blinkR' }),
   fn('horn', 'lights', 'Horn (hold)', 'HORN', 'horn', ['h'], { mode: 'hold', led: 'white' }),
   fn('air_horn', 'lights', 'Air horn (hold)', 'AIR HORN', 'airhorn', ['n'], { mode: 'hold', led: 'white' }),
-  fn('wipers', 'lights', 'Wipers faster', 'WIPERS', 'wiper', ['p'], { latch: true, tel: 'wipers', led: 'amber' }),
+  fn('wipers', 'lights', 'Wipers faster', 'WIPERS', 'wiper', ['ctrl', 'shift', 'f5'], { bind: true, latch: true, tel: 'wipers', led: 'amber' }),
   fn('wipers_back', 'lights', 'Wipers off', 'WIPERS OFF', 'wiper', ['p'], {}),   // runs the cycling key until the wipers stop (see wiperOff in app.js)
   fn('cabin_light', 'lights', 'Cabin interior light', 'CABIN\nLIGHT', 'cabin', ['num.'], { bind: true, latch: true }),
 
   // Cruise control
-  fn('cruise', 'cruise', 'Cruise control', 'CRUISE', 'cruise', ['c'], { latch: true, tel: 'cruiseOn', led: 'green' }),
+  fn('cruise', 'cruise', 'Cruise control', 'CRUISE', 'cruise', ['ctrl', 'shift', 'f7'], { bind: true, latch: true, tel: 'cruiseOn', led: 'green' }),
   fn('cruise_up', 'cruise', 'Cruise speed increase', 'SET\u00a0+', 'plus', ['='], { bind: true }),
   fn('cruise_down', 'cruise', 'Cruise speed decrease', 'SET\u00a0−', 'minus', ['-'], { bind: true }),
   fn('cruise_resume', 'cruise', 'Cruise resume', 'RESUME', 'resume', ['backspace'], { bind: true }),
 
   // Axles & trailer
   fn('lift_axle', 'chassis', 'Lift / drop truck axle', 'AXLE', 'axle', ['u'], { latch: true, tel: 'lift', led: 'amber' }),
-  fn('trailer_axle', 'chassis', 'Lift / drop trailer axle', 'T AXLE', 'taxle', ['y'], { bind: true, latch: true, tel: 'trailerLift', led: 'amber' }),
-  fn('diff_lock', 'chassis', 'Differential lock', 'DIFF LOCK', 'diff', ['v'], { latch: true, tel: 'diff', led: 'red' }),
+  fn('trailer_axle', 'chassis', 'Lift / drop trailer axle', 'T AXLE', 'taxle', ['ctrl', 'shift', 'f10'], { bind: true, latch: true, tel: 'trailerLift', led: 'amber' }),
+  fn('diff_lock', 'chassis', 'Differential lock', 'DIFF LOCK', 'diff', ['ctrl', 'shift', 'f9'], { bind: true, latch: true, tel: 'diff', led: 'red' }),
   fn('susp_front_up', 'chassis', 'Front suspension up', 'FRONT\nUP', 'suspup', ['num7'], { bind: true }),
   fn('susp_front_down', 'chassis', 'Front suspension down', 'FRONT\nDOWN', 'suspdown', ['num1'], { bind: true }),
   fn('susp_rear_up', 'chassis', 'Rear suspension up', 'REAR\nUP', 'suspup', ['num9'], { bind: true }),
   fn('susp_rear_down', 'chassis', 'Rear suspension down', 'REAR\nDOWN', 'suspdown', ['num3'], { bind: true }),
   fn('susp_reset', 'chassis', 'Reset suspension', 'RESET\nSUSP.', 'suspreset', ['num5'], { bind: true }),
-  fn('trailer_attach', 'chassis', 'Attach / detach trailer', 'TRAILER', 'trailer', ['t'], { latch: true, tel: 'trailer', led: 'green' }),
+  fn('trailer_attach', 'chassis', 'Attach / detach trailer', 'TRAILER', 'trailer', ['ctrl', 'shift', 'f12'], { bind: true, latch: true, tel: 'trailer', led: 'green' }),
 
   // Gearbox
   fn('gear_up', 'gearbox', 'Shift up', 'GEAR\u00a0+', 'up', ['shift']),
