@@ -1472,7 +1472,7 @@
     }
     if (w.t === 'sgauge') {
       // Real dial cut from the photo (empty face); the app draws its figures and the needle.
-      node.className = 'w sk k-sgauge' + (w.small ? ' small' : '');
+      node.className = 'w sk k-sgauge k-vgauge' + (w.small ? ' small' : '');
       node.innerHTML = '<div class="sg">' + sovGaugeSvg(w.field) + '</div>';
       return node;
     }
@@ -1481,7 +1481,7 @@
       // with a name tag under it. Its states (lit, lever up, pressed) are CSS on the same picture.
       const f = fnOf(w);
       const ph = parseFloat(panel.style.height) || 400;
-      node.className = 'w sk k-spr s-' + w.k + (w.c ? ' c-' + w.c : '') + (w.k === 'lamp' ? ' passive' : '');
+      node.className = 'w sk k-spr k-vbtn s-' + w.k + (w.c ? ' c-' + w.c : '') + (w.k === 'lamp' ? ' passive' : '');
       node.style.setProperty('--ph', ((w.ph || 1) * 100).toFixed(1) + '%');
       node.style.setProperty('--pa', String(w.pa || 1));
       node.style.setProperty('--k', (w.r[3] / 100 * ph * (w.ph || 1)).toFixed(1) + 'px');
@@ -1691,8 +1691,14 @@
           '</div>';
       } else
       if (w.vfd) {
-        // old vacuum-fluorescent display: green seven-segment figures behind dark glass
-        node.classList.add('vfd');
+        // old vacuum-fluorescent display: green seven-segment figures behind dark glass.
+        // k-vfd-float: position is pinned to --vfd-x/--vfd-y (defaults = this rect's own left/top),
+        // so a future drag feature can move it just by rewriting those two custom properties.
+        node.classList.add('vfd', 'k-vfd-float');
+        node.style.setProperty('--vfd-x', pct(w.r[0]));
+        node.style.setProperty('--vfd-y', pct(w.r[1]));
+        node.style.setProperty('left', 'var(--vfd-x)');
+        node.style.setProperty('top', 'var(--vfd-y)');
         node.innerHTML = '<div class="vf-glass"><div class="vf-d" data-k="spd"></div><div class="vf-d" data-k="gear"></div><div class="vf-d" data-k="fuel"></div><div class="vf-d" data-k="time"></div></div>' +
           '<div class="vf-cap"><span></span><span></span><span></span><span></span></div>';
       } else
