@@ -2156,12 +2156,12 @@
     const spec = sovSpec(field);
     let nums = '';
     for (let v = 0; v <= spec.max + 1e-9; v += spec.step) {
-      const p = polar(34, SWEEP_START + SWEEP * v / spec.max);
+      const p = polar(68, SWEEP_START + SWEEP * v / spec.max);
       nums += '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] + 3).toFixed(1) + '">' + esc(String(spec.text(Math.round(v * 100) / 100))) + '</text>';
     }
     // the needle is drawn pointing at the first mark and turned by CSS
     const a = SWEEP_START * Math.PI / 180;
-    const tip = [100 + 60 * Math.cos(a), 100 + 60 * Math.sin(a)], tail = [100 - 12 * Math.cos(a), 100 - 12 * Math.sin(a)];
+    const tip = [100 + 78 * Math.cos(a), 100 + 78 * Math.sin(a)], tail = [100 - 14 * Math.cos(a), 100 - 14 * Math.sin(a)];
     return '<svg viewBox="0 0 200 200" aria-hidden="true"><g class="nums">' + nums + '</g><text class="unit" x="100" y="165">' + esc(spec.unit) + '</text>' +
       '<g class="needle"><line x1="' + tail[0].toFixed(1) + '" y1="' + tail[1].toFixed(1) + '" x2="' + tip[0].toFixed(1) + '" y2="' + tip[1].toFixed(1) + '"/></g>' +
       '<circle class="hub" cx="100" cy="100" r="7"/><circle class="hub2" cx="100" cy="100" r="2.6"/></svg>';
