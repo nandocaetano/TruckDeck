@@ -2461,6 +2461,18 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 /* names hidden: the symbol stays, the lettering goes */
 #panel.hide-labels .lbl, #panel.hide-labels .xkey small, #panel.hide-labels .rkey small { display: none; }
 
+/* ---- Fase 6b: brute-force LED discipline (photo review on the real dash) ------------------
+   Two leaks showed up: a hard LED bar/line under keys like (P) and START/STOP (.rkey/.xkey's
+   own .led strip, and the Modern-skin .k-kbd::after bar), and the key's own square base
+   picking up a glow when active. Kill the bars outright and force every key container back to
+   transparent/no-shadow when on/active — the pictogram (.atomic-picto/.cap/.ico) is the only
+   thing allowed to light up; these rules are appended last so they win regardless of skin. */
+.rkey .led, .xkey .led, #panel.eu-modern .k-kbd.on::after { display: none !important; }
+.k-hot.on, .k-hot.active, .k-kbd.on, .k-kbd.active, .rkey.on, .rkey.active, .xkey.on, .xkey.active {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 /* ---- Panel gallery: full-screen carousel -------------------------------------------------- */
 #gallery { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: rgba(8, 9, 11, 0.97); color: var(--ui-fg, #e8e6e1); }
 #gallery[hidden] { display: none; }
