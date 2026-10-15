@@ -418,58 +418,6 @@
   opacity: .85;
   margin-bottom: .15em;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-core-media {
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
-  align-content: center;
-  justify-items: stretch;
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: .55em;
-  padding: .4em;
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media .obd-media-ico {
-  width: clamp(18px, 10cqmin, 36px);
-  height: clamp(18px, 10cqmin, 36px);
-  color: var(--obd-cyan);
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media .obd-val {
-  font-size: clamp(12px, 7cqmin, 28px);
-  white-space: normal;
-  text-align: center;
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media .obd-media-keys {
-  margin-top: .35em;
-  width: 100%;
-}
-/* Local/Spotify ↔ Radio FM switch, top-right corner of the page-5 player cell */
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-mode {
-  position: absolute;
-  top: .3em;
-  right: .3em;
-  z-index: 2;
-  padding: .15em .5em;
-  border: 1px solid color-mix(in srgb, var(--obd-cyan) 55%, transparent);
-  border-radius: 999px;
-  background: rgba(0, 0, 0, .4);
-  color: var(--obd-cyan);
-  font: 700 clamp(6px, 2.6cqmin, 11px)/1.4 var(--font-legend);
-  letter-spacing: .08em;
-  cursor: pointer;
-  pointer-events: auto;
-  -webkit-tap-highlight-color: transparent;
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media.radio-mode .obd-media-mode {
-  background: var(--obd-cyan);
-  color: #06181c;
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-cell-media {
-  position: relative;
-}
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-ico {
   width: clamp(14px, 12cqmin, 48px);
   height: clamp(14px, 12cqmin, 48px);
@@ -586,78 +534,81 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* ==== Global media/notification footer ("Modo Mídia" slim player) ======================
+   Lives above .obd-dmg (TRUCK/TRAILER/CARGO) on every OBD page. Two mutually-exclusive
+   faces inside the SAME box: .omp-normal (track/artist/controls) and .omp-alert
+   (company-message dispatch marquee) — toggled by the .alert class, see app.js. */
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media {
   position: relative;
   z-index: 1;
   flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: .45em;
-  min-height: 1.6em;
-  padding: .35em .4em;
+  min-height: 2.2em;
+  padding: .3em .5em;
   border-radius: .45em;
   background: rgba(0,0,0,.45);
   border: 1px solid rgba(0,243,255,.22);
-  transition: opacity 180ms, max-height 180ms, margin 180ms, padding 180ms;
-  max-height: 3.2em;
   overflow: hidden;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media.collapsed {
-  opacity: 0;
-  max-height: 0;
-  min-height: 0;
-  margin: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  border-width: 0;
-  pointer-events: none;
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-normal {
+  display: flex;
+  align-items: center;
+  gap: .5em;
+  min-width: 0;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-ico {
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media.alert .omp-normal {
+  display: none;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-cover {
   flex: 0 0 auto;
-  width: 1em;
-  height: 1em;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: .3em;
   color: var(--obd-cyan);
+  background: rgba(0,243,255,.1);
   display: grid;
   place-items: center;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-ico svg {
-  width: 100%;
-  height: 100%;
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-cover svg {
+  width: 62%;
+  height: 62%;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-line {
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-text {
   flex: 1 1 auto;
   min-width: 0;
-  color: var(--obd-cyan);
-  font: 600 .7em/1.2 var(--font-legend);
+  display: flex;
+  flex-direction: column;
+  gap: .08em;
+  line-height: 1.15;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-track {
+  color: #e9f7ff;
+  font: 700 .68em/1.15 var(--font-legend);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-line em {
-  font-style: normal;
-  opacity: .75;
-  margin-right: .25em;
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-artist {
+  color: var(--obd-cyan);
+  font: 600 .58em/1.1 var(--font-legend);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-line b {
-  color: #e9f7ff;
-  font-weight: 700;
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys {
-  flex: 1 1 auto;
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-ctrl {
+  flex: 0 0 auto;
   display: flex;
-  gap: .9em;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  gap: .18em;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i[data-media="vol_down"],
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i[data-media="vol_up"] {
-  width: 1.6em;
-  height: 1.6em;
-  opacity: .75;
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-keys {
+  display: flex;
+  gap: .5em;
+  align-items: center;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i {
-  width: 2.03em;
-  height: 2.03em;
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-keys i {
+  width: 1.7em;
+  height: 1.7em;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -667,15 +618,68 @@
   cursor: pointer;
   pointer-events: auto;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i svg {
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-keys i svg {
   width: 55%;
   height: 55%;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i[data-media="media_play"] {
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-keys i[data-media="media_play"] {
   box-shadow: 0 0 0 1.5px var(--obd-cyan), 0 0 .45em rgba(0,243,255,.55);
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media-keys i.down {
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-keys i.down {
   transform: scale(.92);
+}
+/* Thin progress rail under the transport controls. No real track position is reported by the
+   bridge, so this is a cosmetic "playing" indicator (sweeping fill) rather than real elapsed time. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-progress {
+  width: 4.2em;
+  height: .22em;
+  border-radius: .15em;
+  background: rgba(255,255,255,.12);
+  overflow: hidden;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-progress i {
+  display: block;
+  width: 35%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--obd-cyan), var(--obd-green));
+  opacity: .4;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media.playing .omp-progress i {
+  opacity: 1;
+  animation: omp-progress-sweep 2.4s linear infinite;
+}
+@keyframes omp-progress-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(285%); }
+}
+/* Audio-equalizer indicator: bars animate only while something is actually playing. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-eq {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: .14em;
+  width: 1.3em;
+  height: 1.3em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-eq i {
+  flex: 1 1 auto;
+  background: var(--obd-cyan);
+  opacity: .3;
+  height: 30%;
+  border-radius: .05em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media.playing .omp-eq i {
+  opacity: .9;
+  animation: omp-eq-bounce 1.1s ease-in-out infinite;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-eq i:nth-child(1) { animation-delay: 0ms; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-eq i:nth-child(2) { animation-delay: 180ms; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-eq i:nth-child(3) { animation-delay: 90ms; }
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-eq i:nth-child(4) { animation-delay: 270ms; }
+@keyframes omp-eq-bounce {
+  0%, 100% { height: 25%; }
+  50% { height: 95%; }
 }
 /* ==== Fase 3 — 5-page OBD restructure (Pressure / Temperatures / Cruise / Fuel / Consumption) === */
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-ptitle {
@@ -747,29 +751,39 @@
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen[data-si="3"] .obd-core {
   flex: 1 1 auto;
 }
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen[data-si="3"] .freight {
+/* Cargo & Trip (page 5): the music player moved to the global footer, so this page is now
+   100% dedicated to trip/cargo info — generous row spacing instead of the old 70/30 split. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-trip {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6%;
+  padding: 2% 6%;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-trip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .6em;
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-trip-lbl {
+  color: var(--obd-cyan, #00f3ff);
+  font: 600 clamp(7px, 3.2cqmin, 14px)/1.1 var(--font-legend);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  opacity: .85;
   flex: 0 0 auto;
 }
-/* The marquee animation replays once per page-entry, triggered by re-adding this class in JS
-   (removing it first forces a reflow so the same class can restart the animation). */
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .freight.marquee-once {
-  display: inline-block;
-  max-width: 100%;
-  animation: obd-marquee-once 7s linear;
-}
-@keyframes obd-marquee-once {
-  0%, 10% { transform: translateX(0); }
-  90%, 100% { transform: translateX(calc(-1 * max(0px, 100% - 1px))); }
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen-media.active {
-  gap: 2%;
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-core-cons {
-  flex: 0 0 42%;
-  grid-template-rows: 1fr;
-}
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-screen-media .obd-core-media {
-  flex: 1 1 58%;
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-trip-val {
+  color: #fff;
+  font: 700 clamp(10px, 4.6cqmin, 22px)/1 var(--font-legend);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 /* Luzes verde/azul novas (bulbo de presença, farol baixo) — vetor inline, sem asset PNG ainda. */
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell-svg svg {
@@ -780,11 +794,11 @@
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell-svg.lit.tell-green svg {
   color: #5bd47d;
-  filter: drop-shadow(0 0 .4em rgba(75,210,112,.5));
+  filter: drop-shadow(0 0 2px rgba(75,210,112,.5));
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .tell-svg.lit.tell-blue svg {
   color: #76baff;
-  filter: drop-shadow(0 0 .4em rgba(90,170,255,.5));
+  filter: drop-shadow(0 0 2px rgba(90,170,255,.5));
 }
 /* Damage bars (Truck/Trailer/Cargo) fill the OBD's free margin, same %-bar language as the
    Damage & trip widget's .sbar/.sgroup pattern. */
@@ -805,6 +819,29 @@
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg-bar.hidden {
   visibility: hidden;
+}
+/* Dispatch alert (company message): shares the .obd-media box with the music player.
+   Hidden until JS calls showCompanyMessage(text) and adds .alert to the player (app.js);
+   scrolls right-to-left exactly 3 times, then both classes drop and the player view returns. */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-alert.company-message {
+  display: none;
+  height: 100%;
+  min-height: 1.6em;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #ffd166;
+  font: 700 clamp(7px, 3.2cqmin, 14px)/1.3 var(--font-legend);
+  letter-spacing: .05em;
+  text-shadow: 0 0 .4em rgba(255,209,102,.4);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-media.alert .omp-alert.company-message.active {
+  display: flex;
+  animation: obd-company-scroll 4.5s linear 3;
+}
+@keyframes obd-company-scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-dmg-bar small {
   flex: 0 0 auto;
@@ -2529,8 +2566,10 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 #stage.skin > #panel, #stage.skin > #extras { z-index: 1; }
 
 /* ---- Keys drawn by the app inside the empty slots of a frame picture ---------------------------- */
-#panel.skin .w.k-kbd { padding: 0; pointer-events: auto; cursor: pointer; }
-#panel.skin .w.k-kbd .cap { width: 100%; height: 100%; }
+/* Hitbox sharp: the wrapper itself never catches taps — only the drawn .cap shape does,
+   so clicks on empty margin between neighbouring rockers fall through instead of firing. */
+#panel.skin .w.k-kbd { padding: 0; pointer-events: none; cursor: pointer; }
+#panel.skin .w.k-kbd .cap { width: 100%; height: 100%; pointer-events: auto; }
 #panel.skin .w.k-kbd.mini .lbl, #panel.skin .w.k-kbd.mini .led { display: none; }
 /* the generic ".cap" rule above belongs to painted keys (it shows the picture's own cap): an app-drawn cap is always visible */
 #panel.skin .k-kbd .cap { visibility: visible; inset: 0; -webkit-mask-image: none; mask-image: none; }
@@ -2748,9 +2787,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 /* extras bar sits outside the panel, so it is dimmed here */
 #panel.cabin-dark ~ #extras { background: rgba(6, 6, 8, calc(0.3 + 0.65 * var(--cabin, 0))); }
 #panel.cabin-dark ~ #extras .xkey { opacity: calc(1 - 0.6 * var(--cabin, 0)); }
-#panel.cabin-dark ~ #extras .xgroup h4 { opacity: calc(1 - 0.6 * var(--cabin, 0)); }, 170, 50, calc(0.25 * var(--glow, 0))))
-    drop-shadow(0 0 calc(40px * var(--glow, 0)) rgba(255, 140, 30, calc(0.08 * var(--glow, 0))));
-}
+#panel.cabin-dark ~ #extras .xgroup h4 { opacity: calc(1 - 0.6 * var(--cabin, 0)); }
 
 /* Modern skin gauges: subtle cool bloom */
 #panel.cabin-dark .k-gauge {
@@ -2802,12 +2839,6 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 #app[data-style="eu_frame"] #panel .k-kbd {
   pointer-events: auto;
 }
-/* Fase 1.3 / Fase 3 — media unificada: hide the bottom mini-strip while the dedicated
-   Consumption & Media OBD page (index 4 of 5, 0-based) is active, avoiding a duplicate player. */
-#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility[data-screen="4"] .obd-media {
-  display: none;
-}
-
 /* ==== Modern digital speedometer (.spd-body) — 100% cq*, no analog arc ================= */
 #app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero {
   --hero-cyan: #18d7ef;
@@ -2905,6 +2936,11 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   color: var(--hero-white);
   text-shadow: 0 0 .18em rgba(255, 255, 255, .22);
   letter-spacing: -.03em;
+}
+/* 3-digit speeds (100+) no longer fit the 2-digit clamp without overflowing the dial */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-speed.three-digits {
+  font-size: clamp(30px, 29cqmin, 124px);
+  letter-spacing: -.05em;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .k-gps.tinfo.hero .spd-speed.bad {
   color: var(--hero-red);

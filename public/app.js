@@ -54,9 +54,6 @@
     phase: true,          // flasher phase for hazard / indicator lamps when no game drives them
     obc: false,           // on-board computer showing instead of the panel
     bulbUntil: 0,         // telltale bulb-check deadline (ms)
-    radioMode: lsGet('truckdeck.radioMode') === '1',       // OBD page 5 media mode: false = local/Spotify, true = Radio FM
-    radioIdx: parseInt(lsGet('truckdeck.radioIdx') || '0', 10) || 0,
-    radioPlaying: false,  // whether the PC Helper was last told to open the FM stream (audio plays on the PC, never on the tablet)
   };
 
   // Modern (eu_frame) ignition boot sequence — logo → bulb check → gauge sweep → data reveal.
@@ -185,6 +182,46 @@
     // This fires solely if boot_v8.mp4 fails to load/play, so the UI is never stuck hidden.
     if (modernBootElapsed() >= MODERN_BOOT.TOTAL_MS + 4000) stopModernBoot('running');
   }
+
+  // Static city -> country lookup (ETS2 base map + main DLC map city names as reported by the
+  // SDK's cityFrom/cityTo strings). Not exhaustive; unknown cities just show no country tag.
+  // The SDK has no "current country" / map-position field, so only origin and destination
+  // can be resolved this way — there is no feasible way to show where the truck is *now*.
+  const CITY_COUNTRY = {
+    'Antwerp': 'BE', 'Brussels': 'BE', 'Liège': 'BE', 'Charleroi': 'BE', 'Mons': 'BE',
+    'Amsterdam': 'NL', 'Rotterdam': 'NL', 'Eindhoven': 'NL', 'Groningen': 'NL', 'Breda': 'NL', 'Maastricht': 'NL',
+    'Luxembourg': 'LU',
+    'Berlin': 'DE', 'Hamburg': 'DE', 'Munich': 'DE', 'Frankfurt': 'DE', 'Cologne': 'DE', 'Stuttgart': 'DE',
+    'Dortmund': 'DE', 'Essen': 'DE', 'Hannover': 'DE', 'Leipzig': 'DE', 'Dresden': 'DE', 'Nuremberg': 'DE',
+    'Bremen': 'DE', 'Duisburg': 'DE', 'Kiel': 'DE', 'Karlsruhe': 'DE', 'Mannheim': 'DE', 'Flensburg': 'DE',
+    'Rostock': 'DE', 'Wilhelmshaven': 'DE', 'Osnabrück': 'DE', 'Kassel': 'DE',
+    'Warsaw': 'PL', 'Kraków': 'PL', 'Wrocław': 'PL', 'Poznań': 'PL', 'Gdańsk': 'PL', 'Katowice': 'PL',
+    'Łódź': 'PL', 'Szczecin': 'PL', 'Bydgoszcz': 'PL', 'Lublin': 'PL', 'Białystok': 'PL', 'Kielce': 'PL',
+    'Olsztyn': 'PL', 'Opole': 'PL', 'Rzeszów': 'PL', 'Zielona Góra': 'PL',
+    'Prague': 'CZ', 'Brno': 'CZ', 'Ostrava': 'CZ', 'Plzeň': 'CZ', 'Karlovy Vary': 'CZ',
+    'Hradec Králové': 'CZ', 'Liberec': 'CZ', 'Olomouc': 'CZ', 'Ústí nad Labem': 'CZ',
+    'Vienna': 'AT', 'Salzburg': 'AT', 'Graz': 'AT', 'Linz': 'AT', 'Innsbruck': 'AT', 'Klagenfurt': 'AT',
+    'Zürich': 'CH', 'Geneva': 'CH', 'Bern': 'CH', 'Basel': 'CH', 'Lausanne': 'CH', 'Lugano': 'CH', 'St. Gallen': 'CH',
+    'Turin': 'IT', 'Milan': 'IT', 'Venice': 'IT', 'Bologna': 'IT', 'Genoa': 'IT',
+    'Paris': 'FR', 'Lyon': 'FR', 'Marseille': 'FR', 'Lille': 'FR', 'Calais': 'FR', 'Strasbourg': 'FR',
+    'Bordeaux': 'FR', 'Nantes': 'FR', 'Toulouse': 'FR', 'Nice': 'FR', 'Metz': 'FR', 'Reims': 'FR',
+    'Le Havre': 'FR', 'Clermont-Ferrand': 'FR', 'Dijon': 'FR',
+    'London': 'UK', 'Manchester': 'UK', 'Birmingham': 'UK', 'Glasgow': 'UK', 'Edinburgh': 'UK',
+    'Liverpool': 'UK', 'Cardiff': 'UK', 'Dover': 'UK', 'Leeds': 'UK', 'Southampton': 'UK',
+    'Bristol': 'UK', 'Newcastle': 'UK', 'Aberdeen': 'UK',
+    'Madrid': 'ES', 'Barcelona': 'ES', 'Valencia': 'ES', 'Seville': 'ES', 'Bilbao': 'ES',
+    'Zaragoza': 'ES', 'Santander': 'ES', 'A Coruña': 'ES', 'Vigo': 'ES', 'Málaga': 'ES',
+    'Lisbon': 'PT', 'Porto': 'PT', 'Faro': 'PT', 'Braga': 'PT', 'Coimbra': 'PT',
+    'Copenhagen': 'DK', 'Aarhus': 'DK', 'Esbjerg': 'DK', 'Aalborg': 'DK',
+    'Stockholm': 'SE', 'Gothenburg': 'SE', 'Malmö': 'SE', 'Norrköping': 'SE', 'Örebro': 'SE', 'Sundsvall': 'SE',
+    'Oslo': 'NO', 'Bergen': 'NO', 'Trondheim': 'NO', 'Stavanger': 'NO',
+    'Helsinki': 'FI', 'Turku': 'FI', 'Tampere': 'FI',
+    'Budapest': 'HU', 'Debrecen': 'HU', 'Szeged': 'HU', 'Győr': 'HU',
+    'Bratislava': 'SK', 'Košice': 'SK', 'Žilina': 'SK',
+    'Ljubljana': 'SI', 'Maribor': 'SI',
+    'Zagreb': 'HR', 'Split': 'HR', 'Rijeka': 'HR',
+  };
+  const cityCountry = (city) => CITY_COUNTRY[city] || '';
 
   // Shown on the readouts when no bridge is reachable, so the preview is not a wall of dashes.
   const DEMO_TEL = { sdk: true, dmgTruck: 7, dmgTrailer: 1, dmgCargo: 1, routeDist: 369000, routeTime: 14700, time: 1 * 1440 + 11 * 60 + 5, speed: 22.8, gear: 12, cruise: 22.2, fuel: 640, fuelCap: 1000, rpm: 1250, air: 118, retarder: 0, retSteps: 3,
@@ -819,6 +856,29 @@
   }
   setInterval(checkVersion, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
+
+  // Dispatch alert: takes over the music player's own display box, scrolling right-to-left
+  // exactly 3 times (CSS animation-iteration-count: 3), then restores the normal track/artist
+  // view on animationend — same box, no separate footer element.
+  function showCompanyMessage(text) {
+    document.querySelectorAll('.company-message').forEach((el) => {
+      el.textContent = text;
+      const player = el.closest('.obd-media');
+      if (player) player.classList.remove('alert');
+      el.classList.remove('active');
+      void el.offsetWidth; // reflow so re-adding 'active' restarts the animation
+      el.classList.add('active');
+      if (player) player.classList.add('alert');
+    });
+  }
+  window.showCompanyMessage = showCompanyMessage;
+  document.addEventListener('animationend', (ev) => {
+    if (ev.target.classList && ev.target.classList.contains('company-message')) {
+      ev.target.classList.remove('active');
+      const player = ev.target.closest('.obd-media');
+      if (player) player.classList.remove('alert');
+    }
+  });
 
   function connect() {
     // `stage` records how far the handshake got. The catch below covers the WHOLE
@@ -1490,20 +1550,15 @@
           '<div class="obd-cell" data-k="' + key + '">' +
             (label ? '<small class="obd-lbl">' + label + '</small>' : '') +
             '<div class="obd-read"><b class="obd-val">--</b><small class="obd-unit">' + unit + '</small></div></div>';
-        const mediaKeys =
-          '<div class="obd-media-keys">' +
-            '<i data-media="vol_down" role="button" aria-label="Volume down">' + iconSvg('voldown') + '</i>' +
-            '<i data-media="media_prev" role="button" aria-label="Previous">' + iconSvg('prev') + '</i>' +
-            '<i data-media="media_play" role="button" aria-label="Play/Pause">' + iconSvg('playpause') + '</i>' +
-            '<i data-media="media_next" role="button" aria-label="Next">' + iconSvg('next') + '</i>' +
-            '<i data-media="vol_up" role="button" aria-label="Volume up">' + iconSvg('volup') + '</i>' +
-          '</div>';
         // Telltale rendered as inline SVG (no PNG asset yet) reusing the .tell-green/.tell-blue
         // palette already defined for .k-tell elsewhere in app.css.
         const tellSvg = (flag, color, svgPath) =>
           '<i class="tell tell-svg tell-' + color + '" data-flag="' + flag + '"><svg viewBox="0 0 20 20">' + svgPath + '</svg></i>';
-        const bulbSvg = '<circle cx="10" cy="10" r="6" fill="currentColor"/>';
-        const beamSvg = '<path d="M2 7h9l5 3-5 3H2z" fill="currentColor"/>';
+        // ISO 2575 pictograms, thin outline strokes (no filled mass -> no "blurry blob" look).
+        // Position/parking lamp: lamp housing + single horizontal ray.
+        const bulbSvg = '<path d="M3 7.3h6.3c1.7 0 3.1 1.1 3.1 2.7s-1.4 2.7-3.1 2.7H3z" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><line x1="13.4" y1="10" x2="17.2" y2="10" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>';
+        // Low beam: lamp housing + rays angled down-left (cutoff), per standard dash convention.
+        const beamSvg = '<path d="M3 7.3h6.3c1.7 0 3.1 1.1 3.1 2.7s-1.4 2.7-3.1 2.7H3z" fill="none" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><line x1="13.6" y1="8.1" x2="17.6" y2="6.6" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><line x1="14" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><line x1="13.6" y1="11.9" x2="17.3" y2="13.4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>';
         const ptitle = (txt) => '<div class="obd-ptitle">' + txt + '</div>';
         // .obd-body is the flex layout wrapper; .modern-utility only hosts container-type:size.
         // Five pages, 1:1 parity with the Scania S/R 2016 cluster layout Fernando specified.
@@ -1526,19 +1581,17 @@
                 '<div class="obd-cruise-gfx" aria-hidden="true"><i class="ocg-truck"></i><i class="ocg-ring ocg-r1"></i><i class="ocg-ring ocg-r2"></i><i class="ocg-ring ocg-r3"></i></div>' +
                 textCell('cruise', '', L('CRUISE SET', 'CRUZEIRO')) + textCell('retarder', '', L('RETARDER', 'RETARDER')) +
               '</div></div>' +
-              '<div class="obd-screen" data-si="3">' + ptitle(L('FUEL & DISTANCE', 'COMBUSTÍVEL')) + '<div class="obd-core">' +
+              '<div class="obd-screen" data-si="3">' + ptitle(L('FUEL & CONSUMPTION', 'COMBUSTÍVEL')) + '<div class="obd-core">' +
                 cell('fuel', 'fuel', 'l') + textCell('range', 'km', L('RANGE', 'AUTONOMIA')) +
-              '</div><em class="freight"></em></div>' +
-              '<div class="obd-screen obd-screen-media" data-si="4">' + ptitle(L('CONSUMPTION', 'CONSUMO')) +
-                '<div class="obd-core obd-core-cons">' + textCell('consAvg', 'l/100', L('AVG', 'MÉDIA')) + textCell('consInst', 'l/h', L('INST', 'INST')) + '</div>' +
-                '<div class="obd-core obd-core-media">' +
-                  '<div class="obd-cell obd-cell-media" data-k="media">' +
-                    '<button type="button" class="obd-media-mode" data-radio-toggle aria-label="' + L('Media source', 'Fonte de mídia') + '">LOCAL</button>' +
-                    '<span class="obd-media-ico">' + iconSvg('music') + '</span>' +
-                    '<div class="obd-read"><b class="obd-val" data-media-title>--</b></div>' +
-                    '<small class="obd-unit" data-media-artist></small>' +
-                    mediaKeys +
-                  '</div>' +
+                textCell('consAvg', 'l/100', L('AVG', 'MÉDIA')) + textCell('consInst', 'l/h', L('INST', 'INST')) +
+              '</div></div>' +
+              '<div class="obd-screen obd-screen-trip" data-si="4">' + ptitle(L('CARGO & TRIP', 'CARGA E VIAGEM')) +
+                '<div class="obd-trip obd-trip-full">' +
+                  '<div class="obd-trip-row" data-trip="dest"><span class="obd-trip-lbl">' + L('DESTINATION', 'DESTINO') + '</span><b class="obd-trip-val">--</b></div>' +
+                  '<div class="obd-trip-row" data-trip="cargo"><span class="obd-trip-lbl">' + L('CARGO', 'CARGA') + '</span><b class="obd-trip-val">--</b></div>' +
+                  '<div class="obd-trip-row" data-trip="mass"><span class="obd-trip-lbl">' + L('WEIGHT', 'PESO') + '</span><b class="obd-trip-val">--</b></div>' +
+                  '<div class="obd-trip-row" data-trip="income"><span class="obd-trip-lbl">' + L('JOB PAYOUT', 'GANHO DO FRETE') + '</span><b class="obd-trip-val">--</b></div>' +
+                  '<div class="obd-trip-row" data-trip="eta"><span class="obd-trip-lbl">' + L('TIME LEFT', 'HORAS REST.') + '</span><b class="obd-trip-val">--</b></div>' +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -1546,13 +1599,24 @@
               tell('high', 'high') + tell('oilWarn', 'oil') + tell('battWarn', 'batt') +
               tell('lift', 'lift') + tell('trailerLift', 'trailer_lift') +
             '</div>' +
+            '<div class="obd-media">' +
+              '<div class="omp-normal">' +
+                '<span class="omp-cover">' + iconSvg('music') + '</span>' +
+                '<div class="omp-text">' +
+                  '<b class="omp-track"></b>' +
+                  '<small class="omp-artist"></small>' +
+                '</div>' +
+                '<div class="omp-ctrl">' +
+                  '<div class="omp-keys">' + MEDIA_FOOTER_KEYS.map((k) =>
+                    '<i data-media="' + k[0] + '" role="button" aria-label="' + k[2] + '">' + iconSvg(k[1]) + '</i>').join('') + '</div>' +
+                  '<div class="omp-progress"><i></i></div>' +
+                '</div>' +
+                '<div class="omp-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></div>' +
+              '</div>' +
+              '<div class="omp-alert company-message"></div>' +
+            '</div>' +
             '<div class="obd-dmg">' + ['dmgTruck', 'dmgTrailer', 'dmgCargo'].map((k) =>
               '<i class="obd-dmg-bar" data-dmg="' + k + '"><small></small><u><b></b></u></i>').join('') + '</div>' +
-            '<div class="obd-media">' +
-              '<span class="obd-media-ico">' + iconSvg('music') + '</span>' +
-              '<span class="obd-media-line"><em>Playing:</em> <b></b></span>' +
-              mediaKeys +
-            '</div>' +
           '</div>';
       } else {
         node.innerHTML = (w.two ? '<em class="freight"></em><small></small>' : '') +
@@ -1891,41 +1955,35 @@
             if (!img.getAttribute('src') || !img.getAttribute('src').endsWith(on ? '_on.png' : '_off.png')) img.src = next;
           }
         });
-        // Keep media strip visible on tablet (was collapsed whenever S.media wasn't playing,
-        // which made the player vanish outside demo). Controls stay; empty track shows em dash.
-        const mediaEl = node.querySelector('.obd-media');
+        // Slim global footer player, visible on every page above the TRUCK/TRAILER/CARGO bar.
+        // Clean "Music Player" \u2014 no in-game FM radio switch; always mirrors the PC bridge's
+        // now-playing text. Volume keys stay mapped to the OS media keys (Windows/Spotify).
         const mediaLive = S.bridge === 'demo' || !!(S.media && (S.media.running || S.media.playing || S.media.title || S.media.artist));
-        if (mediaEl) mediaEl.classList.remove('collapsed');
-        node.classList.remove('obd-media-collapsed');
         const trackTxt = v.top === 'DEMO' ? (v.line || 'DEMO') : (v.line || v.top || (mediaLive ? '' : '\u2014'));
         const artistTxt = (S.media && S.media.artist) || '';
-        const mediaLine = node.querySelector('.obd-media-line b');
-        if (mediaLine && mediaLine.textContent !== (trackTxt || '\u2014')) mediaLine.textContent = trackTxt || '\u2014';
-        // Page 5's own player: Local/Spotify mirrors the PC bridge; Radio FM shows the current
-        // preset instead and ignores the bridge's "now playing" text entirely.
-        const radioOn = !!S.radioMode;
-        const modeBtn = node.querySelector('[data-radio-toggle]');
-        if (modeBtn) {
-          const btnTxt = radioOn ? 'FM' : 'LOCAL';
-          if (modeBtn.textContent !== btnTxt) modeBtn.textContent = btnTxt;
-        }
-        const mediaCell = node.querySelector('.obd-cell-media');
-        if (mediaCell) mediaCell.classList.toggle('radio-mode', radioOn);
-        const titleTxt = radioOn ? radioPreset().name : (trackTxt || '\u2014');
-        const artistTxtFinal = radioOn ? (radioPreset().freq + ' MHz') : artistTxt;
-        const mediaTitle = node.querySelector('[data-media-title]');
-        if (mediaTitle && mediaTitle.textContent !== titleTxt) mediaTitle.textContent = titleTxt;
-        const mediaArtist = node.querySelector('[data-media-artist]');
-        if (mediaArtist && mediaArtist.textContent !== artistTxtFinal) mediaArtist.textContent = artistTxtFinal;
-        const freightEl = node.querySelector('.freight');
-        if (freightEl) {
-          let freightTxt = '';
-          if (tl && tl.onJob !== false && tl.cityFrom) {
-            const cur = layout().currency || '\u20ac';
-            freightTxt = tl.cityFrom + ' \u2192 ' + tl.cityTo + ' \u00b7 ' + (tl.cargo || '') +
-              (tl.income ? ' \u00b7 ' + cur + (tl.income / 100).toLocaleString(undefined, { minimumFractionDigits: 0 }) : '');
-          }
-          if (freightEl.textContent !== freightTxt) freightEl.textContent = freightTxt;
+        const isPlaying = v.state === '\u25b6';
+        const ptMedia = layout().lang === 'pt';
+        const ompTrack = node.querySelector('.omp-track');
+        const trackLabel = (ptMedia ? 'FAIXA: ' : 'TRACK: ') + (trackTxt || '\u2014');
+        if (ompTrack && ompTrack.textContent !== trackLabel) ompTrack.textContent = trackLabel;
+        const ompArtist = node.querySelector('.omp-artist');
+        const artistLabel = artistTxt ? (ptMedia ? 'ARTISTA: ' : 'ARTIST: ') + artistTxt : '';
+        if (ompArtist && ompArtist.textContent !== artistLabel) ompArtist.textContent = artistLabel;
+        const ompEl = node.querySelector('.obd-media');
+        if (ompEl) ompEl.classList.toggle('playing', isPlaying);
+        // Cargo & Trip screen (data-si="4"): trip fields read straight off raw telemetry.
+        const tripEl = node.querySelector('.obd-trip');
+        if (tripEl) {
+          const pt = layout().lang === 'pt';
+          const cur = layout().currency || '\u20ac';
+          const onJob = tl && tl.onJob !== false && tl.cityFrom;
+          const set = (k, v) => { const el = tripEl.querySelector('[data-trip="' + k + '"] .obd-trip-val'); if (el && el.textContent !== v) el.textContent = v; };
+          const destCc = onJob ? cityCountry(tl.cityTo) : '';
+          set('dest', onJob ? [tl.cityTo + (destCc ? ' (' + destCc + ')' : ''), tl.compTo].filter(Boolean).join(' \u00b7 ') : '--');
+          set('cargo', onJob ? (tl.cargo || '--') : '--');
+          set('mass', onJob && tl.mass > 0 ? (tl.mass / 1000).toFixed(1).replace('.', pt ? ',' : '.') + ' t' : '--');
+          set('income', onJob && tl.income > 0 ? cur + Math.round(tl.income / 100).toLocaleString(pt ? 'pt-BR' : 'en-US') : '--');
+          set('eta', onJob && tl.routeTime > 0 ? Math.floor(tl.routeTime / 3600) + 'h' + pad2(Math.round(tl.routeTime / 60) % 60) : '--');
         }
       } else {
         // Classic / non-utility rtext (media strip)
@@ -2420,8 +2478,12 @@
     const has = (v) => v !== undefined && v !== null && v !== '' && Number.isFinite(Number(v));
     const over = t.limit > 0.5 && Math.abs(t.speed) > t.limit * 1.06;
     const speedEl = node.querySelector('.spd-speed');
-    if (speedEl) speedEl.classList.toggle('bad', over);
-    setTxt('.spd-speed', String(spd(t.speed)));
+    const speedVal = spd(t.speed);
+    if (speedEl) {
+      speedEl.classList.toggle('bad', over);
+      speedEl.classList.toggle('three-digits', speedVal > 99);
+    }
+    setTxt('.spd-speed', String(speedVal));
     setTxt('.spd-unit', mph ? 'mph' : 'km/h');
     setTxt('.spd-gear', gearLabel(t));
     const limitEl = node.querySelector('.spd-limit');
@@ -2540,12 +2602,6 @@
     const next = Number.isInteger(selected) && selected >= 0 && selected < n ? selected : (cur + 1) % n;
     node.dataset.screen = String(next);
     node.querySelectorAll('.obd-screen').forEach((s, i) => s.classList.toggle('active', i === next));
-    // Fuel & Distance page (index 3): replay the Origin/Destination/Cargo marquee once per visit,
-    // never while the page is sitting idle on screen.
-    if (next === 3 && cur !== 3) {
-      const freightEl = node.querySelector('.obd-screen[data-si="3"] .freight');
-      if (freightEl) { freightEl.classList.remove('marquee-once'); void freightEl.offsetWidth; freightEl.classList.add('marquee-once'); }
-    }
     buzz(12);
   }
 
@@ -2800,34 +2856,9 @@
 
   // ---- Music player ------------------------------------------------------------------------
   const MEDIA_KEYS = [['media_prev', 'prev'], ['media_play', 'playpause'], ['media_next', 'next'], ['vol_down', 'voldown'], ['vol_up', 'volup']];
-
-  // ---- Web Radio FM (OBD page 5 only) -------------------------------------------------------
-  // A small built-in set of streaming stations. Prev/next cycle through them and the player
-  // switches its single <audio> element's source; Local/Spotify mode is untouched and still
-  // relays its transport keys to the PC bridge as before.
-  const RADIO_PRESETS = [
-    { name: 'Massa FM', freq: '97.7', url: 'https://stream.massafm.com.br/curitiba' },
-    { name: 'Clube FM', freq: '101.5', url: 'https://18403.live.streamtheworld.com/RADIO_CLUBE_FM_CURITIBAP.mp3' },
-    { name: 'Mundo Livre FM', freq: '93.9', url: 'https://8892.live.streamtheworld.com/MUNDOLIVRE_FM_CURITIBAP.mp3' },
-    { name: 'Jovem Pan FM', freq: '103.9', url: 'https://stream.zeno.fm/jovempancuritiba' },
-  ];
-  // Playback is ETS2's own in-game radio now — the tablet only taps the same media_* / vol_*
-  // virtual keys as every other dash button (see send('tap', ...) below), through the normal
-  // bridge/server.js SendInput path. The name/freq list here is a local display label only;
-  // for it to match what's actually playing, add these stations to ETS2's own
-  // live_streams.sii and bind its Multimedia controls (Options > Controls) to the media keys.
-  function radioPreset() { return RADIO_PRESETS[S.radioIdx] || RADIO_PRESETS[0]; }
-  function radioSetIdx(i) {
-    S.radioIdx = ((i % RADIO_PRESETS.length) + RADIO_PRESETS.length) % RADIO_PRESETS.length;
-    lsSet('truckdeck.radioIdx', String(S.radioIdx));
-  }
-  function radioCycle(dir) { radioSetIdx((S.radioIdx || 0) + dir); }
-  function radioTogglePlay() { S.radioPlaying = !S.radioPlaying; }
-  function radioSetMode(on) {
-    S.radioMode = on;
-    lsSet('truckdeck.radioMode', on ? '1' : '0');
-    if (!on && S.radioPlaying) S.radioPlaying = false;
-  }
+  // Slim global footer player (Fernando's "Modo Mídia" layout): just Prev/Play/Next —
+  // Volume stays on the OS media keys (Windows/Spotify), not a footer button.
+  const MEDIA_FOOTER_KEYS = [['media_prev', 'prev', 'Previous'], ['media_play', 'playpause', 'Play/Pause'], ['media_next', 'next', 'Next']];
 
   function mediaView() {
     const text = panelText();
@@ -3614,32 +3645,11 @@
     if (!node) return;
     // frame-method panels: only kbd buttons and media keys respond to touch
     const _fw = findWidget(node.dataset.id);
-    if (_fw && _fw.sk && skinOf(page()) && skinOf(page()).frame && _fw.t !== 'kbd' && _fw.t !== 'gps' && !ev.target.closest('[data-media]') && !ev.target.closest('[data-radio-toggle]')) return;
+    if (_fw && _fw.sk && skinOf(page()) && skinOf(page()).frame && _fw.t !== 'kbd' && _fw.t !== 'gps' && !ev.target.closest('[data-media]')) return;
     ev.preventDefault();
-    // OBD page 5's Local/Spotify vs Radio FM switch
-    const radioToggle = ev.target.closest('[data-radio-toggle]');
-    if (radioToggle) {
-      radioSetMode(!S.radioMode);
-      buzz(12);
-      return;
-    }
     // the music player has its own keys inside one widget
     const mediaKey = ev.target.closest('[data-media]');
     if (mediaKey) {
-      // While the OBD page-5 player is in Radio FM mode, prev/next also walk the local display
-      // label (name/freq) — but every key, including play and volume, still taps through to
-      // the game's own native radio via the same bridge path as any other dash button.
-      if (S.radioMode && mediaKey.closest('.obd-cell-media')) {
-        const act = mediaKey.dataset.media;
-        if (act === 'media_prev') radioCycle(-1);
-        else if (act === 'media_next') radioCycle(1);
-        else if (act === 'media_play') radioTogglePlay();
-        send('tap', [act]);
-        mediaKey.classList.add('down');
-        setTimeout(() => mediaKey.classList.remove('down'), 140);
-        buzz(12);
-        return;
-      }
       send('tap', [mediaKey.dataset.media]);
       mediaKey.classList.add('down');
       setTimeout(() => mediaKey.classList.remove('down'), 140);
