@@ -58,13 +58,19 @@ button { color: inherit; }
 .text-button:hover { text-decoration: underline; }
 .text-button.danger { color: var(--danger); }
 .asset-list, .dashboard-tools { display: grid; gap: 6px; }
-.package-group { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0,0,0,.08); }
-.package-group + .package-group { margin-top: 4px; }
-.package-group.is-active-package { border-color: rgba(228, 174, 87, .45); background: rgba(228, 174, 87, .06); }
-.package-group.is-other-package { opacity: .92; }
+.package-group { display: grid; gap: 6px; padding: 8px; border: 1px solid rgba(228, 174, 87, .45); border-radius: 8px; background: rgba(228, 174, 87, .06); }
 .package-heading { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
 .package-kicker { font-size: 8px; color: var(--accent); }
 .package-hint { margin: 0 0 2px; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.clear-menu { display: grid; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.clear-menu .field-label { font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+#elementTintRow { align-items: end; margin-top: 8px; }
+#elementTintRow .button { align-self: end; height: 34px; }
+.button-element.has-tint img { position: relative; }
+.button-element .tint-overlay {
+  position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  mix-blend-mode: color; opacity: .55;
+}
 .asset-tool, .dashboard-tool { width: 100%; min-height: 52px; display: flex; align-items: center; gap: 9px; padding: 7px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0,0,0,.12); text-align: left; cursor: grab; }
 .asset-tool:hover, .dashboard-tool:hover { border-color: var(--accent); background: rgba(228, 174, 87, .07); }
 .asset-tool:active, .dashboard-tool:active { cursor: grabbing; }

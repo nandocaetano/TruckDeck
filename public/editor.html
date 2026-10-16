@@ -69,10 +69,17 @@
       </section>
 
       <section class="tool-section">
-        <div class="section-title"><span id="buttonsPackageTitle">Pacote Moderno</span><span class="section-kicker" id="buttonsPackageKicker">PACOTES</span></div>
-        <p class="helper-text">O pacote do painel activo vem primeiro. O outro pacote fica disponível para misturar peças.</p>
+        <div class="section-title"><span id="buttonsPackageTitle">Pacote Moderno</span><span class="section-kicker" id="buttonsPackageKicker">PACOTE</span></div>
+        <label class="field" id="packageSelectRow">
+          <span>Pacote activo na paleta</span>
+          <select id="packageSelect">
+            <option value="modern">Pacote Moderno</option>
+            <option value="soviet">Pacote Soviético</option>
+          </select>
+        </label>
+        <p class="helper-text">Selecione um pacote para ver só os seus botões. Mude o seletor para misturar peças de outro pacote.</p>
         <div class="asset-list" id="assetList">
-          <!-- Package groups injected by editor.js from PACKAGES (Modern / Soviet) -->
+          <!-- Exclusive package tools injected by editor.js from PACKAGES -->
         </div>
         <label class="file-button custom-asset-button">
           <span>Carregar botão personalizado</span>
@@ -92,7 +99,11 @@
 
       <section class="tool-section toolbox-footer">
         <p class="helper-text">Clique num ativo para o adicionar ao centro. Arraste-o para posicionar. Ctrl/⌘ + clique seleciona vários botões (grupo) — arraste para mover o grupo todo. Ctrl/⌘+C copia o grupo selecionado, Ctrl/⌘+V cola-o deslocado para reposicionar.</p>
-        <button type="button" class="text-button danger" id="clearButton">Limpar orientação atual</button>
+        <div class="clear-menu" id="clearMenu">
+          <span class="field-label">Limpar</span>
+          <button type="button" class="text-button danger" id="clearOrientationButton">Limpar botões da orientação</button>
+          <button type="button" class="text-button danger" id="clearAllButton">Limpar tudo até o background</button>
+        </div>
       </section>
     </aside>
 
@@ -155,8 +166,13 @@
         <fieldset>
           <legend>Identidade / função</legend>
           <label class="field"><span>ID do layout</span><input id="selectedId" type="text" spellcheck="false" autocomplete="off"></label>
-          <label class="field" id="functionField"><span>Função (catálogo)</span><select id="selectedFunctionId"></select></label>
+          <label class="field" id="functionField"><span id="functionFieldLabel">Função (catálogo)</span><select id="selectedFunctionId"></select></label>
+          <p class="field-note" id="lampHint" hidden>Lâmpada = indicador passivo de telemetria. Não envia comando de veículo.</p>
           <label class="checkbox-field" id="noPictogramField" hidden><input id="selectedNoPictogram" type="checkbox"><span>Nenhum / sem pictograma (asset já tem texto ou legenda impressa de fábrica)</span></label>
+          <div class="coordinate-grid" id="elementTintRow">
+            <label class="field"><span>Cor do elemento</span><input id="selectedElementColor" type="color" value="#ffffff" title="Tint / overlay no asset selecionado"></label>
+            <button type="button" class="button button-small button-accent" id="applyElementColorButton">Aplicar cor</button>
+          </div>
           <div id="slotFields" class="slot-fields" hidden>
             <span class="field-label">Metal 3 × 1 — função de cada interruptor</span>
             <label class="field"><span>Slot 1 (esquerda)</span><input id="selectedSlot1" type="text" placeholder="ex.: beam_high" spellcheck="false" autocomplete="off"></label>
