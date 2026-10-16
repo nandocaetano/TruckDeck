@@ -29,6 +29,38 @@ const LAYOUTS_FILE = path.join(DATA_DIR, 'layouts.json');
 const ATOMIC_LAYOUT_FILE = path.join(DATA_DIR, 'atomic-layout.json');
 const ATOMIC_LAYOUT_SCHEMA = 'desktruck.atomic-layout/v1';
 
+// A legacy save (pre 2026-10-16) kept one flat `orientations` object shared by both skins,
+// tagged only by a single top-level `skin` field -- that's exactly what let switching the
+// editor's skin tab make the Modern board invisible to app.js without anyone touching a
+// button (board.skin flipped to sov_frame, atomicApplies() stopped matching eu_frame pages).
+// Every read goes through here first so legacy files keep their existing buttons, now parked
+// under boards.eu_frame, instead of silently vanishing once the client code stops looking at
+// the old flat shape.
+function migrateAtomicLayout(data) {
+  if (!data || typeof data !== 'object') return data;
+  if (data.boards && typeof data.boards === 'object') return data;
+  if (!data.orientations) return data;
+  const { orientations, skin, ...rest } = data;
+  return {
+    ...rest,
+    boards: {
+      eu_frame: { orientations },
+      sov_frame: { orientations: { landscape: { buttons: [], zones: [] }, portrait: { buttons: [], zones: [] } } }
+    }
+  };
+}
+function readAtomicLayout() {
+  const data = readJson(ATOMIC_LAYOUT_FILE, null);
+  const migrated = migrateAtomicLayout(data);
+  if (migrated && migrated !== data) {
+    try {
+      fs.writeFileSync(ATOMIC_LAYOUT_FILE + '.tmp', JSON.stringify(migrated));
+      fs.renameSync(ATOMIC_LAYOUT_FILE + '.tmp', ATOMIC_LAYOUT_FILE);
+    } catch (e) { console.log('[atomic-layout] Could not persist migration: ' + e.message); }
+  }
+  return migrated;
+}
+
 // How long a tapped key stays down. Games poll input once per frame, so anything shorter
 // than ~2 frames at low fps can be missed.
 const TAP_MS = 70;
@@ -405,7 +437,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   if (isLoopback && route === '/api/atomic-layout' && req.method === 'GET') {
-    json(res, 200, readJson(ATOMIC_LAYOUT_FILE, null));
+    json(res, 200, readAtomicLayout());
     return;
   }
 
@@ -511,7 +543,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (route === '/api/atomic-layout' && req.method === 'GET') {
-      json(res, 200, readJson(ATOMIC_LAYOUT_FILE, null));
+      json(res, 200, readAtomicLayout());
       return;
     }
 
@@ -526,18 +558,24 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      // Same anti-wipe guard as layouts.json: a save with zero buttons in both orientations,
-      // replacing a file that had buttons, is kept as a .bak.json instead of silently applied.
-      const prev = readJson(ATOMIC_LAYOUT_FILE, null);
+      // Same anti-wipe guard as layouts.json: a save with zero buttons across both skins'
+      // boards, replacing a file that had buttons, is kept as a .bak.json instead of silently
+      // applied. Counts both skins together so this guard still catches a wipe regardless of
+      // which skin tab was open when it happened.
+      const prev = readAtomicLayout();
       if (prev) {
-        const buttonCount = (o) => {
-          if (!o || !o.orientations) return 0;
+        const boardButtonCount = (board) => {
+          if (!board || !board.orientations) return 0;
           let n = 0;
           for (const mode of ['landscape', 'portrait']) {
-            const list = o.orientations[mode] && o.orientations[mode].buttons;
+            const list = board.orientations[mode] && board.orientations[mode].buttons;
             if (Array.isArray(list)) n += list.length;
           }
           return n;
+        };
+        const buttonCount = (o) => {
+          if (!o || !o.boards) return 0;
+          return boardButtonCount(o.boards.eu_frame) + boardButtonCount(o.boards.sov_frame);
         };
         const before = buttonCount(prev), after = buttonCount(incoming);
         // Same reasoning as layouts.json above: a save that drops from e.g. 26 buttons to 5

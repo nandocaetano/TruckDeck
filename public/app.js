@@ -306,6 +306,17 @@
     }
     return atomicCache;
   }
+  // Each skin owns its own board under boards.<skin> (see editor.js's freshBoard()/activeBoard()
+  // — this is the other half of the 2026-10-16 fix). A legacy payload synced before that change
+  // is still a flat {orientations,...} with a single top-level skin tag; read it as eu_frame
+  // only, since Soviet boards didn't exist in that shape.
+  function boardFor(skin) {
+    const board = atomicBoard();
+    if (!board) return null;
+    if (board.boards) return board.boards[skin] || null;
+    if (skin === 'eu_frame' && board.orientations) return board;
+    return null;
+  }
   // Shared by connect()'s initial fetch and the SSE-triggered refetch below: write the PC's
   // atomic-layout payload into localStorage only when it actually differs, and drop the cached
   // parse so atomicBoard() re-reads it on the next call.
@@ -317,8 +328,7 @@
     atomicRaw = null; // force atomicBoard() to re-parse instead of serving its old cache
     return true;
   }
-  function hasAtomicButtons() {
-    const board = atomicBoard();
+  function boardHasButtons(board) {
     if (!board || !board.orientations) return false;
     for (const mode of ['landscape', 'portrait']) {
       const o = board.orientations[mode];
@@ -326,21 +336,28 @@
     }
     return false;
   }
-  // If the Layout Editor saved buttons, open Modern (eu_frame) so widgetsOf() paints them.
-  // Call again after connect() sync — the PC store can overwrite activeId.
+  function hasAtomicButtons(skin) {
+    if (skin) return boardHasButtons(boardFor(skin));
+    return boardHasButtons(boardFor('eu_frame')) || boardHasButtons(boardFor('sov_frame'));
+  }
+  // If the Layout Editor saved buttons, open a panel for whichever skin actually has them so
+  // widgetsOf() paints them. Call again after connect() sync — the PC store can overwrite
+  // activeId. Prefers eu_frame when both skins have buttons (today's default panel).
   function preferAtomicModern() {
-    if (!hasAtomicButtons() || !S.store || !Array.isArray(S.store.layouts)) return false;
-    const modern = S.store.layouts.find((l) => l.preset === 'eu_frame'
-      || (l.pages || []).some((pg) => pg && pg.skin === 'eu_frame'));
-    if (!modern || S.store.activeId === modern.id) return false;
-    S.store.activeId = modern.id;
+    if (!S.store || !Array.isArray(S.store.layouts)) return false;
+    const wantSkin = hasAtomicButtons('eu_frame') ? 'eu_frame' : (hasAtomicButtons('sov_frame') ? 'sov_frame' : null);
+    if (!wantSkin) return false;
+    const target = S.store.layouts.find((l) => l.preset === wantSkin
+      || (l.pages || []).some((pg) => pg && pg.skin === wantSkin));
+    if (!target || S.store.activeId === target.id) return false;
+    S.store.activeId = target.id;
     S.page = 0;
     return true;
   }
   // Only the two dashboard zone types are read here; the editor's buttons are bridged
   // separately by atomicDashButtons()/atomicDashButtonsSig() below.
-  function atomicDashZones(cut) {
-    const board = atomicBoard();
+  function atomicDashZones(cut, skin) {
+    const board = boardFor(skin || 'eu_frame');
     const mode = cut === 'P' ? 'portrait' : 'landscape';
     const o = board && board.orientations && board.orientations[mode];
     if (!o || !Array.isArray(o.zones)) return [];
@@ -387,13 +404,15 @@
     return FUNCTIONS[id] ? id : 'custom';
   }
 
-  // A button's asset is either a shipped picture (editor ships it at skins/modern/<file>, same
-  // folder the panel background lives in) or a player-uploaded custom asset, stored once per
-  // board as a data URI in board.customAssets and referenced here by its id.
-  function resolveAtomicAsset(board, key) {
+  // A button's asset is either a shipped picture (Modern: skins/modern/<file>, Soviet:
+  // skins/sov/btn/<file>) or a player-uploaded custom asset, stored once top-level (shared by
+  // both skins' boards) as a data URI in customAssets and referenced here by its id.
+  function resolveAtomicAsset(customAssets, skin, key) {
     if (!key) return null;
-    const custom = board && Array.isArray(board.customAssets) && board.customAssets.find((a) => a && a.id === key);
+    const custom = Array.isArray(customAssets) && customAssets.find((a) => a && a.id === key);
     if (custom) return custom.src || null;
+    if (typeof key === 'string' && key.indexOf('sov_') === 0) return SKIN_PATH + 'sov/btn/' + key;
+    if (skin === 'sov_frame') return SKIN_PATH + 'sov/btn/' + key;
     return SKIN_PATH + 'modern/' + key;
   }
   // Editor-authored asset keys/filenames end up concatenated into a CSS url("...") below; escape
@@ -422,8 +441,10 @@
     }
     return picto;
   }
-  function atomicDashButtons(cut) {
-    const board = atomicBoard();
+  function atomicDashButtons(cut, skin) {
+    const resolvedSkin = skin || 'eu_frame';
+    const board = boardFor(resolvedSkin);
+    const customAssets = atomicBoard() && atomicBoard().customAssets;
     const mode = cut === 'P' ? 'portrait' : 'landscape';
     const o = board && board.orientations && board.orientations[mode];
     if (!o || !Array.isArray(o.buttons)) return [];
@@ -435,7 +456,7 @@
         fn: resolved,
         r: [Number(b.x) || 0, Number(b.y) || 0, Number(b.width) || 1, Number(b.height) || 1],
         zIndex: Number(b.zIndex) || 10,
-        asset: resolveAtomicAsset(board, b.asset),
+        asset: resolveAtomicAsset(customAssets, resolvedSkin, b.asset),
         picto: b.pictogramHidden ? null : atomicButtonPicto(resolved, b.pictogram)
       };
     });
@@ -444,8 +465,8 @@
   // geometry (x,y,width,height) and the pictogram's own box, so drag/resize in the editor and
   // pictogram edits both invalidate the cache. Never the resolved asset src -- that can be a
   // multi-MB base64 data URI.
-  function atomicDashButtonsSig(cut) {
-    const board = atomicBoard();
+  function atomicDashButtonsSig(cut, skin) {
+    const board = boardFor(skin || 'eu_frame');
     const mode = cut === 'P' ? 'portrait' : 'landscape';
     const o = board && board.orientations && board.orientations[mode];
     if (!o || !Array.isArray(o.buttons)) return '';
@@ -553,20 +574,33 @@
   // picture. Frame panels (empty plate + keys drawn by the app) normally ship a capture of the
   // finished panel: skins/<id>-<cut>v.jpg, listed here with its aspect ratio. Modern uses its
   // canonical background pair instead; a cut with no capture borrows the landscape one.
-  const PREVIEWS = { eu_frame: { T: 2752 / 1536, P: 1152 / 1728 }, sov_frame: { T: 1.703 }, scania25_frame: { T: 1.792 } };
-  const panelAsset = (skinId, cut, hideNames) => {
+  const PREVIEWS = { eu_frame: { T: 2752 / 1536, P: 1152 / 1728 }, sov_frame: { T: 2752 / 1536, P: 1536 / 2752 }, scania25_frame: { T: 1.792 } };
+  const SOV_BG_VARIANTS = ['military1', 'military2', 'sigabem', 'vivamexico'];
+  function sovBgOf(l) {
+    const v = (l && l.sovBg) || 'military1';
+    return SOV_BG_VARIANTS.includes(v) ? v : 'military1';
+  }
+  // Empty-plate background for frame skins. Modern uses the leather pair; Soviet uses one of
+  // the four parked variants under skins/sov/bg/. layoutRef lets the gallery preview each
+  // panel's own sovBg instead of the active layout's.
+  const panelAsset = (skinId, cut, hideNames, layoutRef) => {
     if (skinId === 'eu_frame') {
       return SKIN_PATH + 'modern/' + (cut === 'P' ? 'bg-portrait.jpg' : 'bg-landscape.jpg');
     }
+    if (skinId === 'sov_frame') {
+      const variant = sovBgOf(layoutRef || layout());
+      return SKIN_PATH + 'sov/bg/bg-' + variant + '-' + (cut === 'P' ? 'portrait' : 'landscape') + '.jpg';
+    }
     return SKIN_PATH + skinId + '-' + cut + (hideNames ? 'n' : '') + '.jpg';
   };
-  const previewOf = (skinId, cut) => {
+  const previewOf = (skinId, cut, layoutRef) => {
     const pv = PREVIEWS[skinId];
     if (pv) {
       const c = pv[cut] ? cut : 'T';
-      return { src: skinId === 'eu_frame' ? panelAsset(skinId, c, false) : SKIN_PATH + skinId + '-' + c + 'v.jpg', ar: pv[c] };
+      const usePlate = skinId === 'eu_frame' || skinId === 'sov_frame';
+      return { src: usePlate ? panelAsset(skinId, c, false, layoutRef) : SKIN_PATH + skinId + '-' + c + 'v.jpg', ar: pv[c] };
     }
-    return { src: panelAsset(skinId, cut, false), ar: SKINS[skinId][cut].ar };
+    return { src: panelAsset(skinId, cut, false, layoutRef), ar: SKINS[skinId][cut].ar };
   };
   const skinCut = (pg) => (pg.size === 'phone' ? 'P' : 'T');
   const skinOf = (pg) => (pg.skin && SKINS[pg.skin] ? SKINS[pg.skin][skinCut(pg)] : null);
@@ -579,13 +613,22 @@
       : { t: 'rtext', two: true, utility: 1, r: [z.x, z.y, z.width, z.height], id: z.id, bg: '#010203', ink: '#d9f4ff' };
   }
   let skinMemo = { key: '', list: [] };
+  // Each skin reads only its own board (boardFor(pg.skin)) so eu_frame and sov_frame can
+  // never leak into each other. An untouched board (e.g. sov_frame right after migration)
+  // has zero buttons, so its pages fall through to the normal fixed/factory widgets instead
+  // of painting an empty atomic layer.
+  function atomicApplies(pg) {
+    if (pg.skin !== 'eu_frame' && pg.skin !== 'sov_frame') return false;
+    return boardHasButtons(boardFor(pg.skin));
+  }
   function widgetsOf(pg) {
     const skin = skinOf(pg);
     if (!skin) return pg.widgets || [];
     const cut = skinCut(pg);
-    const zones = pg.skin === 'eu_frame' ? atomicDashZones(cut) : [];
-    const buttons = pg.skin === 'eu_frame' ? atomicDashButtons(cut) : [];
-    const buttonsSig = pg.skin === 'eu_frame' ? atomicDashButtonsSig(cut) : '';
+    const useAtomic = atomicApplies(pg);
+    const zones = useAtomic ? atomicDashZones(cut, pg.skin) : [];
+    const buttons = useAtomic ? atomicDashButtons(cut, pg.skin) : [];
+    const buttonsSig = useAtomic ? atomicDashButtonsSig(cut, pg.skin) : '';
     const key = pg.id + cut + JSON.stringify(pg.over || {}) + JSON.stringify(zones) + buttonsSig;
     if (skinMemo.key !== key) {
       // Zones from the editor replace the preset's fixed w_drive/w_media slots wholesale; a
@@ -4096,6 +4139,8 @@
       '<label class="field"><span>Name</span><input type="text" data-field="name" value="' + esc(p.name) + '"></label>' +
       (p.skin ? '<p class="note">' + (p.skin === 'eu_frame'
         ? 'Modern starts with a complete mapped layout. In Edit mode, drag a button to move it or tap it to change its function; portrait and landscape positions are saved independently.'
+        : p.skin === 'sov_frame'
+        ? 'Soviet uses an empty plate plus live keys. Pick the fascia photo under Menu › This panel › Soviet background. Layout Editor boards with skin sov_frame replace the factory grid when they have buttons.'
         : 'This page is the panel picture: its keys stay where they are painted. Tap a key in Edit to change what it does, or add a page of your own keys below.') + '</p>' :
       '<div class="group"><h3>Grid</h3><div class="row">' +
       '<div class="sizer"><span>Columns</span><div class="stepper"><button class="btn" data-act="grid" data-d="c-">−</button><b>' + p.cols + '</b><button class="btn" data-act="grid" data-d="c+">+</button></div></div>' +
@@ -4223,6 +4268,10 @@
         '<label class="field grow"><span>Panel</span><input type="color" data-field="sc25:bg" value="' + ((l.sc25 && l.sc25.bg) || '#0a0c10') + '"></label></div>' +
         '<button class="btn" data-act="sc25home">Cluster back to screen 1</button><button class="btn" data-act="sc25learn">' + (S.padLearn ? 'Press the controller button now...' : 'Learn a controller button') + '</button>' +
         '<p class="note">' + (S.dashAuto ? 'Sync: automatic. ' : '') + 'Learned controller button: ' + ((l.sc25 && l.sc25.padBtn !== undefined && l.sc25.padBtn !== '') ? l.sc25.padBtn : 'none') + '. Last button seen: ' + (S.lastPad === undefined ? 'none yet' : S.lastPad) + '.</p>' : '') +
+      (skinId === 'sov_frame' ? '<label class="field"><span>Soviet background</span><select data-field="sovBg">' + options([
+        ['military1', 'Military 1'], ['military2', 'Military 2'], ['sigabem', 'Siga Bem'], ['vivamexico', 'Viva México'],
+      ], sovBgOf(l)) + '</select></label>' +
+      '<p class="note">Empty plate behind the Soviet keys. Widgets stay the same; only the fascia photo changes.</p>' : '') +
       (hasSkin ? '<button class="btn" data-act="deco">Stickers: add, move, remove</button>' : '') +
       (hasStickers ? check('stickers', 'Show the stickers that come with this panel', l.stickers !== false) : '') +
       (hasSkin && !l.locked ? '<button class="btn" data-act="rebuild">Put every key back as in the art</button>' : '') +
@@ -4237,6 +4286,11 @@
       (act, target) => {
         if (act === 'field') {
           if (target.dataset.field.indexOf('sc25:') === 0) { l.sc25 = l.sc25 || {}; l.sc25[target.dataset.field.slice(5)] = target.value; save(); renderPanel(); return; }
+          if (target.dataset.field === 'sovBg') {
+            l.sovBg = sovBgOf({ sovBg: target.value });
+            skinMemo = { key: '', list: [] };
+            save(); renderPanel(); return;
+          }
           if (target.dataset.field === 'stickers') { l.stickers = target.checked; save(); renderPanel(); return; }
           if (GLOBAL_KEYS.includes(target.dataset.field)) {
             const f = target.dataset.field;
@@ -4321,7 +4375,7 @@
     };
     const card = (x) => {
       const skin = x.pages[0].skin;
-      const pv = skin && SKINS[skin] ? previewOf(skin, cut) : null;
+      const pv = skin && SKINS[skin] ? previewOf(skin, cut, x) : null;
       const ar = pv ? pv.ar : 1.4;
       return '<article class="gcard' + (x.id === act ? ' current' : '') + '" data-id="' + x.id + '">' +
         '<div class="gpic" style="aspect-ratio:' + ar + '">' + (pv ? '<img src="' + pv.src + '" alt="" draggable="false">' : '<span>' + esc(x.name) + '</span>') + '</div>' +

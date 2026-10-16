@@ -17,6 +17,10 @@
         <button type="button" class="button button-ghost button-small" id="undoButton" title="Desfazer (Ctrl+Z)" disabled>↺</button>
         <button type="button" class="button button-ghost button-small" id="redoButton" title="Refazer (Ctrl+Y)" disabled>↻</button>
       </div>
+      <div class="orientation-switch" role="group" aria-label="Tema">
+        <button type="button" class="skin-button is-active" data-skin="eu_frame">Modern</button>
+        <button type="button" class="skin-button" data-skin="sov_frame">Soviet</button>
+      </div>
       <div class="orientation-switch" role="group" aria-label="Orientação">
         <button type="button" class="orientation-button is-active" data-orientation="landscape">Landscape</button>
         <button type="button" class="orientation-button" data-orientation="portrait">Portrait</button>
@@ -47,6 +51,15 @@
             <small id="backgroundPath">skins/modern/bg-landscape.jpg</small>
           </div>
         </div>
+        <label class="field" id="sovBgRow" hidden>
+          <span>Variante soviética</span>
+          <select id="sovBgSelect">
+            <option value="military1">Military 1</option>
+            <option value="military2">Military 2</option>
+            <option value="sigabem">Siga Bem</option>
+            <option value="vivamexico">Viva México</option>
+          </select>
+        </label>
         <label class="file-button">
           <span>Carregar imagem local</span>
           <input id="backgroundInput" type="file" accept="image/png,image/jpeg,image/webp">
@@ -57,42 +70,7 @@
       <section class="tool-section">
         <div class="section-title"><span>Botões individuais</span><span class="section-kicker">ATIVOS</span></div>
         <div class="asset-list" id="assetList">
-          <button type="button" class="asset-tool" draggable="true" data-asset="btn-rocker-v.png" data-label="Rocker vertical">
-            <span class="asset-preview"><img src="skins/modern/btn-rocker-v.png" alt=""></span><span><strong>Rocker V</strong><small>btn-rocker-v.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="btn-rocker-h.png" data-label="Rocker horizontal">
-            <span class="asset-preview"><img src="skins/modern/btn-rocker-h.png" alt=""></span><span><strong>Rocker H</strong><small>btn-rocker-h.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="btn-square.png" data-label="Botão quadrado">
-            <span class="asset-preview"><img src="skins/modern/btn-square.png" alt=""></span><span><strong>Square</strong><small>btn-square.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="btn-3x1-metal.png" data-label="Metal 3 × 1">
-            <span class="asset-preview asset-preview-wide"><img src="skins/modern/btn-3x1-metal.png" alt=""></span><span><strong>Metal 3 × 1</strong><small>btn-3x1-metal.png · 3 funções</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="engine_cir.png" data-label="Motor circular">
-            <span class="asset-preview"><img src="skins/modern/engine_cir.png" alt=""></span><span><strong>Motor circular</strong><small>engine_cir.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="engine_cr_vt.png" data-label="Motor cromado VT">
-            <span class="asset-preview"><img src="skins/modern/engine_cr_vt.png" alt=""></span><span><strong>Motor cromado VT</strong><small>engine_cr_vt.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="engine_cromo.png" data-label="Motor cromado">
-            <span class="asset-preview"><img src="skins/modern/engine_cromo.png" alt=""></span><span><strong>Motor cromado</strong><small>engine_cromo.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="engine_old.png" data-label="Motor clássico">
-            <span class="asset-preview"><img src="skins/modern/engine_old.png" alt=""></span><span><strong>Motor clássico</strong><small>engine_old.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="engine_red.png" data-label="Motor vermelho">
-            <span class="asset-preview"><img src="skins/modern/engine_red.png" alt=""></span><span><strong>Motor vermelho</strong><small>engine_red.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="hazard_black.png" data-label="Alerta preto">
-            <span class="asset-preview"><img src="skins/modern/hazard_black.png" alt=""></span><span><strong>Alerta preto</strong><small>hazard_black.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="hazard_sq_blk.png" data-label="Alerta quadrado">
-            <span class="asset-preview"><img src="skins/modern/hazard_sq_blk.png" alt=""></span><span><strong>Alerta quadrado</strong><small>hazard_sq_blk.png</small></span>
-          </button>
-          <button type="button" class="asset-tool" draggable="true" data-asset="parking.png" data-label="Estacionamento">
-            <span class="asset-preview"><img src="skins/modern/parking.png" alt=""></span><span><strong>Estacionamento</strong><small>parking.png</small></span>
-          </button>
+          <!-- Shipped assets are injected by editor.js from ASSETS_MODERN / ASSETS_SOV -->
         </div>
         <label class="file-button custom-asset-button">
           <span>Carregar botão personalizado</span>

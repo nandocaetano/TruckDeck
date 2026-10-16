@@ -3,11 +3,28 @@
   'use strict';
 
   const STORAGE_KEY = 'desktruck.atomic-layout.v1';
-  const OFFICIAL = {
+  const OFFICIAL_MODERN = {
     landscape: { name: 'bg-landscape.jpg', src: 'skins/modern/bg-landscape.jpg', width: 2752, height: 1536 },
     portrait: { name: 'bg-portrait.jpg', src: 'skins/modern/bg-portrait.jpg', width: 1152, height: 1728 }
   };
-  const ASSETS = {
+  const SOV_BG_VARIANTS = ['military1', 'military2', 'sigabem', 'vivamexico'];
+  const SOV_BG_LABELS = {
+    military1: 'Military 1',
+    military2: 'Military 2',
+    sigabem: 'Siga Bem',
+    vivamexico: 'Viva México'
+  };
+  function officialOf(mode) {
+    if (state.skin === 'sov_frame') {
+      const variant = SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'military1';
+      const name = 'bg-' + variant + '-' + mode + '.jpg';
+      return mode === 'landscape'
+        ? { name: name, src: 'skins/sov/bg/' + name, width: 2752, height: 1536 }
+        : { name: name, src: 'skins/sov/bg/' + name, width: 1536, height: 2752 };
+    }
+    return OFFICIAL_MODERN[mode];
+  }
+  const ASSETS_MODERN = {
     'btn-rocker-v.png': { label: 'Rocker V', defaultSize: [5.5, 13] },
     'btn-rocker-h.png': { label: 'Rocker H', defaultSize: [13, 5.5] },
     'btn-square.png': { label: 'Square', defaultSize: [8, 8] },
@@ -21,6 +38,29 @@
     'hazard_sq_blk.png': { label: 'Alerta quadrado', defaultSize: [8, 8] },
     'parking.png': { label: 'Estacionamento', defaultSize: [8, 8] }
   };
+  const ASSETS_SOV = {
+    'sov_key.png': { label: 'Key', defaultSize: [8, 10] },
+    'sov_sq.png': { label: 'Square', defaultSize: [8, 8] },
+    'sov_push.png': { label: 'Push', defaultSize: [8, 8] },
+    'sov_tog_up.png': { label: 'Toggle up', defaultSize: [6, 12] },
+    'sov_tog_mid.png': { label: 'Toggle mid', defaultSize: [6, 12] },
+    'sov_tog_down.png': { label: 'Toggle down', defaultSize: [6, 12] },
+    'sov_lamp_red_off.png': { label: 'Lamp red off', defaultSize: [7, 7] },
+    'sov_lamp_red_on.png': { label: 'Lamp red on', defaultSize: [7, 7] },
+    'sov_lamp_green_off.png': { label: 'Lamp green off', defaultSize: [7, 7] },
+    'sov_lamp_green_on.png': { label: 'Lamp green on', defaultSize: [7, 7] },
+    'sov_lamp_blue_off.png': { label: 'Lamp blue off', defaultSize: [7, 7] },
+    'sov_lamp_blue_on.png': { label: 'Lamp blue on', defaultSize: [7, 7] },
+    'sov_lamp_amber_off.png': { label: 'Lamp amber off', defaultSize: [7, 7] },
+    'sov_lamp_amber_on.png': { label: 'Lamp amber on', defaultSize: [7, 7] },
+    'sov_dial_speed.png': { label: 'Dial speed', defaultSize: [18, 18] },
+    'sov_dial_rpm.png': { label: 'Dial rpm', defaultSize: [18, 18] },
+    'sov_dial_fuel.png': { label: 'Dial fuel', defaultSize: [12, 12] },
+    'sov_dial_air.png': { label: 'Dial air', defaultSize: [12, 12] }
+  };
+  function currentAssets() {
+    return state.skin === 'sov_frame' ? ASSETS_SOV : ASSETS_MODERN;
+  }
   const DASHBOARDS = {
     'dash-obd': { label: 'Tela OBD', defaultSize: [38, 15] },
     'dash-speedometer': { label: 'Velocímetro', defaultSize: [22, 15] }
@@ -71,25 +111,40 @@
     return [0, 1, 2].map((i) => String(arr[i] || ''));
   }
   function getAssetDef(key) {
-    if (ASSETS[key]) return ASSETS[key];
+    if (ASSETS_MODERN[key]) return ASSETS_MODERN[key];
+    if (ASSETS_SOV[key]) return ASSETS_SOV[key];
     return customAssets.find((asset) => asset.id === key) || null;
   }
   function assetImageSrc(key) {
-    if (ASSETS[key]) return 'skins/modern/' + key;
+    if (ASSETS_MODERN[key]) return 'skins/modern/' + key;
+    if (ASSETS_SOV[key]) return 'skins/sov/btn/' + key;
     const custom = customAssets.find((asset) => asset.id === key);
     return custom ? custom.src : '';
   }
 
+  // Each skin owns its own buttons/zones so flipping the editor's skin tab (setSkin below)
+  // can never make one skin's board overwrite or hide the other's -- that shared-board +
+  // global board.skin tag was the root cause of the 2026-10-16 incident (app.js's
+  // atomicApplies() compares pg.skin to this one global flag).
+  function freshBoard() {
+    return {
+      orientations: {
+        landscape: { buttons: [], zones: defaultZones('landscape') },
+        portrait: { buttons: [], zones: defaultZones('portrait') }
+      }
+    };
+  }
   function initialState() {
     return {
       schema: 'desktruck.atomic-layout/v1',
       skin: 'eu_frame',
+      sovBg: 'military1',
       gridStep: 1,
       snap: true,
       guides: true,
-      orientations: {
-        landscape: { buttons: [], zones: defaultZones('landscape') },
-        portrait: { buttons: [], zones: defaultZones('portrait') }
+      boards: {
+        eu_frame: freshBoard(),
+        sov_frame: freshBoard()
       }
     };
   }
@@ -149,6 +204,8 @@
   function applyPayload(saved) {
     const fresh = initialState();
     if (!saved || saved.schema !== fresh.schema) return fresh;
+    fresh.skin = saved.skin === 'sov_frame' ? 'sov_frame' : 'eu_frame';
+    fresh.sovBg = SOV_BG_VARIANTS.includes(saved.sovBg) ? saved.sovBg : 'military1';
     customAssets = Array.isArray(saved.customAssets)
       ? saved.customAssets.filter((item) => item && typeof item.id === 'string' && typeof item.src === 'string').map((item) => ({
         id: item.id,
@@ -157,11 +214,20 @@
         defaultSize: Array.isArray(item.defaultSize) && item.defaultSize.length === 2 ? item.defaultSize : [8, 8]
       }))
       : [];
-    ['landscape', 'portrait'].forEach((mode) => {
-      const source = saved.orientations && saved.orientations[mode];
-      if (!source) return;
-      fresh.orientations[mode].buttons = Array.isArray(source.buttons) ? source.buttons.map(normalizeButton) : [];
-      fresh.orientations[mode].zones = Array.isArray(source.zones) ? source.zones.map(normalizeZone) : [];
+    // v2 payloads carry a per-skin boards map; a legacy flat payload (top-level `orientations`,
+    // no `boards`) is migrated here by reading it as the eu_frame board only -- it predates the
+    // Soviet skin, so nothing of substance can be sitting in a sov_frame board that old shape
+    // never had.
+    ['eu_frame', 'sov_frame'].forEach((skinKey) => {
+      const savedBoard = (saved.boards && saved.boards[skinKey])
+        || (skinKey === 'eu_frame' && !saved.boards ? saved : null);
+      if (!savedBoard || !savedBoard.orientations) return;
+      ['landscape', 'portrait'].forEach((mode) => {
+        const source = savedBoard.orientations[mode];
+        if (!source) return;
+        fresh.boards[skinKey].orientations[mode].buttons = Array.isArray(source.buttons) ? source.buttons.map(normalizeButton) : [];
+        fresh.boards[skinKey].orientations[mode].zones = Array.isArray(source.zones) ? source.zones.map(normalizeZone) : [];
+      });
     });
     fresh.gridStep = clamp(Number(saved.gridStep) || 1, .25, 10);
     fresh.snap = saved.snap !== false;
@@ -253,7 +319,7 @@
   function normalizeButton(item) {
     const resolved = getAssetDef(item.asset);
     const asset = resolved ? item.asset : 'btn-square.png';
-    const def = resolved || ASSETS['btn-square.png'];
+    const def = resolved || ASSETS_MODERN['btn-square.png'];
     return {
       id: String(item.id || uid('button')),
       asset,
@@ -316,7 +382,7 @@
     // should leave the same button selected, showing the reverted value) -- only drop entries
     // whose element the undo/redo itself added or removed.
     selection = keptSelection.filter((entry) => findElement(entry.kind, entry.id));
-    persist(); renderCustomAssetTools(); render();
+    persist(); renderShippedAssetTools(); renderCustomAssetTools(); render();
   }
   function undo() {
     if (!historyStack.length) return;
@@ -339,13 +405,15 @@
     if (redoButton) redoButton.disabled = !redoStack.length;
   }
 
-  function currentBoard() { return state.orientations[orientation]; }
+  function activeBoard() { return state.boards[state.skin]; }
+  function currentBoard() { return activeBoard().orientations[orientation]; }
   function allElements() { return currentBoard().buttons.map((item) => ({ kind: 'button', item })).concat(currentBoard().zones.map((item) => ({ kind: 'zone', item }))); }
   function findElement(kind, id) { return allElements().find((entry) => entry.kind === kind && entry.item.id === id); }
   function isSelected(kind, id) { return selection.some((entry) => entry.kind === kind && entry.id === id); }
 
   function init() {
     bindControls();
+    renderShippedAssetTools();
     renderCustomAssetTools();
     setOrientation('landscape');
     render();
@@ -357,7 +425,9 @@
 
   function bindControls() {
     $$('.orientation-button').forEach((button) => button.addEventListener('click', () => setOrientation(button.dataset.orientation)));
-    $$('.asset-tool').forEach(bindTool);
+    $$('.skin-button').forEach((button) => button.addEventListener('click', () => setSkin(button.dataset.skin)));
+    const sovSelect = $('#sovBgSelect');
+    if (sovSelect) sovSelect.addEventListener('change', () => setSovBg(sovSelect.value));
     $$('.dashboard-tool').forEach(bindTool);
     $('#backgroundInput').addEventListener('change', handleBackgroundFile);
     $('#customAssetInput').addEventListener('change', handleCustomAssetFile);
@@ -480,18 +550,66 @@
   }
 
   function setOrientation(next) {
-    if (!OFFICIAL[next]) return;
+    if (next !== 'landscape' && next !== 'portrait') return;
     orientation = next;
     selection = [];
     $$('.orientation-button').forEach((button) => button.classList.toggle('is-active', button.dataset.orientation === orientation));
     render();
   }
 
+  // Switching tabs is a VIEW change, not an edit: it must never touch history or trigger a
+  // save. Each skin already owns its own board (see freshBoard() above), so no data crosses
+  // over just by looking at the other tab.
+  function setSkin(next) {
+    const skin = next === 'sov_frame' ? 'sov_frame' : 'eu_frame';
+    if (state.skin === skin) return;
+    state.skin = skin;
+    if (!SOV_BG_VARIANTS.includes(state.sovBg)) state.sovBg = 'military1';
+    selection = [];
+    renderShippedAssetTools();
+    render();
+    announce(skin === 'sov_frame' ? 'Tema Soviético — empty plate + widgets PNG.' : 'Tema Modern — empty plate + rockers.');
+  }
+
+  function setSovBg(variant) {
+    const next = SOV_BG_VARIANTS.includes(variant) ? variant : 'military1';
+    if (state.sovBg === next) return;
+    state.sovBg = next;
+    persist();
+    render();
+    announce('Fundo soviético: ' + (SOV_BG_LABELS[next] || next) + '.');
+  }
+
+  function renderShippedAssetTools() {
+    const list = $('#assetList');
+    if (!list) return;
+    $$('.asset-tool:not(.is-custom)', list).forEach((node) => node.remove());
+    const assets = currentAssets();
+    const fragment = document.createDocumentFragment();
+    Object.keys(assets).forEach((key) => {
+      const def = assets[key];
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'asset-tool';
+      button.draggable = true;
+      button.dataset.asset = key;
+      button.dataset.label = def.label;
+      const wide = def.defaultSize[0] > def.defaultSize[1] * 1.6;
+      button.innerHTML = '<span class="asset-preview' + (wide ? ' asset-preview-wide' : '') + '"><img src="' + assetImageSrc(key) + '" alt=""></span><span><strong>' + escapeHtml(def.label) + '</strong><small>' + escapeHtml(key) + '</small></span>';
+      bindTool(button);
+      fragment.appendChild(button);
+    });
+    const firstCustom = list.querySelector('.asset-tool.is-custom');
+    if (firstCustom) list.insertBefore(fragment, firstCustom);
+    else list.appendChild(fragment);
+  }
+
   function render() {
     const board = currentBoard();
-    const bg = OFFICIAL[orientation];
+    const bg = officialOf(orientation);
     const stage = $('#stage');
     stage.dataset.orientation = orientation;
+    stage.dataset.skin = state.skin;
     stage.style.setProperty('--stage-aspect', bg.width + ' / ' + bg.height);
     stage.style.backgroundImage = 'url("' + (runtimeBackgrounds[orientation] || bg.src) + '")';
     stage.classList.toggle('has-elements', board.buttons.length + board.zones.length > 0);
@@ -500,6 +618,13 @@
     $('#backgroundName').textContent = runtimeBackgrounds[orientation] ? 'imagem local' : bg.name;
     $('#backgroundPath').textContent = runtimeBackgrounds[orientation] ? 'preview temporário' : bg.src;
     $('#workspaceTitle').innerHTML = (orientation === 'landscape' ? 'Landscape' : 'Portrait') + ' <span>· ' + bg.width + ' × ' + bg.height + '</span>';
+    const brand = $('.brand .eyebrow');
+    if (brand) brand.textContent = state.skin === 'sov_frame' ? 'DESKTRUCK / SOVIET' : 'DESKTRUCK / MODERN';
+    $$('.skin-button').forEach((button) => button.classList.toggle('is-active', button.dataset.skin === state.skin));
+    const sovRow = $('#sovBgRow');
+    if (sovRow) sovRow.hidden = state.skin !== 'sov_frame';
+    const sovSelect = $('#sovBgSelect');
+    if (sovSelect) sovSelect.value = SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'military1';
     $('#snapToggle').checked = state.snap;
     $('#guidesToggle').checked = state.guides;
     $('#gridStep').value = state.gridStep;
@@ -900,7 +1025,7 @@
 
   function displayValues(item, unit) {
     if (unit === 'px') {
-      const bg = OFFICIAL[orientation];
+      const bg = officialOf(orientation);
       return { x: round(item.x / 100 * bg.width, 2), y: round(item.y / 100 * bg.height, 2), width: round(item.width / 100 * bg.width, 2), height: round(item.height / 100 * bg.height, 2) };
     }
     return { x: round(item.x, 3), y: round(item.y, 3), width: round(item.width, 3), height: round(item.height, 3) };
@@ -918,7 +1043,7 @@
     const id = $('#selectedId').value.trim();
     if (id && !allElements().some(({ item }) => item.id === id && item !== primary.item)) primary.item.id = id;
     primary.item.functionId = primary.kind === 'button' ? $('#selectedFunctionId').value.trim() : '';
-    primary.item.label = $('#selectedLabel').value.trim() || (primary.kind === 'button' ? (getAssetDef(primary.item.asset) || ASSETS['btn-square.png']).label : DASHBOARDS[primary.item.type].label);
+    primary.item.label = $('#selectedLabel').value.trim() || (primary.kind === 'button' ? (getAssetDef(primary.item.asset) || ASSETS_MODERN['btn-square.png']).label : DASHBOARDS[primary.item.type].label);
     selection = selection.map((entry) => entry.kind === primary.kind && entry.id === previousId ? { kind: primary.kind, id: primary.item.id } : entry);
     persist(); renderStage(); renderInspector();
   }
@@ -928,7 +1053,7 @@
     if (!primary) return;
     pushHistory();
     const unit = $('#selectedUnit').value;
-    const bg = OFFICIAL[orientation];
+    const bg = officialOf(orientation);
     const value = (id, size) => {
       const number = Number($('#' + id).value);
       return unit === 'px' ? number / size * 100 : number;
@@ -1007,7 +1132,7 @@
   function clearOrientation() {
     if (!window.confirm('Remover todos os botões e zonas desta orientação?')) return;
     pushHistory();
-    state.orientations[orientation] = { buttons: [], zones: [] }; selection = []; persist(); render(); announce('Orientação limpa.');
+    activeBoard().orientations[orientation] = { buttons: [], zones: [] }; selection = []; persist(); render(); announce('Orientação limpa.');
   }
 
   function deleteSelection() {
@@ -1076,19 +1201,28 @@
   function buildReport() {
     const orientations = {};
     ['landscape', 'portrait'].forEach((mode) => {
-      const bg = OFFICIAL[mode];
-      const board = state.orientations[mode];
+      const bg = officialOf(mode);
+      const board = activeBoard().orientations[mode];
       orientations[mode] = {
         background: { file: bg.src, width: bg.width, height: bg.height, localPreviewLoaded: Boolean(runtimeBackgrounds[mode]) },
         zones: board.zones.map((zone) => exportElement(zone, 'dashboard', mode)),
         buttons: board.buttons.map((button) => exportElement(button, 'button', mode))
       };
     });
-    return { schema: state.schema, version: 1, skin: state.skin, generatedAt: new Date().toISOString(), grid: { snap: state.snap, stepPercent: state.gridStep, guides: state.guides }, customAssets, orientations };
+    return {
+      schema: state.schema,
+      version: 1,
+      skin: state.skin,
+      sovBg: state.skin === 'sov_frame' ? (SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'military1') : undefined,
+      generatedAt: new Date().toISOString(),
+      grid: { snap: state.snap, stepPercent: state.gridStep, guides: state.guides },
+      customAssets,
+      orientations
+    };
   }
 
   function exportElement(item, kind, mode) {
-    const bg = OFFICIAL[mode];
+    const bg = officialOf(mode);
     const result = { id: item.id, type: kind, label: item.label, position: { unit: 'percent', x: round(item.x), y: round(item.y), width: round(item.width), height: round(item.height) }, pixels: { x: round(item.x / 100 * bg.width, 2), y: round(item.y / 100 * bg.height, 2), width: round(item.width / 100 * bg.width, 2), height: round(item.height / 100 * bg.height, 2) }, zIndex: item.zIndex || 1 };
     if (kind === 'button') Object.assign(result, { asset: item.asset, functionId: item.functionId || '', pictogram: item.pictogram || defaultPictogram(), pictogramHidden: Boolean(item.pictogramHidden), slots: Array.isArray(item.slots) ? item.slots : undefined });
     else result.dashboard = item.type;
@@ -1105,11 +1239,12 @@
       '.modern-atomic-canvas > .modern-atomic-dashboard { border: 1px dashed rgba(117,199,192,.8); }'
     ];
     Object.entries(report.orientations).forEach(([mode, data]) => {
-      const bg = OFFICIAL[mode];
+      const bg = officialOf(mode);
       lines.push('', '.modern-atomic-canvas[data-orientation="' + mode + '"] {', '  aspect-ratio: ' + bg.width + ' / ' + bg.height + ';', '  background-image: url("' + bg.src + '");', '}');
       data.zones.concat(data.buttons).forEach((item) => {
         const selector = '.modern-atomic-canvas[data-orientation="' + mode + '"] > [data-layout-id="' + cssQuote(item.id) + '"]';
-        lines.push(selector + ' {', '  left: ' + item.position.x + '%;', '  top: ' + item.position.y + '%;', '  width: ' + item.position.width + '%;', '  height: ' + item.position.height + '%;', '  z-index: ' + item.zIndex + ';', item.asset ? '  background-image: url("skins/modern/' + item.asset + '");' : '', item.functionId ? '  --function-id: "' + cssQuote(item.functionId) + '";' : '', '}');
+        const assetSrc = item.asset ? assetImageSrc(item.asset) : '';
+        lines.push(selector + ' {', '  left: ' + item.position.x + '%;', '  top: ' + item.position.y + '%;', '  width: ' + item.position.width + '%;', '  height: ' + item.position.height + '%;', '  z-index: ' + item.zIndex + ';', assetSrc ? '  background-image: url("' + assetSrc + '");' : '', item.functionId ? '  --function-id: "' + cssQuote(item.functionId) + '";' : '', '}');
       });
     });
     return lines.filter((line) => line !== undefined).join('\n');
@@ -1152,16 +1287,22 @@
           });
           renderCustomAssetTools();
         }
+        // A report targets exactly one skin (whichever was active when it was exported) --
+        // set state.skin FIRST so the import writes into that skin's own board, never into
+        // whatever tab happened to be open before the import.
+        const importSkin = report.skin === 'sov_frame' ? 'sov_frame' : 'eu_frame';
+        state.skin = importSkin;
         ['landscape', 'portrait'].forEach((mode) => {
           const source = report.orientations && report.orientations[mode];
           if (!source) return;
-          state.orientations[mode] = {
+          state.boards[importSkin].orientations[mode] = {
             buttons: (source.buttons || []).map((item) => normalizeButton({ id: item.id, asset: item.asset, label: item.label, functionId: item.functionId, pictogram: item.pictogram, pictogramHidden: item.pictogramHidden, slots: item.slots, ...(item.position || {}) })),
             zones: (source.zones || []).map((item) => normalizeZone({ id: item.id, type: item.dashboard || item.type, label: item.label, ...(item.position || {}) }))
           };
         });
         if (report.grid) { state.gridStep = clamp(Number(report.grid.stepPercent) || 1, .25, 10); state.snap = report.grid.snap !== false; state.guides = report.grid.guides !== false; }
-        persist(); selection = []; render(); announce('Relatório importado.');
+        state.sovBg = SOV_BG_VARIANTS.includes(report.sovBg) ? report.sovBg : 'military1';
+        persist(); selection = []; renderShippedAssetTools(); render(); announce('Relatório importado.');
       } catch (error) { announce('Não foi possível importar este JSON.'); }
     };
     reader.readAsText(file); event.target.value = '';
