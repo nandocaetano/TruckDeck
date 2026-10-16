@@ -7,8 +7,9 @@
     landscape: { name: 'bg-landscape.jpg', src: 'skins/modern/bg-landscape.jpg', width: 2752, height: 1536 },
     portrait: { name: 'bg-portrait.jpg', src: 'skins/modern/bg-portrait.jpg', width: 1152, height: 1728 }
   };
-  const SOV_BG_VARIANTS = ['military1', 'military2', 'sigabem', 'vivamexico'];
+  const SOV_BG_VARIANTS = ['white', 'military1', 'military2', 'sigabem', 'vivamexico'];
   const SOV_BG_LABELS = {
+    white: 'Branca / Esmaltada',
     military1: 'Military 1',
     military2: 'Military 2',
     sigabem: 'Siga Bem',
@@ -16,7 +17,7 @@
   };
   function officialOf(mode) {
     if (state.skin === 'sov_frame') {
-      const variant = SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'military1';
+      const variant = SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'white';
       const name = 'bg-' + variant + '-' + mode + '.jpg';
       return mode === 'landscape'
         ? { name: name, src: 'skins/sov/bg/' + name, width: 2752, height: 1536 }
@@ -192,7 +193,7 @@
     return {
       schema: 'desktruck.atomic-layout/v1',
       skin: 'eu_frame',
-      sovBg: 'military1',
+      sovBg: 'white',
       gridStep: 1,
       snap: true,
       guides: true,
@@ -268,7 +269,7 @@
     const fresh = initialState();
     if (!saved || saved.schema !== fresh.schema) return fresh;
     fresh.skin = saved.skin === 'sov_frame' ? 'sov_frame' : 'eu_frame';
-    fresh.sovBg = SOV_BG_VARIANTS.includes(saved.sovBg) ? saved.sovBg : 'military1';
+    fresh.sovBg = SOV_BG_VARIANTS.includes(saved.sovBg) ? saved.sovBg : 'white';
     customAssets = Array.isArray(saved.customAssets)
       ? saved.customAssets.filter((item) => item && typeof item.id === 'string' && typeof item.src === 'string').map((item) => ({
         id: item.id,
@@ -661,7 +662,7 @@
     const skin = next === 'sov_frame' ? 'sov_frame' : 'eu_frame';
     if (state.skin === skin) return;
     state.skin = skin;
-    if (!SOV_BG_VARIANTS.includes(state.sovBg)) state.sovBg = 'military1';
+    if (!SOV_BG_VARIANTS.includes(state.sovBg)) state.sovBg = 'white';
     // Cascade palette follows the skin tab by default (exclusive package view).
     activePackageId = packageIdForSkin(skin);
     const packageSelect = $('#packageSelect');
@@ -673,7 +674,7 @@
   }
 
   function setSovBg(variant) {
-    const next = SOV_BG_VARIANTS.includes(variant) ? variant : 'military1';
+    const next = SOV_BG_VARIANTS.includes(variant) ? variant : 'white';
     if (state.sovBg === next) return;
     state.sovBg = next;
     // Drop session override so the official variant plate paints immediately.
@@ -754,7 +755,7 @@
     const modernBgNote = $('#modernBgNote');
     if (modernBgNote) modernBgNote.hidden = state.skin !== 'eu_frame';
     const sovSelect = $('#sovBgSelect');
-    if (sovSelect) sovSelect.value = SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'military1';
+    if (sovSelect) sovSelect.value = SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'white';
     $('#snapToggle').checked = state.snap;
     $('#guidesToggle').checked = state.guides;
     $('#gridStep').value = state.gridStep;
@@ -1417,7 +1418,7 @@
       schema: state.schema,
       version: 1,
       skin: state.skin,
-      sovBg: state.skin === 'sov_frame' ? (SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'military1') : undefined,
+      sovBg: state.skin === 'sov_frame' ? (SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'white') : undefined,
       generatedAt: new Date().toISOString(),
       grid: { snap: state.snap, stepPercent: state.gridStep, guides: state.guides },
       customAssets,
@@ -1513,7 +1514,7 @@
           };
         });
         if (report.grid) { state.gridStep = clamp(Number(report.grid.stepPercent) || 1, .25, 10); state.snap = report.grid.snap !== false; state.guides = report.grid.guides !== false; }
-        state.sovBg = SOV_BG_VARIANTS.includes(report.sovBg) ? report.sovBg : 'military1';
+        state.sovBg = SOV_BG_VARIANTS.includes(report.sovBg) ? report.sovBg : 'white';
         activePackageId = packageIdForSkin(importSkin);
         persist(); selection = []; renderShippedAssetTools(); render(); announce('Relatório importado.');
       } catch (error) { announce('Não foi possível importar este JSON.'); }

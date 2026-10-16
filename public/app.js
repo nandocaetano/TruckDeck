@@ -575,14 +575,14 @@
   // finished panel: skins/<id>-<cut>v.jpg, listed here with its aspect ratio. Modern uses its
   // canonical background pair instead; a cut with no capture borrows the landscape one.
   const PREVIEWS = { eu_frame: { T: 2752 / 1536, P: 1152 / 1728 }, sov_frame: { T: 2752 / 1536, P: 1536 / 2752 }, scania25_frame: { T: 1.792 } };
-  const SOV_BG_VARIANTS = ['military1', 'military2', 'sigabem', 'vivamexico'];
+  const SOV_BG_VARIANTS = ['white', 'military1', 'military2', 'sigabem', 'vivamexico'];
   function sovBgOf(l) {
-    const v = (l && l.sovBg) || 'military1';
-    return SOV_BG_VARIANTS.includes(v) ? v : 'military1';
+    const v = (l && l.sovBg) || 'white';
+    return SOV_BG_VARIANTS.includes(v) ? v : 'white';
   }
   // Empty-plate background for frame skins. Modern uses the leather pair; Soviet uses one of
-  // the four parked variants under skins/sov/bg/. layoutRef lets the gallery preview each
-  // panel's own sovBg instead of the active layout's.
+  // the parked variants under skins/sov/bg/ (default white enamel). layoutRef lets the gallery
+  // preview each panel's own sovBg instead of the active layout's.
   const panelAsset = (skinId, cut, hideNames, layoutRef) => {
     if (skinId === 'eu_frame') {
       return SKIN_PATH + 'modern/' + (cut === 'P' ? 'bg-portrait.jpg' : 'bg-landscape.jpg');
@@ -4271,9 +4271,9 @@
         '<button class="btn" data-act="sc25home">Cluster back to screen 1</button><button class="btn" data-act="sc25learn">' + (S.padLearn ? 'Press the controller button now...' : 'Learn a controller button') + '</button>' +
         '<p class="note">' + (S.dashAuto ? 'Sync: automatic. ' : '') + 'Learned controller button: ' + ((l.sc25 && l.sc25.padBtn !== undefined && l.sc25.padBtn !== '') ? l.sc25.padBtn : 'none') + '. Last button seen: ' + (S.lastPad === undefined ? 'none yet' : S.lastPad) + '.</p>' : '') +
       (skinId === 'sov_frame' ? '<label class="field"><span>Soviet background</span><select data-field="sovBg">' + options([
-        ['military1', 'Military 1'], ['military2', 'Military 2'], ['sigabem', 'Siga Bem'], ['vivamexico', 'Viva México'],
+        ['white', 'Branca / Esmaltada'], ['military1', 'Military 1'], ['military2', 'Military 2'], ['sigabem', 'Siga Bem'], ['vivamexico', 'Viva México'],
       ], sovBgOf(l)) + '</select></label>' +
-      '<p class="note">Empty plate behind the Soviet keys. Widgets stay the same; only the fascia photo changes.</p>' : '') +
+      '<p class="note">Empty plate behind the Soviet keys. Default is the clean white enamel plate; photoreal variants stay available.</p>' : '') +
       (hasSkin ? '<button class="btn" data-act="deco">Stickers: add, move, remove</button>' : '') +
       (hasStickers ? check('stickers', 'Show the stickers that come with this panel', l.stickers !== false) : '') +
       (hasSkin && !l.locked ? '<button class="btn" data-act="rebuild">Put every key back as in the art</button>' : '') +
