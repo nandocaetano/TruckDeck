@@ -181,11 +181,20 @@
     try { return localStorage.getItem('truckdeck.pin') || ''; } catch (error) { return ''; }
   }
 
+  // Boards-aware: v2 payloads nest buttons under boards.eu_frame / boards.sov_frame.
+  // Legacy flat payloads (top-level orientations, no boards) still count as having buttons
+  // so a stale localStorage cache can seed an empty server without wiping a good board.
   function hasAnyButtons(payload) {
-    if (!payload || !payload.orientations) return false;
-    return ['landscape', 'portrait'].some((mode) => {
-      const o = payload.orientations[mode];
-      return o && Array.isArray(o.buttons) && o.buttons.length > 0;
+    if (!payload) return false;
+    const boards = payload.boards
+      ? [payload.boards.eu_frame, payload.boards.sov_frame]
+      : [payload];
+    return boards.some((board) => {
+      if (!board || !board.orientations) return false;
+      return ['landscape', 'portrait'].some((mode) => {
+        const o = board.orientations[mode];
+        return o && Array.isArray(o.buttons) && o.buttons.length > 0;
+      });
     });
   }
 
