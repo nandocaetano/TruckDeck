@@ -58,9 +58,13 @@
     'sov_dial_fuel.png': { label: 'Dial fuel', defaultSize: [12, 12] },
     'sov_dial_air.png': { label: 'Dial air', defaultSize: [12, 12] }
   };
-  function currentAssets() {
-    return state.skin === 'sov_frame' ? ASSETS_SOV : ASSETS_MODERN;
-  }
+  // Visual packages for the toolbox. The active skin's package is listed first and marked
+  // "painel ativo"; the other package stays available so Fernando can still mix pieces
+  // across packs while editing (PRODUCTION_WORKFLOW Fase 2 sandbox).
+  const PACKAGES = [
+    { id: 'modern', label: 'Pacote Moderno', skin: 'eu_frame', assets: ASSETS_MODERN },
+    { id: 'soviet', label: 'Pacote Soviético', skin: 'sov_frame', assets: ASSETS_SOV }
+  ];
   const DASHBOARDS = {
     'dash-obd': { label: 'Tela OBD', defaultSize: [38, 15] },
     'dash-speedometer': { label: 'Velocímetro', defaultSize: [22, 15] }
@@ -261,9 +265,10 @@
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushToServer, 600);
   }
-  // Used by both the 600ms autosave and the explicit Salvar button. Autosave stays quiet on
-  // success (it fires on every edit, announcing each one would drown out real messages) but
-  // always reports a failure -- a silently-ignored res.ok used to make "PIN wrong" or "bridge
+  // Only two callers left: saveNow() (explicit Salvar button / Ctrl+S) and the one-time boot
+  // reconciliation (needsSeedPush) that seeds the bridge when it has no board yet but this
+  // browser's localStorage does. Neither fires on a plain edit anymore -- see persist() above.
+  // Always reports a failure -- a silently-ignored res.ok used to make "PIN wrong" or "bridge
   // offline" look identical to "saved fine", which is what made the tablet desync invisible.
   async function pushToServer() {
     const text = JSON.stringify({ ...state, customAssets });
@@ -366,9 +371,12 @@
   function writeLocal() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, customAssets })); } catch (error) { /* private browsing */ }
   }
+  // Fernando's rule (2026-10-16): the Editor is a sandbox. Every edit writes to localStorage
+  // only; the bridge is touched exclusively by an explicit user action (Salvar button / Ctrl+S
+  // -> saveNow(), or the one-time boot reconciliation below) so two open tabs on different
+  // skins can never race a PUT into each other's board.
   function persist() {
     writeLocal();
-    schedulePush();
   }
 
   // Snapshot-based undo/redo: the whole editable state is small JSON (buttons/zones per
@@ -592,25 +600,52 @@
   function renderShippedAssetTools() {
     const list = $('#assetList');
     if (!list) return;
-    $$('.asset-tool:not(.is-custom)', list).forEach((node) => node.remove());
-    const assets = currentAssets();
+    $$('.asset-tool:not(.is-custom), .package-group', list).forEach((node) => node.remove());
+    const ordered = PACKAGES.slice().sort((a, b) => {
+      const aActive = a.skin === state.skin ? 0 : 1;
+      const bActive = b.skin === state.skin ? 0 : 1;
+      return aActive - bActive;
+    });
     const fragment = document.createDocumentFragment();
-    Object.keys(assets).forEach((key) => {
-      const def = assets[key];
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'asset-tool';
-      button.draggable = true;
-      button.dataset.asset = key;
-      button.dataset.label = def.label;
-      const wide = def.defaultSize[0] > def.defaultSize[1] * 1.6;
-      button.innerHTML = '<span class="asset-preview' + (wide ? ' asset-preview-wide' : '') + '"><img src="' + assetImageSrc(key) + '" alt=""></span><span><strong>' + escapeHtml(def.label) + '</strong><small>' + escapeHtml(key) + '</small></span>';
-      bindTool(button);
-      fragment.appendChild(button);
+    ordered.forEach((pack) => {
+      const active = pack.skin === state.skin;
+      const group = document.createElement('div');
+      group.className = 'package-group' + (active ? ' is-active-package' : ' is-other-package');
+      group.dataset.package = pack.id;
+      const heading = document.createElement('div');
+      heading.className = 'package-heading';
+      heading.innerHTML = '<span>' + escapeHtml(pack.label) + '</span><span class="package-kicker">' +
+        (active ? 'PAINEL ATIVO' : 'MISTURAR') + '</span>';
+      group.appendChild(heading);
+      if (!active) {
+        const hint = document.createElement('p');
+        hint.className = 'package-hint';
+        hint.textContent = 'Peças de outro pacote — arraste se quiser misturar no painel actual.';
+        group.appendChild(hint);
+      }
+      Object.keys(pack.assets).forEach((key) => {
+        const def = pack.assets[key];
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'asset-tool';
+        button.draggable = true;
+        button.dataset.asset = key;
+        button.dataset.label = def.label;
+        button.dataset.package = pack.id;
+        const wide = def.defaultSize[0] > def.defaultSize[1] * 1.6;
+        button.innerHTML = '<span class="asset-preview' + (wide ? ' asset-preview-wide' : '') + '"><img src="' + assetImageSrc(key) + '" alt=""></span><span><strong>' + escapeHtml(def.label) + '</strong><small>' + escapeHtml(key) + '</small></span>';
+        bindTool(button);
+        group.appendChild(button);
+      });
+      fragment.appendChild(group);
     });
     const firstCustom = list.querySelector('.asset-tool.is-custom');
     if (firstCustom) list.insertBefore(fragment, firstCustom);
     else list.appendChild(fragment);
+    const buttonsTitle = $('#buttonsPackageTitle');
+    if (buttonsTitle) buttonsTitle.textContent = state.skin === 'sov_frame' ? 'Pacote Soviético' : 'Pacote Moderno';
+    const buttonsKicker = $('#buttonsPackageKicker');
+    if (buttonsKicker) buttonsKicker.textContent = 'PACOTES';
   }
 
   function render() {
@@ -626,12 +661,16 @@
     $('#backgroundMode').textContent = orientation.toUpperCase();
     $('#backgroundName').textContent = runtimeBackgrounds[orientation] ? 'imagem local' : bg.name;
     $('#backgroundPath').textContent = runtimeBackgrounds[orientation] ? 'preview temporário' : bg.src;
+    const bgPackage = $('#backgroundPackageLabel');
+    if (bgPackage) bgPackage.textContent = state.skin === 'sov_frame' ? 'Fundo Soviético' : 'Fundo Moderno';
     $('#workspaceTitle').innerHTML = (orientation === 'landscape' ? 'Landscape' : 'Portrait') + ' <span>· ' + bg.width + ' × ' + bg.height + '</span>';
     const brand = $('.brand .eyebrow');
     if (brand) brand.textContent = state.skin === 'sov_frame' ? 'DESKTRUCK / SOVIET' : 'DESKTRUCK / MODERN';
     $$('.skin-button').forEach((button) => button.classList.toggle('is-active', button.dataset.skin === state.skin));
     const sovRow = $('#sovBgRow');
     if (sovRow) sovRow.hidden = state.skin !== 'sov_frame';
+    const modernBgNote = $('#modernBgNote');
+    if (modernBgNote) modernBgNote.hidden = state.skin !== 'eu_frame';
     const sovSelect = $('#sovBgSelect');
     if (sovSelect) sovSelect.value = SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'military1';
     $('#snapToggle').checked = state.snap;

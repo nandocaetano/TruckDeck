@@ -4249,11 +4249,13 @@
       '<label class="field"><span>Display brightness</span><select data-field="brightness">' + options([
         ['auto', 'Auto'], ['100', '100%'], ['80', '80%'], ['60', '60%'], ['40', '40%'], ['20', '20%'],
       ], pr.brightness || 'auto') + '</select></label>' +
-      '<label class="field"><span>OBD cluster theme</span><select data-field="obdTheme">' + options([
-        ['v8-blue', 'V8 Blue'], ['scania-white', 'Scania White'], ['classic-amber', 'Classic Amber'],
-        ['emerald-green', 'Emerald Green'], ['red-line', 'Red Line'], ['cyber-neon', 'Cyber Neon'], ['monochrome', 'Monochrome'],
-        ['reggae-roots', 'Reggae Roots'],
-      ], pr.obdTheme || 'v8-blue') + '</select></label>' +
+      (skinId === 'eu_frame' || skinId === 'modern_eu' || skinId === 'modern_us' || skinId === 'modern_br' || skinId === 'modern_heavy' || skinId === 'modern_rugged'
+        ? '<label class="field"><span>OBD cluster theme</span><select data-field="obdTheme">' + options([
+            ['v8-blue', 'V8 Blue'], ['scania-white', 'Scania White'], ['classic-amber', 'Classic Amber'],
+            ['emerald-green', 'Emerald Green'], ['red-line', 'Red Line'], ['cyber-neon', 'Cyber Neon'], ['monochrome', 'Monochrome'],
+            ['reggae-roots', 'Reggae Roots'],
+          ], pr.obdTheme || 'v8-blue') + '</select></label>'
+        : '') +
       check('autoRotate', 'Switch between vertical and horizontal when the screen turns', pr.autoRotate !== false) +
       '<div class="row"><button class="btn grow" data-act="keys">Key setup</button><button class="btn grow" data-act="transfer">Export / import</button></div>' +
       '<p class="note">These stay the same on every panel, including the ones you add later.</p></div>' +
@@ -4261,7 +4263,7 @@
       '<div class="group"><h3>This panel</h3>' +
       (l.locked ? '<p class="note"><b>' + esc(l.name) + '</b> is a built-in panel: its keys cannot be changed. Use it as a model to get a copy you can edit freely.</p>' +
       '<button class="btn primary" data-act="duplicate">Use as a model (editable copy)</button>'
-        : '<label class="field"><span>Name</span><input type="text" data-field="name" value="' + esc(l.name) + '"></label>') + +
+        : '<label class="field"><span>Name</span><input type="text" data-field="name" value="' + esc(l.name) + '"></label>') +
       (skinId === 'scania25_frame' ? '<h3>Panel colours</h3>' +
         '<label class="field"><span>Cluster backlight</span><select data-field="sc25:theme">' + options([['orange', 'Orange'], ['red', 'Red'], ['blue', 'Blue'], ['cyan', 'Cyan'], ['purple', 'Purple'], ['white', 'White']], (l.sc25 && l.sc25.theme) || 'orange') + '</select></label>' +
         '<div class="row"><label class="field grow"><span>Key legend</span><input type="color" data-field="sc25:print" value="' + ((l.sc25 && l.sc25.print) || '#e8ecf0') + '"></label>' +

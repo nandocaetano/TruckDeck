@@ -43,7 +43,7 @@
       </div>
 
       <section class="tool-section">
-        <div class="section-title"><span>Fundo oficial</span><span class="section-kicker" id="backgroundMode">LANDSCAPE</span></div>
+        <div class="section-title"><span id="backgroundPackageLabel">Fundo Moderno</span><span class="section-kicker" id="backgroundMode">LANDSCAPE</span></div>
         <div class="background-card">
           <div class="background-swatch" id="backgroundSwatch" aria-hidden="true"></div>
           <div class="background-copy">
@@ -51,6 +51,7 @@
             <small id="backgroundPath">skins/modern/bg-landscape.jpg</small>
           </div>
         </div>
+        <p class="helper-text" id="modernBgNote">Pacote Moderno — bg-landscape / bg-portrait oficiais.</p>
         <label class="field" id="sovBgRow" hidden>
           <span>Variante soviética</span>
           <select id="sovBgSelect">
@@ -68,9 +69,10 @@
       </section>
 
       <section class="tool-section">
-        <div class="section-title"><span>Botões individuais</span><span class="section-kicker">ATIVOS</span></div>
+        <div class="section-title"><span id="buttonsPackageTitle">Pacote Moderno</span><span class="section-kicker" id="buttonsPackageKicker">PACOTES</span></div>
+        <p class="helper-text">O pacote do painel activo vem primeiro. O outro pacote fica disponível para misturar peças.</p>
         <div class="asset-list" id="assetList">
-          <!-- Shipped assets are injected by editor.js from ASSETS_MODERN / ASSETS_SOV -->
+          <!-- Package groups injected by editor.js from PACKAGES (Modern / Soviet) -->
         </div>
         <label class="file-button custom-asset-button">
           <span>Carregar botão personalizado</span>
@@ -80,8 +82,8 @@
       </section>
 
       <section class="tool-section">
-        <div class="section-title"><span>Zonas globais</span><span class="section-kicker">DASHBOARD</span></div>
-        <p class="helper-text">Somente telas obrigatórias podem ocupar uma zona. Botões continuam sempre atómicos.</p>
+        <div class="section-title"><span>Pacote OBD</span><span class="section-kicker">DASHBOARD</span></div>
+        <p class="helper-text">Zonas de telemetria partilhadas. Botões continuam sempre atómicos.</p>
         <div class="dashboard-tools">
           <button type="button" class="dashboard-tool" draggable="true" data-dashboard="dash-obd" data-label="Tela OBD"><span class="dashboard-icon">OBD</span><span><strong>Tela OBD</strong><small>telemetria</small></span></button>
           <button type="button" class="dashboard-tool" draggable="true" data-dashboard="dash-speedometer" data-label="Velocímetro"><span class="dashboard-icon">SPD</span><span><strong>Velocímetro</strong><small>telemetria</small></span></button>
