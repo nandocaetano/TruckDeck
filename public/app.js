@@ -676,8 +676,7 @@
       // Absolute rule (Fernando, 2026-10-18): colour NEVER determines function.
       // A lamp with an empty functionId stays inert until mapped in the Editor.
       // Multi-stage lever family: editor places ONE state (mid/off/up); app swaps up/down art.
-      const isParkTog = /sov_toggle_parking_brake/i.test(assetKey);
-      const isTog = isParkTog || /^sov_tog_(?:up|mid|down)(?:\.|$)/i.test(assetKey) || /sov_toggle_/i.test(assetKey);
+      const isTog = /^sov_tog_(?:up|mid|down)(?:\.|$)/i.test(assetKey) || /sov_toggle_/i.test(assetKey);
       const isRocker = /btn-rocker/i.test(assetKey);
       const isModLights = /mod_rotary_lights\.png$/i.test(assetKey);
       const isModWipers = /mod_rotary_wipers\.png$/i.test(assetKey);
@@ -695,7 +694,7 @@
       // Function-named Soviet photos bind their catalog command when the editor left functionId empty.
       let fnHint = b.functionId;
       if (!fnHint) {
-        if (isParkTog || /sov_toggle_parking_brake|sov_push_parking_brake/i.test(assetKey)) fnHint = 'parking_brake';
+        if (/sov_toggle_parking_brake|sov_push_parking_brake/i.test(assetKey)) fnHint = 'parking_brake';
         else if (isHazLit || isHazPush) fnHint = 'hazard';
         else if (isModWipers) fnHint = 'wipers';
         else if (isRotary) fnHint = 'lights';
@@ -722,7 +721,6 @@
       // engine_running telltale keeps the alternator --lv flicker; presence/low_beam follows lightsOn.
       if (lampId === 'engine_running') out.eng = true;
       if (isTog) out.tog = true;
-      if (isParkTog) out.parkTog = true;
       if (isHazLit) out.hazardFail = true; // class name kept; means "lit indicator, static body"
       if (isRocker) out.rocker = true;
       if (isFrameStatic) out.frameStatic = true;
@@ -733,11 +731,10 @@
         out.asset = String(out.asset).replace(/sov_push_parking_brake\.png/i, 'sov_push_parking_brake_frame.png');
         out.pbCore = String(out.asset).replace(/_frame\.png$/i, '_core.png');
       }
-      // Parking lever (sov_toggle_parking_brake): a frame+lever split was tried and reverted
-      // (2026-10-19) — the rod occupies the whole pivot-to-tip channel in BOTH source photos, so
-      // no clean lever-free frame exists to composite; any attempt left a baked-in "ghost" rod
-      // visible under the swapped lever-body layer. Full-pose photo swap only, .cap frozen via
-      // .lever-swap (same no-transform/no-filter convention as .hazard-fail / .frame-static).
+      // Parking brake lever widget (sov_toggle_parking_brake) was removed as a product decision
+      // (Fernando, 2026-10-19) — no clean lever-free frame existed to composite, leaving a
+      // baked-in "ghost" rod under the swapped lever-body layer. Boards now use the standard
+      // sov_tog_up/down toggle art for parking_brake, same as any other Soviet toggle.
       if (isRotary) {
         out.rotary = true;
         if (isModLights) out.modRotary = 'lights';
@@ -1393,6 +1390,23 @@
     }).catch(() => {});
   }
 
+  // Long-poll fallback (Fernando, 2026-10-19): tablet wifi/SSE drops silently on some devices
+  // and EventSource's own retry can sit disconnected far longer than the Editor save it misses.
+  // A 3s poll of the tiny /api/version timestamp catches that case even with the SSE connection
+  // dead, without re-fetching the whole board every tick. Compares server timestamps against
+  // each other (never against the client clock) so clock skew cannot mask or fake an update.
+  let lastAtomicSyncAt = 0;
+  let versionPollTimer = null;
+  function startVersionPolling() {
+    clearInterval(versionPollTimer);
+    versionPollTimer = setInterval(() => {
+      fetchJson('api/version', { headers: { 'X-Pin': S.pin } }).then((res) => {
+        const v = res && res.status === 200 && res.body && res.body.version;
+        if (v && v > lastAtomicSyncAt) { lastAtomicSyncAt = v; refetchAtomicLayout(); }
+      }).catch(() => {});
+    }, 3000);
+  }
+
   let events = null;
   function openEvents() {
     if (events) events.close();
@@ -1417,7 +1431,7 @@
           }
         }
       }
-      else if (msg.type === 'atomic-layout') refetchAtomicLayout();
+      else if (msg.type === 'atomic-layout') { lastAtomicSyncAt = msg.at || Date.now(); refetchAtomicLayout(); }
       else if (msg.type === 'error') toast(msg.msg);
       else if (msg.type === 'localAction' && msg.action === 'obd_page_next') {
         document.querySelectorAll('.k-rtext.modern-utility').forEach((n) => cycleModernObd(n));
@@ -1526,8 +1540,10 @@
         if (atomicChanged) renderAll();
         save(); // first run: seed the PC with this device's panels
       }
+      lastAtomicSyncAt = Date.now();
       stage = 'events';
       openEvents();
+      startVersionPolling();
       renderStatus();
       stage = 'done';
     }).catch((e) => {
@@ -2152,8 +2168,7 @@
       if (w.zIndex) node.style.zIndex = w.zIndex;
       if (w.lamp) node.classList.add('passive', 'atomic-lamp');
       if (w.eng) node.classList.add('engl');
-      if (w.tog && !w.parkTog) node.classList.add('asset-tog');
-      if (w.parkTog) node.classList.add('lever-swap');
+      if (w.tog) node.classList.add('asset-tog');
       if (w.hazardFail) node.classList.add('hazard-fail');
       if (w.frameStatic) node.classList.add('frame-static');
       if (w.rocker) node.classList.add('asset-rocker');
@@ -2186,13 +2201,8 @@
       }
       // Soviet toggle shells: remember up/down art so .on can flip the lever photo.
       if (w.tog) {
-        if (w.parkTog || /sov_toggle_parking_brake/i.test(String(w.asset || ''))) {
-          node.dataset.togDown = 'skins/sov/btn/sov_toggle_parking_brake_down.png';
-          node.dataset.togUp = 'skins/sov/btn/sov_toggle_parking_brake_up.png';
-        } else {
-          node.dataset.togDown = 'skins/sov/btn/sov_tog_down.png';
-          node.dataset.togUp = 'skins/sov/btn/sov_tog_up.png';
-        }
+        node.dataset.togDown = 'skins/sov/btn/sov_tog_down.png';
+        node.dataset.togUp = 'skins/sov/btn/sov_tog_up.png';
       }
       // Parking push: the yellow cap is its own layer so only it can sink into the bezel.
       if (w.pbCore) {
@@ -2543,14 +2553,9 @@
       node.querySelectorAll('.rot-tick').forEach((el, i) => el.classList.toggle('is-live', i === idx));
     }
     // Soviet toggle levers: swap PNG by latch/telemetry.
-    // Parking brake is mechanically inverted vs a normal switch:
-    //   OFF (released) = lever UP · ON (set) = lever DOWN.
     if (node.dataset.togDown && node.dataset.togUp) {
       const engaged = !!(f.latch ? on : shown);
-      const parkLever = !!(w.parkTog || f.id === 'parking_brake');
-      const art = parkLever
-        ? (engaged ? node.dataset.togDown : node.dataset.togUp)
-        : (engaged ? node.dataset.togUp : node.dataset.togDown);
+      const art = engaged ? node.dataset.togUp : node.dataset.togDown;
       node.style.setProperty('--asset', cssUrl(art));
     }
   }

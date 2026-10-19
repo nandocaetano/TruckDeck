@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="editor.css">
 </head>
 <body>
+  <div id="publishToast" class="publish-toast" hidden role="alert" aria-live="assertive"></div>
   <header class="topbar">
     <div class="brand">
       <span class="eyebrow">DESKTRUCK / MODERN</span>
@@ -26,8 +27,8 @@
         <button type="button" class="orientation-button" data-orientation="portrait">Portrait</button>
       </div>
       <button type="button" class="button button-ghost" id="importButton">Importar JSON de Layout</button>
-      <button type="button" class="button button-primary" id="saveButton" title="Salvar agora no bridge (Ctrl/⌘+S)">Salvar</button>
-      <button type="button" class="button button-primary" id="exportButton">Exportar JSON + CSS</button>
+      <button type="button" class="button button-primary button-publish" id="saveButton" title="Publicar no tablet via bridge (Ctrl/⌘+S)">PUBLICAR NO TABLET</button>
+      <button type="button" class="button button-ghost" id="exportButton" title="Baixa o JSON + CSS só para este navegador — não afeta o servidor nem o tablet">Baixar Backup Local</button>
       <input id="importInput" type="file" accept="application/json,.json" hidden>
     </div>
   </header>

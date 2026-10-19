@@ -34,6 +34,8 @@ button { color: inherit; }
 .button-ghost { background: transparent; }
 .button-small { padding: 6px 9px; font-size: 10px; }
 .button-accent { border-color: var(--accent-2); color: var(--accent-2); }
+.button-publish { font-size: 12px; letter-spacing: .02em; }
+.button-publish[disabled] { opacity: .6; cursor: wait; transform: none; }
 .editor-layout { display: grid; grid-template-columns: 272px minmax(560px, 1fr) 286px; gap: 12px; padding: 12px; min-height: calc(100vh - 126px); }
 .panel { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: linear-gradient(155deg, rgba(27, 35, 44, .96), rgba(17, 22, 28, .96)); box-shadow: var(--shadow); overflow: hidden; }
 .toolbox, .inspector { display: flex; flex-direction: column; }
@@ -199,6 +201,13 @@ body.keys-locked .layout-element.button-element.is-selected { outline-color: #7d
 .drop-hint small { font-size: 9px; }
 .stage.has-elements .drop-hint { opacity: 0; }
 .workspace-status { min-height: 31px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+#statusMessage.is-pending { color: var(--accent, #e4ae57); }
+#statusMessage.is-success { color: #5fd38a; font-weight: 700; }
+#statusMessage.is-error { color: #ef5a5a; font-weight: 700; }
+.publish-toast { position: fixed; top: 14px; right: 14px; z-index: 999; max-width: 420px; padding: 11px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,.35); color: #0e1116; }
+.publish-toast.is-pending { background: #e4ae57; }
+.publish-toast.is-success { background: #5fd38a; }
+.publish-toast.is-error { background: #ef5a5a; color: #fff; white-space: pre-wrap; }
 .layers-list { max-height: 190px; overflow-y: auto; border-bottom: 1px solid var(--line); }
 .layer-row { display: flex; align-items: center; gap: 8px; padding: 7px 14px; cursor: pointer; border-bottom: 1px solid rgba(201,220,232,.06); }
 .layer-row:hover { background: rgba(228,174,87,.06); }

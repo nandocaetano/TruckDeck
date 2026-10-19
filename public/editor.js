@@ -91,9 +91,6 @@
     'sov_tog_up.png': { label: 'Toggle up', defaultSize: [6, 12] },
     'sov_tog_mid.png': { label: 'Toggle mid', defaultSize: [6, 12] },
     'sov_tog_down.png': { label: 'Toggle down', defaultSize: [6, 12] },
-    'sov_toggle_parking_brake.png': { label: 'Parking Brake Toggle', defaultSize: [8, 10] },
-    'sov_toggle_parking_brake_up.png': { label: 'Parking Brake Toggle up', defaultSize: [8, 8] },
-    'sov_toggle_parking_brake_down.png': { label: 'Parking Brake Toggle down', defaultSize: [8, 8] },
     'sov_lamp_red_off.png': { label: 'Lamp red off', defaultSize: [7, 7] },
     'sov_lamp_red_on.png': { label: 'Lamp red on', defaultSize: [7, 7] },
     'sov_lamp_green_off.png': { label: 'Lamp green off', defaultSize: [7, 7] },
@@ -538,23 +535,35 @@
         body: text
       });
       if (!res.ok) {
-        announce(res.status === 401
+        const message = res.status === 401
           ? 'PIN incorreto ou ausente - o bridge recusou o salvamento.'
-          : 'Falha ao salvar no bridge (HTTP ' + res.status + ').');
-        return false;
+          : 'Falha ao salvar no bridge (HTTP ' + res.status + ').';
+        announce(message, 'error');
+        return { ok: false, message };
       }
-      return true;
+      return { ok: true };
     } catch (error) {
-      announce('Bridge inacessível - alterações ficaram só neste navegador.');
-      return false;
+      const message = 'Bridge inacessível - alterações ficaram só neste navegador. (' + (error && error.message || error) + ')';
+      announce(message, 'error');
+      return { ok: false, message };
     }
   }
   async function saveNow() {
     clearTimeout(pushTimer);
     writeLocal();
-    announce('Salvando...');
-    const ok = await pushToServer();
-    if (ok) announce('Salvo no bridge.');
+    const btn = $('#saveButton');
+    if (btn) btn.disabled = true;
+    announce('A salvar...', 'pending');
+    toast('A salvar...', 'pending');
+    const result = await pushToServer();
+    if (btn) btn.disabled = false;
+    if (result.ok) {
+      announce('Painel Publicado!', 'success');
+      toast('Painel Publicado!', 'success');
+    } else {
+      announce(result.message, 'error');
+      toast(result.message, 'error');
+    }
   }
 
   // Default pictogram box: centered at ~32% of the button — glanceable without covering the
@@ -1919,7 +1928,25 @@
     }
   }
 
-  function announce(message) { $('#statusMessage').textContent = message; }
+  function announce(message, state) {
+    const el = $('#statusMessage');
+    el.textContent = message;
+    el.classList.remove('is-pending', 'is-success', 'is-error');
+    if (state) el.classList.add('is-' + state);
+  }
+  let toastTimer = null;
+  function toast(message, state) {
+    const el = $('#publishToast');
+    if (!el) return;
+    clearTimeout(toastTimer);
+    el.textContent = message;
+    el.classList.remove('is-pending', 'is-success', 'is-error');
+    el.classList.add('is-' + state);
+    el.hidden = false;
+    if (state !== 'pending') {
+      toastTimer = setTimeout(() => { el.hidden = true; }, state === 'error' ? 6000 : 2600);
+    }
+  }
 
   // ---- Live sync (bridge SSE) ----------------------------------------------------------------
   // Mirrors app.js's refetchAtomicLayout(): the bridge broadcasts 'atomic-layout' whenever

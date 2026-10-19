@@ -270,6 +270,9 @@ function broadcast(obj) {
 // reload. The PUT handler's own write already broadcasts synchronously; lastSelfWriteAt skips the
 // watcher's redundant echo of that same write.
 let lastSelfWriteAt = 0;
+// Exposed via GET /api/version for the long-poll fallback below; bumped by both the PUT
+// handler and the watcher so either path is visible to a client polling instead of SSE.
+let lastAtomicLayoutChangeAt = Date.now();
 let atomicWatchTimer = null;
 try {
   // Watches the directory, not the file directly: every save here (ours and the Editor's)
@@ -282,7 +285,8 @@ try {
     clearTimeout(atomicWatchTimer);
     atomicWatchTimer = setTimeout(() => {
       if (Date.now() - lastSelfWriteAt < 500) return; // our own PUT write already broadcast this
-      broadcast({ type: 'atomic-layout', at: Date.now() });
+      lastAtomicLayoutChangeAt = Date.now();
+      broadcast({ type: 'atomic-layout', at: lastAtomicLayoutChangeAt });
     }, 150);
   });
 } catch (e) { console.log('[atomic-layout] Could not watch ' + DATA_DIR + ': ' + e.message); }
@@ -606,6 +610,15 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // Lightweight long-poll fallback for clients whose SSE connection dropped (flaky tablet
+    // wifi, backgrounded browser tab): a 3s setInterval fetch of this instead of reopening
+    // EventSource. Just the timestamp -- the full board is only refetched when it is newer
+    // than what the client already has in memory.
+    if (route === '/api/version' && req.method === 'GET') {
+      json(res, 200, { version: lastAtomicLayoutChangeAt });
+      return;
+    }
+
     if (route === '/api/atomic-layout' && req.method === 'PUT') {
       // The Editor is the source of truth for every Modern-skin layout (button and dashboard
       // placement, backgrounds, custom assets as base64). Those assets inflate the payload
@@ -659,12 +672,13 @@ const server = http.createServer(async (req, res) => {
       }
 
       lastSelfWriteAt = Date.now();
+      lastAtomicLayoutChangeAt = lastSelfWriteAt;
       fs.writeFileSync(ATOMIC_LAYOUT_FILE + '.tmp', JSON.stringify(incoming));
       fs.renameSync(ATOMIC_LAYOUT_FILE + '.tmp', ATOMIC_LAYOUT_FILE);
       // Tell every connected tablet/painel to refetch: without this they only pick up an
       // editor save on their next full connect()/reload, which is what made saves on the
       // PC look like they "didn't reach" the tablet.
-      broadcast({ type: 'atomic-layout', at: Date.now() });
+      broadcast({ type: 'atomic-layout', at: lastAtomicLayoutChangeAt });
       json(res, 200, { ok: true });
       return;
     }
