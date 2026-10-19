@@ -4488,28 +4488,9 @@ video::-webkit-media-controls-start-playback-button {
   filter: none !important;
   box-shadow: none !important;
 }
-/* Sink shadow lives on its own layer (.well-sink), masked to the asset's own alpha silhouette —
-   same -webkit-mask technique as .tint-overlay. .cap's background-image fills the full widget
-   rect, which includes the ~10% transparent photo margin (see #panel .hit comment above); an
-   inset box-shadow painted on .cap itself showed as a black rectangle in that margin. */
-#app .k-kbd.has-asset.frame-static .well-sink {
-  position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  -webkit-mask-image: var(--asset); mask-image: var(--asset);
-  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  -webkit-mask-position: center; mask-position: center;
-  opacity: 0;
-  transition: opacity 80ms ease;
-}
-#app .k-kbd.has-asset.frame-static.on .well-sink,
-#app .k-kbd.has-asset.frame-static.in .well-sink,
-#app .k-kbd.has-asset.frame-static.down .well-sink,
-#app .w.down.k-kbd.has-asset.frame-static .well-sink {
-  opacity: 1;
-  box-shadow:
-    inset 0 .14em .32em rgba(0, 0, 0, .82),
-    inset 0 0 .45em rgba(0, 0, 0, .5);
-}
+/* No separate sink layer: these PNGs are single-layer photos, so the only safe affordance
+   is the frozen .cap above. Afunding the inner key requires a second asset (see .pb-core
+   pattern) that doesn't exist yet for these widgets. */
 /* Key barrels and rotary housings never inherit the generic push physics. */
 #app #panel .w.key-turn,
 #app #panel .w.k-rotary,

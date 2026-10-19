@@ -2199,12 +2199,8 @@
         node.style.setProperty('--pb-core', cssUrl(w.pbCore));
         node.innerHTML += '<i class="pb-core" aria-hidden="true"></i>';
       }
-      // Static-frame housings: the press "well" shadow lives on its own layer masked to the
-      // asset's own alpha silhouette, so it never paints the ~10% transparent photo margin
-      // around the object (that margin painted a visible black rectangle around the button).
-      if (w.frameStatic) {
-        node.innerHTML += '<i class="well-sink" aria-hidden="true"></i>';
-      }
+      // Static-frame housings: single-layer photos, no separate sink layer (frame stays
+      // fully static and unadorned until a second inner-key asset exists).
       // Rotary selector: static base (.cap) + static icon crown + the pin as the ONLY moving
       // layer. The crown counter-rotates each tick so labels stay upright.
       if (w.rotary && (w.states || []).length) {
