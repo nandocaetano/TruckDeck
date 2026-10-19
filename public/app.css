@@ -1389,8 +1389,8 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
    One single rule set — the authoritative one lives in the sov_frame block near the end of
    this file; nothing else may touch .hazard-fail. */
 /* Plain push shells (incl. sov_push_hazard.png): physical press sink. Lit hazard excluded above. */
-.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.k-rotary):not(.key-turn):not(.frame-static).in .cap,
-.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.k-rotary):not(.key-turn):not(.frame-static).down .cap {
+.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.lever-split):not(.k-rotary):not(.key-turn):not(.frame-static).in .cap,
+.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.lever-split):not(.k-rotary):not(.key-turn):not(.frame-static).down .cap {
   transform: scale(0.94) translateY(2%);
   filter: brightness(0.86);
 }
@@ -1420,6 +1420,22 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
   filter: brightness(0.86);
 }
 @media (prefers-reduced-motion: reduce) { .k-kbd.has-asset.pb-split .pb-core { transition: none; } }
+/* Soviet parking-brake lever (sov_toggle_parking_brake_frame + _lever_up/_down): frame.png is
+   cross-filled from both real photos and carries no lever at all, so .cap can stay 100% static
+   in every state — no scale/translateY/filter, ever. Only .lever-body swaps the up/down pose. */
+.k-kbd.has-asset.lever-split .cap,
+.k-kbd.has-asset.lever-split.on .cap,
+.k-kbd.has-asset.lever-split.in .cap,
+.k-kbd.has-asset.lever-split.down .cap,
+.w.down.k-kbd.has-asset.lever-split .cap {
+  transform: none !important;
+  scale: none !important;
+  filter: none !important;
+}
+.k-kbd.has-asset.lever-split .lever-body {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: var(--lever-asset) center / 100% 100% no-repeat;
+}
 /* Regra 3: LED telltales — off art in editor; on art + coloured glow from telemetry. */
 #app[data-style="sov_frame"] .k-kbd.has-asset.atomic-lamp.on .cap {
   filter: drop-shadow(0 0 5px var(--lamp-glow, #3dff7a))

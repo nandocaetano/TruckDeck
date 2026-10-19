@@ -733,6 +733,13 @@
         out.asset = String(out.asset).replace(/sov_push_parking_brake\.png/i, 'sov_push_parking_brake_frame.png');
         out.pbCore = String(out.asset).replace(/_frame\.png$/i, '_core.png');
       }
+      // Parking lever (sov_toggle_parking_brake): same split idea, but the frame is cross-filled
+      // from both real photos (tools/build_parking_brake.py) so it carries no lever at all —
+      // the .cap shows the static frame; a separate lever-body layer swaps the up/down pose.
+      if (isParkTog) {
+        out.leverSplit = true;
+        out.asset = 'skins/sov/btn/sov_toggle_parking_brake_frame.png';
+      }
       if (isRotary) {
         out.rotary = true;
         if (isModLights) out.modRotary = 'lights';
@@ -2147,11 +2154,12 @@
       if (w.zIndex) node.style.zIndex = w.zIndex;
       if (w.lamp) node.classList.add('passive', 'atomic-lamp');
       if (w.eng) node.classList.add('engl');
-      if (w.tog) node.classList.add('asset-tog');
+      if (w.tog && !w.leverSplit) node.classList.add('asset-tog');
       if (w.hazardFail) node.classList.add('hazard-fail');
       if (w.frameStatic) node.classList.add('frame-static');
       if (w.rocker) node.classList.add('asset-rocker');
       if (w.pbCore) node.classList.add('pb-split');
+      if (w.leverSplit) node.classList.add('lever-split');
       if (w.rockerDn) node.classList.add('is-dn');
       node.innerHTML = widgetHtml({ id: w.id, t: w.k || 'rocker', fn: w.fn });
       // Photo assets already carry their own lamps/legends — strip the synthetic LED strip.
@@ -2181,12 +2189,18 @@
       // Soviet toggle shells: remember up/down art so .on can flip the lever photo.
       if (w.tog) {
         if (w.parkTog || /sov_toggle_parking_brake/i.test(String(w.asset || ''))) {
-          node.dataset.togDown = 'skins/sov/btn/sov_toggle_parking_brake_down.png';
-          node.dataset.togUp = 'skins/sov/btn/sov_toggle_parking_brake_up.png';
+          node.dataset.togDown = 'skins/sov/btn/sov_toggle_parking_brake_lever_down.png';
+          node.dataset.togUp = 'skins/sov/btn/sov_toggle_parking_brake_lever_up.png';
         } else {
           node.dataset.togDown = 'skins/sov/btn/sov_tog_down.png';
           node.dataset.togUp = 'skins/sov/btn/sov_tog_up.png';
         }
+      }
+      // Parking lever split: .cap keeps the static cross-filled frame (set from w.asset above);
+      // a dedicated layer carries only the moving lever body and is the sole thing that swaps art.
+      if (w.leverSplit) {
+        node.style.setProperty('--lever-asset', cssUrl(node.dataset.togUp));
+        node.innerHTML += '<i class="lever-body" aria-hidden="true"></i>';
       }
       // Parking push: the yellow cap is its own layer so only it can sink into the bezel.
       if (w.pbCore) {
@@ -2543,7 +2557,7 @@
       const art = parkLever
         ? (engaged ? node.dataset.togDown : node.dataset.togUp)
         : (engaged ? node.dataset.togUp : node.dataset.togDown);
-      node.style.setProperty('--asset', cssUrl(art));
+      node.style.setProperty(parkLever ? '--lever-asset' : '--asset', cssUrl(art));
     }
   }
 
