@@ -9,13 +9,29 @@ _update.zip
 
 # QA / review screenshots (local proof captures, not source)
 _review_*.png
+_review_*.jpg
+_review_*.jpeg
 _qa_*.png
+qa-*.png
+qa-*.jpg
+qa-*.jpeg
+qa_*.png
+qa_*.jpg
+qa_*.jpeg
+qa-*.patch
 
 # manual backup folders/files predating git (kept on disk, not tracked)
 _backup_*
+backups/
+_bak_*/
 *.bak
 *.*.bak
 public/*Copia*
+
+# local lock, machine settings, and helper binaries (not source)
+.lock
+settings.json
+*.exe
 
 # python bytecode cache
 __pycache__/
