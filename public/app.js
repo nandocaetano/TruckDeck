@@ -359,6 +359,23 @@
     const v = normalizeSovBg(sovBg);
     return v === 'white' || v === 'military1' || v === 'military2';
   }
+  // SSOT guard (2026-10-19): a board key present in the atomic payload is authoritative even
+  // with buttons:[] (an explicit, intentional blank state). Only an absent/undefined board key
+  // falls back to legacy factory widgets. Scoped to sov_frame for now — eu_frame's fallback
+  // behaviour is unchanged pending a separate decision.
+  function boardExists(skin, sovBg) {
+    const board = atomicBoard();
+    if (!board) return false;
+    if (board.boards) {
+      if (skin === 'sov_frame') {
+        const bg = sovBg != null ? sovBg : (layout() && layout().sovBg);
+        return !!board.boards[sovBoardKey(bg)];
+      }
+      return !!board.boards[skin];
+    }
+    if (skin === 'eu_frame' && board.orientations) return true;
+    return false;
+  }
   function emptyAtomicBoard(skinKey) {
     return {
       skin: skinKey || 'sov_white',
@@ -927,9 +944,10 @@
   // buttons:[] — so factory spr/sgauge never inherit onto a clean enamel plate.
   function atomicApplies(pg) {
     if (pg.skin !== 'eu_frame' && pg.skin !== 'sov_frame') return false;
-    const bg = pg.skin === 'sov_frame' ? sovBgOf(layout()) : null;
-    if (pg.skin === 'sov_frame' && isEmptyPlateSovBg(bg)) return true;
-    return boardHasButtons(boardFor(pg.skin, bg));
+    if (pg.skin === 'eu_frame') return boardHasButtons(boardFor(pg.skin)); // unchanged: pending decision on eu_frame SSOT scope
+    const bg = sovBgOf(layout());
+    if (isEmptyPlateSovBg(bg)) return true;
+    return boardExists(pg.skin, bg);
   }
   function widgetsOf(pg) {
     const skin = skinOf(pg);
@@ -937,7 +955,6 @@
     const cut = skinCut(pg);
     const useAtomic = atomicApplies(pg);
     const sovBg = pg.skin === 'sov_frame' ? sovBgOf(layout()) : null;
-    const emptyPlate = pg.skin === 'sov_frame' && isEmptyPlateSovBg(sovBg);
     const zones = useAtomic ? atomicDashZones(cut, pg.skin) : [];
     const buttons = useAtomic ? atomicDashButtons(cut, pg.skin) : [];
     const buttonsSig = useAtomic ? atomicDashButtonsSig(cut, pg.skin) : '';
@@ -952,7 +969,7 @@
       // sov_frame board has buttons — OR when white/military empty-plate is active — drop
       // those factory widgets so only empty plate + JSON remain (zero DOM keys if array []).
       let base = zones.length ? skin.w.filter((w) => w.id !== 'w_drive' && w.id !== 'w_media') : skin.w;
-      if (pg.skin === 'sov_frame' && (buttons.length || emptyPlate)) {
+      if (pg.skin === 'sov_frame' && useAtomic) {
         base = base.filter((w) => w.t !== 'spr' && w.t !== 'sgauge' && w.t !== 'kbd' && w.t !== 'tell' && w.id !== 'w_info');
       } else if (buttons.length) {
         base = base.filter((w) => !w.g);
