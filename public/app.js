@@ -837,12 +837,18 @@
     if (!st.prefs.keyLabels) st.prefs.keyLabels = st.prefs.names || 'show';
     if (!st.prefs.pictograms) st.prefs.pictograms = 'show';
     if (!st.prefs.labelFont) st.prefs.labelFont = 'barlow';
-    // One-off: auto-rotate was left switched off on devices set up while the vertical panels were being
-    // reworked, which keeps the horizontal art on an upright screen. Turn it back on once; the player can
+    // One-off, re-armed: rotReset 1 already ran, then auto-rotate was saved off.
+    // A tall window kept Modern and both Scanias on the landscape cut. Soviet
+    // already follows the screen. Turn the switch back on once; the player can
     // still switch it off again in the menu.
-    if (st.prefs && !st.prefs.rotReset) { st.prefs.autoRotate = true; st.prefs.rotReset = 1; }
+    let rotFixed = false;
+    if (st.prefs && st.prefs.rotReset !== 2) {
+      if (st.prefs.autoRotate === false) rotFixed = true;
+      st.prefs.autoRotate = true;
+      st.prefs.rotReset = 2;
+    }
     applyPrefs();
-    return migrated;
+    return migrated || rotFixed;
   }
   function applyPrefs() {
     const pr = S.store.prefs;
