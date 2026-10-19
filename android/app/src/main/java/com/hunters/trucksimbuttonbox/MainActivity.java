@@ -101,7 +101,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        // Opening animation first (bundled page, about two seconds), then the real start.
+        // Opening animation first (bundled page, SPLASH_MS), then the real start.
         // onConnectPage stays true meanwhile, so nothing treats the splash as a failed panel.
         web.loadUrl(SPLASH_PAGE);
         web.postDelayed(this::start, SPLASH_MS);
