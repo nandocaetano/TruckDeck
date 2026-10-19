@@ -14,6 +14,7 @@
   --ui-danger: #e5484d;
   --ui-glow: rgba(242, 162, 58, 0.22);
   --ui-soft-line: rgba(255, 255, 255, 0.08);
+  --led-glow-strength: 0.72;
   /* indicator lamps */
   --lamp-green: #5fe36a;
   --lamp-amber: #ffb02e;
@@ -1249,7 +1250,12 @@ button { cursor: pointer; }
   box-shadow: none;
 }
 .k-kbd.has-asset .cap::before { display: none; }
-.k-kbd.has-asset .ico, .k-kbd.has-asset .lbl { display: none; }
+.k-kbd.has-asset .ico, .k-kbd.has-asset .lbl, .k-kbd.has-asset .led { display: none !important; }
+/* Soviet / any skin with photo assets: never paint the synthetic LED strip on keys. */
+#app[data-style="sov_frame"] .k-kbd .led,
+#app[data-style="sov_frame"] .k-kbd.on::after {
+  display: none !important;
+}
 
 /* Hitbox: outer .w ignores clicks; only the inset .hit receives them so transparent PNG
    margins (~10%) do not steal taps from overlapping neighbour boxes. Paint stays full-bleed. */
@@ -1306,6 +1312,9 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
   justify-content: center;
   pointer-events: none;
   z-index: 2;
+  /* Never put box-shadow on the pictogram box — it paints a square halo around alpha art. */
+  box-shadow: none !important;
+  background: transparent !important;
 }
 .k-kbd.has-asset .atomic-picto svg {
   width: 100%;
@@ -1313,6 +1322,128 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
   color: #fff;
   /* Sharp edge only — drop soft neon bloom so symbols stay defined. */
   filter: drop-shadow(0 1px 1px rgba(0,0,0,.9));
+}
+/* Editor text label overlay (item.label) — subtle footer caption, never a banner. */
+.k-kbd.has-asset .key-label {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 6%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: #f4f7fb;
+  font: 600 clamp(8px, calc(var(--k) * 0.045), 11px) / 1.05 "Barlow Condensed", "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
+  white-space: pre-line;
+  overflow: hidden;
+  max-height: 18%;
+}
+#panel.hide-labels .key-label { display: none !important; }
+#panel.hide-pictograms .atomic-picto { display: none !important; }
+#panel[data-label-font="barlow"] .key-label { font-family: "Barlow Condensed", "Segoe UI", sans-serif; }
+#panel[data-label-font="share"] .key-label { font-family: "Share Tech Mono", ui-monospace, monospace; }
+#panel[data-label-font="arialn"] .key-label { font-family: "Arial Narrow", Arial, sans-serif; }
+#panel[data-label-font="roboto"] .key-label { font-family: "Roboto Condensed", "Segoe UI", sans-serif; }
+#panel[data-label-font="oswald"] .key-label { font-family: "Oswald", "Arial Narrow", sans-serif; }
+
+/* Atomic rocker / toggle motion + latch retention (photo assets). */
+.k-kbd.has-asset.asset-rocker .cap,
+.k-kbd.has-asset.asset-tog .cap {
+  transition: transform 80ms ease, filter 80ms ease, background-image 80ms ease;
+  transform-origin: center center;
+}
+.k-kbd.has-asset.asset-rocker.on .cap,
+.k-kbd.has-asset.asset-rocker.in .cap {
+  transform: perspective(280px) rotateX(8deg);
+  filter: brightness(0.92);
+}
+.k-kbd.has-asset.asset-rocker.down .cap {
+  transform: perspective(280px) rotateX(12deg);
+  filter: brightness(0.82);
+}
+.k-kbd.has-asset.asset-rocker.is-dn.on .cap,
+.k-kbd.has-asset.asset-rocker.is-dn.in .cap {
+  transform: perspective(280px) rotateX(-8deg);
+}
+.k-kbd.has-asset.asset-rocker.is-dn.down .cap {
+  transform: perspective(280px) rotateX(-12deg);
+  filter: brightness(0.82);
+}
+/* Regra 1: levers (asset-tog) NEVER sink like a push — only PNG swap and/or slight rotateX. */
+.w.k-kbd.has-asset.asset-tog.down .cap,
+.w.k-kbd.has-asset.asset-tog.in .cap,
+.w.k-kbd.has-asset.asset-tog.on .cap,
+.w.down.k-kbd.has-asset.asset-tog .cap {
+  transform: perspective(260px) rotateX(6deg) !important;
+  filter: brightness(0.95) !important;
+}
+.w.k-kbd.has-asset.asset-tog:not(.on):not(.in):not(.down) .cap {
+  transform: none !important;
+}
+/* Hazard lit (sov_push_hazard_off/on): a plain backlit push. Body 100% static, bulb binary.
+   One single rule set — the authoritative one lives in the sov_frame block near the end of
+   this file; nothing else may touch .hazard-fail. */
+/* Plain push shells (incl. sov_push_hazard.png): physical press sink. Lit hazard excluded above. */
+.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.k-rotary):not(.key-turn).in .cap,
+.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.k-rotary):not(.key-turn).down .cap {
+  transform: scale(0.94) translateY(2%);
+  filter: brightness(0.86);
+}
+/* Yellow parking push (sov_push_parking_brake_frame + _core): the bezel is bolted to the panel.
+   The housing layer (.cap) never moves; ONLY the yellow cap (.pb-core) sinks into its recess.
+   transform-origin = the cap's own centre in the photo (51.07% / 54.4%), not the image centre. */
+.k-kbd.has-asset.pb-split .cap,
+.k-kbd.has-asset.pb-split.on .cap,
+.k-kbd.has-asset.pb-split.in .cap,
+.k-kbd.has-asset.pb-split.down .cap,
+.w.down.k-kbd.has-asset.pb-split .cap {
+  transform: none !important;
+  scale: none !important;
+  filter: none !important;
+}
+.k-kbd.has-asset.pb-split .pb-core {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: var(--pb-core) center / 100% 100% no-repeat;
+  transform-origin: 51.07% 54.4%;
+  transition: transform 90ms ease, filter 90ms ease;
+}
+.k-kbd.has-asset.pb-split.in .pb-core,
+.k-kbd.has-asset.pb-split.down .pb-core,
+.k-kbd.has-asset.pb-split.on .pb-core,
+.w.down.k-kbd.has-asset.pb-split .pb-core {
+  transform: scale(0.955);
+  filter: brightness(0.86);
+}
+@media (prefers-reduced-motion: reduce) { .k-kbd.has-asset.pb-split .pb-core { transition: none; } }
+/* Regra 3: LED telltales — off art in editor; on art + coloured glow from telemetry. */
+#app[data-style="sov_frame"] .k-kbd.has-asset.atomic-lamp.on .cap {
+  filter: drop-shadow(0 0 5px var(--lamp-glow, #3dff7a))
+          drop-shadow(0 0 12px color-mix(in srgb, var(--lamp-glow, #3dff7a) 55%, transparent));
+}
+/* Tint clipped to the asset PNG alpha via --asset mask — never paints the hitbox box. */
+.k-kbd.has-asset .tint-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.72;
+  -webkit-mask-image: var(--asset);
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-image: var(--asset);
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  mask-position: center;
+}
+.k-kbd.has-asset.atomic-lamp .hit {
+  cursor: default;
 }
 
 /* ---- Hazard: the one red key on the dash ----------------------------------------------- */
@@ -1728,6 +1859,12 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
   text-wrap: balance;
 }
 .sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+.sheet-body > .menu-panel { order: 1; }
+.sheet-body > .menu-panel-detail { order: 2; margin-top: -10px; padding-top: 10px; border-top: 1px solid var(--ui-soft-line); }
+.sheet-body > .menu-app-settings { order: 3; }
+.sheet-body > .menu-general { order: 4; }
+.sheet-body > [class*="menu-"] { width: 100%; max-width: 380px; align-self: center; }
+.menu-panel-detail > h4 { margin: 0; color: var(--ui-dim); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
 .group { display: flex; flex-direction: column; gap: 8px; }
 .group > h3 {
   margin: 0;
@@ -2137,6 +2274,19 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 
 /* ---- Ignition key barrel (classic panels) --------------------------------------------------- */
 .k-ign { border-radius: 50%; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* Photoreal key slot (sov_key_slot): same hit pattern as has-asset keys — full frame tappable. */
+#panel.skin .w.k-ign.has-asset {
+  pointer-events: none;
+  padding: 0;
+}
+#panel.skin .w.k-ign.has-asset .cap { pointer-events: none; background: var(--asset) center / 100% 100% no-repeat; }
+#panel.skin .w.k-ign.has-asset .hit {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: auto;
+  cursor: pointer;
+}
 .k-ign svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .k-ign .ikey { transform: rotate(-50deg); transition: transform 190ms cubic-bezier(0.3, 1.4, 0.5, 1); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.7)); }
 .k-ign[data-s="1"] .ikey { transform: rotate(0deg); }
@@ -2487,11 +2637,11 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
    lit halo (~50% the old spread) so the cap reads as a lamp, not a lit-up panel. */
 .w.on .led {
   background: radial-gradient(circle, var(--lamp) 0%, color-mix(in srgb, var(--lamp) 45%, transparent) 55%, transparent 75%);
-  box-shadow: 0 0 1.5px 0 var(--lamp), 0 0 4px 1px color-mix(in srgb, var(--lamp) 38%, transparent);
+  box-shadow: 0 0 1.5px 0 var(--lamp), 0 0 4px 1px color-mix(in srgb, var(--lamp) 36%, transparent);
 }
 .rkey.on .led, .xkey.on .led {
   background: radial-gradient(circle, var(--lamp, #3dff7a) 0%, color-mix(in srgb, var(--lamp, #3dff7a) 45%, transparent) 55%, transparent 75%);
-  box-shadow: 0 0 1.5px 0 var(--lamp, #3dff7a), 0 0 4px 1px color-mix(in srgb, var(--lamp, #3dff7a) 38%, transparent);
+  box-shadow: 0 0 1.5px 0 var(--lamp, #3dff7a), 0 0 4px 1px color-mix(in srgb, var(--lamp, #3dff7a) 36%, transparent);
 }
 .w.on .ico { filter: drop-shadow(0 0 calc(var(--k) * 0.025) var(--lamp)); }
 .k-hot.holding::after { content: ""; position: absolute; left: 8%; right: 8%; bottom: 4%; height: 4px; border-radius: 2px; background: var(--lamp, #ff3b30); transform-origin: left; animation: holdbar 1s linear forwards; pointer-events: none; }
@@ -2658,8 +2808,30 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
    only the .k-sgauge/.k-spr widgets paint as CSS/SVG now instead of PNG cutouts; .k-vgauge/.k-vbtn are
    the forward-looking class names, kept alongside the originals so every fn/on/down/engl.lit binding
    in app.js — which still queries .k-sgauge/.k-spr — needs zero change) ============================== */
+/* ---- Glass lens overlay (sov_lens.png) -------------------------------------------------------
+   Not a button: a sheet of curved glass laid over a dial niche. 100% passive — taps pass straight
+   through to whatever sits underneath (pointer-events:none), it never sinks, lights or tints.
+   Geometry follows the dials: a perfect circle on the box's smaller side, clipped at its edge. */
+#panel.skin .k-lens,
+.k-lens {
+  pointer-events: none !important;
+  display: grid; place-items: center;
+  background: none; border: 0; box-shadow: none; cursor: default;
+}
+.k-lens::before {
+  content: ''; display: block;
+  height: 100%; max-width: 100%; aspect-ratio: 1;
+  border-radius: 50%; overflow: hidden;
+  background: var(--asset) center / 100% 100% no-repeat;
+}
+.k-lens, .k-lens::before, .k-lens:active, .k-lens.in, .k-lens.on, .k-lens.down {
+  transform: none !important; scale: none !important; filter: none !important;
+  transition: none !important; animation: none !important;
+}
+
 /* dials: metal bezel (--dial-bezel) + recessed face (--dial-face), same vars the Modern gauges use */
-#panel.skin .k-sgauge { display: grid; place-items: center; pointer-events: none; }
+/* auto (not none): eat taps so neighbour .hit-full boxes cannot fire under the dial face. */
+#panel.skin .k-sgauge { display: grid; place-items: center; pointer-events: auto; cursor: default; }
 .k-sgauge .sg {
   height: 100%; max-width: 100%; aspect-ratio: 1; position: relative; --glow: 0; border-radius: 50%;
   background: var(--dial-bezel);
@@ -2681,10 +2853,11 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 /* sov_frame: real photographed dial faces (bezel, patina, numerals baked in) replace the CSS/SVG plate.
    The app only overlays the moving needle + pivot cap; .nums/.unit stay in the DOM (hidden) so the
    non-photo skins sharing .k-sgauge keep their original vector rendering untouched. */
-[data-style="sov_frame"] .k-sgauge .sg-speed { background: center / cover no-repeat url(skins/sov/btn/sov_dial_speed.png); }
-[data-style="sov_frame"] .k-sgauge .sg-rpm   { background: center / cover no-repeat url(skins/sov/btn/sov_dial_rpm.png); }
-[data-style="sov_frame"] .k-sgauge .sg-fuel  { background: center / cover no-repeat url(skins/sov/btn/sov_dial_fuel.png); }
-[data-style="sov_frame"] .k-sgauge .sg-air   { background: center / cover no-repeat url(skins/sov/btn/sov_dial_air.png); }
+/* contain (not cover): full dial face maps 1:1 onto the square .sg so hub == viewBox (100,100). */
+[data-style="sov_frame"] .k-sgauge .sg-speed { background: center / contain no-repeat url(skins/sov/btn/sov_dial_speed.png); }
+[data-style="sov_frame"] .k-sgauge .sg-rpm   { background: center / contain no-repeat url(skins/sov/btn/sov_dial_rpm.png); }
+[data-style="sov_frame"] .k-sgauge .sg-fuel  { background: center / contain no-repeat url(skins/sov/btn/sov_dial_fuel.png); }
+[data-style="sov_frame"] .k-sgauge .sg-air   { background: center / contain no-repeat url(skins/sov/btn/sov_dial_air.png); }
 [data-style="sov_frame"] .k-sgauge .sg[class*="sg-"]::before { content: none; }
 [data-style="sov_frame"] .k-sgauge .sg[class*="sg-"] .nums,
 [data-style="sov_frame"] .k-sgauge .sg[class*="sg-"] .unit { display: none; }
@@ -2693,10 +2866,39 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 .k-sgauge.small .nums text { font-size: 16px; }
 .k-sgauge .unit { fill: #b9b5a6; font: 600 7.5px var(--font-legend); text-anchor: middle; letter-spacing: 0.08em; }
 .k-sgauge.small .unit { font-size: 10px; }
-.k-sgauge .needle { transform-origin: 100px 100px; transition: transform 220ms linear; }
+/* Regra 2: pivot locked to dial centre. 50% 50% of the 200×200 viewBox (= 100px 100px).
+   Widget % size must not ovalize the face or shift the origin (see aspect-ratio 1/1 below). */
+.k-sgauge .needle {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transition: transform 220ms linear;
+}
 .k-sgauge .needle line { stroke: #ff7a1a; stroke-width: 2.6; stroke-linecap: round; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8)); }
 .k-sgauge .hub { fill: #1a1a1a; stroke: #7c7f82; stroke-width: 1.4; }
 .k-sgauge .hub2 { fill: #b8bcc0; }
+
+/* The motor centres a square in the mapped rectangle after fit(), including panel stretch. */
+#panel.skin .k-sgauge,
+#panel.skin .k-lens {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+}
+.k-sgauge .sg,
+.k-sgauge .sg > svg,
+.k-lens::before {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  clip-path: circle(50% at 50% 50%) !important;
+  overflow: hidden !important;
+}
 
 /* switches, buttons, lamps */
 #panel.skin .k-spr { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0; pointer-events: none; cursor: pointer; }
@@ -2731,6 +2933,11 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 /* green segment display */
 .k-gps.tinfo.vfd { display: grid; grid-template-rows: 1fr auto; gap: 0; padding: 4% 3% 0; cursor: pointer; border-radius: 6px;
   background: linear-gradient(180deg, #2a2b2c, #111212 18%, #0b0b0b); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 0 1px #000, 0 3px 6px rgba(40, 25, 5, 0.55); }
+#app[data-style="sov_frame"] #panel.skin .k-gps.vfd,
+#app[data-style="sov_frame"] #panel.skin .k-gps.vfd * {
+  pointer-events: none !important;
+  cursor: default;
+}
 .k-gps.tinfo.vfd::after { display: none; }
 .vfd .vf-glass, .vfd .vf-cap { display: grid; grid-template-columns: 3fr 2fr 3fr 4.4fr; column-gap: 4%; }
 .vfd .vf-glass { min-height: 0; padding: 5% 4%; border-radius: 3px; transform: none;
@@ -2752,9 +2959,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   .k-vfd-float .vf-glass, .k-vfd-float .vf-cap { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(2, 1fr); row-gap: 4%; }
 }
 
-/* fixes after the first look */
-#panel.skin .k-sgauge { display: block; }
-.k-sgauge .sg { position: absolute; inset: 0; margin: auto; height: 100%; width: auto; aspect-ratio: 1; max-width: 100%; max-height: 100%; }
+/* fixes after the first look — keep dial square (do NOT reintroduce inset:0 stretch). */
 .k-sgauge .unit { font-size: 7px; }
 .k-sgauge.small .unit { font-size: 9px; }
 .k-spr.s-lamp .pic { filter: brightness(0.8) saturate(0.85); }
@@ -2773,10 +2978,10 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 .k-spr.s-lamp.c-b .pic { --glow: rgba(70, 130, 255, 0.9); }
 .k-spr.s-lamp.c-a .pic { --glow: rgba(255, 170, 40, 0.9); }
 .k-spr.s-lamp .pic { --hue: hue-rotate(0deg); filter: var(--hue) brightness(0.8) saturate(0.85); }
-.k-spr.s-lamp.on .pic { filter: var(--hue) brightness(1.75) saturate(1.7) drop-shadow(0 0 calc(var(--k) * 0.16) var(--glow)); }
+.k-spr.s-lamp.on .pic { filter: var(--hue) brightness(1.7) saturate(1.65) drop-shadow(0 0 calc(var(--k) * 0.16) var(--glow)); }
 /* engine lamp: brightness set many times a second from the engine speed (--lv, 0 to 1.1) */
 .k-spr.s-lamp.engl .pic { transition: none; }
-.k-spr.s-lamp.engl.lit .pic { filter: brightness(calc(0.8 + 1.15 * var(--lv))) saturate(calc(0.85 + 1 * var(--lv))) drop-shadow(0 0 calc(var(--k) * 0.2 * var(--lv)) rgba(40, 255, 130, calc(0.9 * var(--lv)))); }
+.k-spr.s-lamp.engl.lit .pic { filter: brightness(calc(0.8 + 1.15 * var(--lv))) saturate(calc(0.85 + 1 * var(--lv))) drop-shadow(0 0 calc(var(--k) * 0.2 * var(--lv)) rgba(40, 255, 130, calc(0.85 * var(--lv)))); }
 #panel.skin .k-spr.s-sq .ico, #panel.skin .k-spr.s-sq.on .ico { color: rgba(58, 36, 12, 0.78); filter: none; }
 
 /* ---- Lamps, second pass: only the glass lens lights up. The lens is its own layer, cut at its edge;
@@ -4153,9 +4358,11 @@ video::-webkit-media-controls-start-playback-button {
 }
 #panel.eu-modern .k-kbd.on .atomic-picto,
 #panel.eu-modern .k-kbd.on .ico {
-  filter: drop-shadow(0 0 4px var(--led-on, #35ff66))
-          drop-shadow(0 0 10px color-mix(in srgb, var(--led-on, #35ff66) 55%, transparent))
-          brightness(1.25);
+  /* Soft alpha-only glow (tuned down ~12% from the prior +15% pass). */
+  filter: drop-shadow(0 0 calc(4px * var(--led-glow-strength)) var(--led-on, #35ff66))
+          drop-shadow(0 0 calc(10px * var(--led-glow-strength)) color-mix(in srgb, var(--led-on, #35ff66) 48%, transparent))
+          brightness(1.14);
+  box-shadow: none;
 }
 .k-kbd, .k-kbd .cap {
   -webkit-tap-highlight-color: transparent;
@@ -4170,9 +4377,177 @@ video::-webkit-media-controls-start-playback-button {
   height: 2px;
   border-radius: 2px;
   background: var(--led-on, #35ff66);
-  box-shadow: 0 0 4px 1px var(--led-on, #35ff66), 0 0 10px 2px color-mix(in srgb, var(--led-on, #35ff66) 45%, transparent);
+  box-shadow: 0 0 calc(4px * var(--led-glow-strength)) 1px var(--led-on, #35ff66), 0 0 calc(10px * var(--led-glow-strength)) 2px color-mix(in srgb, var(--led-on, #35ff66) 40%, transparent);
   pointer-events: none;
   z-index: 5;
+}
+#panel.cabin-dark { --led-glow-strength: 1.15; }
+/* Soviet atomic lamps: same --lv formula as factory .k-spr.engl, applied to the photo cap. */
+#app[data-style="sov_frame"] .k-kbd.has-asset.engl.lit .cap {
+  filter: brightness(calc(0.8 + 1.15 * var(--lv, 0))) saturate(calc(0.85 + 1 * var(--lv, 0)))
+    drop-shadow(0 0 calc(var(--k, 40px) * 0.2 * var(--lv, 0)) rgba(40, 255, 130, calc(0.85 * var(--lv, 0))));
+}
+#app[data-style="sov_frame"] .k-kbd.has-asset.atomic-lamp.on .cap {
+  filter: brightness(1.75) saturate(1.65)
+    drop-shadow(0 0 calc(var(--k, 40px) * 0.16) rgba(40, 255, 130, 0.75));
+}
+/* Soviet photo keys (toggles, hazard, parking, rockers…): kill the default .rocker/.hazard
+   black well + round bezel on EVERY layer. PNG alpha sits on the enamel plate with no
+   circular black disc behind asset-tog / sov_toggle_* levers. */
+#app[data-style="sov_frame"] .k-kbd.has-asset,
+#app[data-style="sov_frame"] .k-kbd.has-asset.asset-tog,
+#app[data-style="sov_frame"] .k-kbd.has-asset.rocker,
+#app[data-style="sov_frame"] .k-kbd.has-asset.hazard,
+#app[data-style="sov_frame"] .k-kbd.has-asset.round,
+#app[data-style="sov_frame"] .k-kbd.has-asset.toggle,
+#app[data-style="sov_frame"] .k-kbd.has-asset .hit,
+#app[data-style="sov_frame"] .k-kbd.has-asset .well,
+#app[data-style="sov_frame"] .k-kbd.has-asset .bezel,
+#app[data-style="sov_frame"] .k-kbd.has-asset .kbd-wrapper {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+#app[data-style="sov_frame"] .k-kbd.has-asset .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.asset-tog .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.rocker .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.hazard .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.round .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.toggle .cap {
+  background-color: transparent !important;
+  background-image: var(--asset) !important;
+  background-position: center !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+#app[data-style="sov_frame"] .k-kbd.has-asset::before,
+#app[data-style="sov_frame"] .k-kbd.has-asset::after,
+#app[data-style="sov_frame"] .k-kbd.has-asset .cap::before,
+#app[data-style="sov_frame"] .k-kbd.has-asset .cap::after,
+#app[data-style="sov_frame"] .k-kbd.has-asset .hit::before,
+#app[data-style="sov_frame"] .k-kbd.has-asset .hit::after,
+#app[data-style="sov_frame"] .k-kbd.has-asset .well::before,
+#app[data-style="sov_frame"] .k-kbd.has-asset .well::after {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+/* Ignition key photo: no square bezel/shadow — only the PNG alpha silhouette. */
+#app[data-style="sov_frame"] .k-ign.has-asset,
+#app[data-style="sov_frame"] .k-ign.has-asset .cap {
+  background-color: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+#app[data-style="sov_frame"] .k-ign.has-asset .cap {
+  background: var(--asset) center / 100% 100% no-repeat;
+}
+#app[data-style="sov_frame"] .k-ign.has-asset svg { display: none !important; }
+/* Key barrels and rotary housings never inherit the generic push physics. */
+#app #panel .w.key-turn,
+#app #panel .w.k-rotary,
+#app #panel .w.key-turn .cap,
+#app #panel .w.k-rotary .cap {
+  transform: none !important;
+  scale: none !important;
+  filter: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Rotary is a selector, never a push button. Freeze every inherited press target; the only
+   permitted transform is the angular state applied to .rot-pin below. */
+#app #panel .w.k-rotary:active,
+#app #panel .w.k-rotary.in,
+#app #panel .w.k-rotary.down,
+#app #panel .w.k-rotary.on {
+  transform: none !important;
+  translate: none !important;
+  scale: none !important;
+  filter: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+#app #panel .w.k-rotary .hit,
+#app #panel .w.k-rotary .well {
+  transform: none !important;
+  translate: none !important;
+  scale: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+#app #panel .w.k-rotary .rot-pin {
+  transform: rotate(calc(var(--rot-deg, 0deg) - var(--pin-bake, 0deg))) !important;
+  transform-origin: 50% 50% !important;
+}
+#app #panel .w.key-turn .cap {
+  translate: none !important;
+  mask-image: radial-gradient(circle closest-side at 50% 50%, transparent calc(var(--key-radius) * 2 - .2%), #000 calc(var(--key-radius) * 2));
+}
+#app #panel .w.key-turn .key-core {
+  position: absolute;
+  inset: 0;
+  background: var(--asset) center / 100% 100% no-repeat;
+  clip-path: circle(var(--key-radius) at 50% 50%);
+  transform-origin: 50% 50%;
+  transform: rotate(var(--key-deg, 0deg)) !important;
+  transition: none !important;
+  animation: none !important;
+  pointer-events: none;
+}
+/* Soviet hazard lit (sov_push_hazard_off/on) — THE one rule set for this button.
+   Plain backlit push: the body never moves and the bulb is a dry binary swap of --asset.
+   The resting selector is listed first so the inherited 60ms transition cannot soften the cut. */
+#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail.down .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail.on .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail.in .cap,
+#app[data-style="sov_frame"] .w.down.k-kbd.has-asset.hazard-fail .cap {
+  transform: none !important;
+  translate: none !important;
+  scale: none !important;
+  transition: none !important;
+  animation: none !important;
+  opacity: 1 !important;
+}
+#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail .cap {
+  filter: none !important;
+}
+#app[data-style="sov_frame"] .hazard-fail .hazard-light {
+  position: absolute;
+  inset: 0;
+  background: var(--haz-light) center / 100% 100% no-repeat;
+  clip-path: ellipse(30% 32% at 50% 50%);
+  pointer-events: none;
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail.on .hazard-light {
+  filter: drop-shadow(0 0 4px var(--haz-glow, #ffb02e))
+          drop-shadow(0 0 11px color-mix(in srgb, var(--haz-glow, #ffb02e) 55%, transparent)) !important;
+}
+#app[data-style="sov_frame"] .k-kbd.has-asset.asset-tog.down .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.asset-tog.in .cap,
+#app[data-style="sov_frame"] .k-kbd.has-asset.asset-tog.on .cap,
+#app[data-style="sov_frame"] .w.down.k-kbd.has-asset.asset-tog .cap {
+  transform: perspective(260px) rotateX(6deg) !important;
 }
 #panel.eu-modern.edit .k-kbd.on::after { display: none; }
 #panel.scania-sr.cabin-dark::before { opacity:calc(.42 - .18 * var(--cabin,0)); }
@@ -4368,4 +4743,126 @@ video::-webkit-media-controls-start-playback-button {
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .obd-fuelbar i {
   background: var(--obd-bar-gradient, linear-gradient(90deg, var(--obd-cyan), var(--obd-green)));
+}
+
+/* ---- Rotary selector (hybrid: base PNG + CSS icon crown + pin PNG) -----------------------
+   Anatomy (Fernando's blueprint, 2026-10-18):
+     .k-rotary .cap        clean base photo, static
+     .rot-crown .rot-tick  labels/icons laid out on an arc, static, upright
+     .rot-pin              the ONLY layer that rotates
+   Assets (from Fernando's headlight-control-dial photo, split 2026-10-18):
+     sov_rotary_dial.png  868x868  housing + silver ring + silkscreen (AUTO / 0 / bulb / low)
+     sov_rotary_knob.png  504x504  round crop of the well, knob baked in at +24.1deg
+   Pivot: the knob crop is taken AROUND the dial centre, so its own centre is the mechanical
+   pivot. --pin-bake subtracts the photographed angle; a state's `deg` is the printed legend. */
+.k-kbd.has-asset.k-rotary { overflow: visible; }
+/* Base never sinks, tilts or dims — it is the fixed housing (same rule family as hazard-fail). */
+.k-kbd.has-asset.k-rotary .cap,
+.k-kbd.has-asset.k-rotary.on .cap,
+.k-kbd.has-asset.k-rotary.in .cap,
+.k-kbd.has-asset.k-rotary.down .cap,
+.w.down.k-kbd.has-asset.k-rotary .cap {
+  transform: none !important;
+  /* `translate` is owned by the centring rule below (-50% -50%), so it is pinned here instead
+     of being zeroed — a sink would otherwise come back as a translate. */
+  translate: -50% -50% !important;
+  scale: none !important;
+  filter: none !important;
+}
+.k-kbd.has-asset.k-rotary .rot-crown,
+.k-kbd.has-asset.k-rotary .rot-pin {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.k-kbd.has-asset.k-rotary .rot-crown { z-index: 3; }
+.k-kbd.has-asset.k-rotary .rot-pin { z-index: 4; }
+.k-kbd.has-asset.k-rotary .rot-tick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 26%;
+  height: 26%;
+  margin: -13% 0 0 -13%;
+  color: rgba(234, 231, 221, .88);
+  /* radial placement, then counter-rotation so text/icons stay upright */
+  /* --rot-rn is a unitless fraction of --k (the square's side): a % in translateY would
+     resolve against the tick's own box, not the component. */
+  transform: rotate(var(--a)) translateY(calc(-1 * var(--k) * var(--rot-rn, .42))) rotate(calc(-1 * var(--a)));
+}
+.k-kbd.has-asset.k-rotary .rot-txt {
+  font: 700 calc(var(--k) * .105) / 1 var(--ui, system-ui), sans-serif;
+  letter-spacing: .04em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .7);
+}
+.k-kbd.has-asset.k-rotary .rot-ico { display: block; width: 58%; height: 58%; }
+.k-kbd.has-asset.k-rotary .rot-ico svg { width: 100%; height: 100%; }
+.k-kbd.has-asset.k-rotary .rot-pin {
+  /* The knob is a round crop of the well taken around the dial centre, so the image centre IS
+     the pivot — no padding tricks. --pin-bake cancels the angle the knob was photographed at. */
+  background: var(--pin) 50% 50% / var(--pin-size, 58%) auto no-repeat;
+  transform-origin: 50% 50%;
+  transform: rotate(calc(var(--rot-deg, 0deg) - var(--pin-bake, 0deg)));
+  transition: transform 180ms cubic-bezier(.2, .75, .25, 1);
+}
+/* The active position reads a touch brighter than the rest of the crown. */
+.k-kbd.has-asset.k-rotary .rot-tick.is-live { color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .k-kbd.has-asset.k-rotary .rot-pin { transition: none; }
+}
+/* The base photo is 1:1 and the pin pivot is the square's centre, so every rotary layer lives
+   inside a centred square derived from the slot's smaller side — a rectangular slot in the
+   Editor can no longer stretch the housing or shift the pivot (same spirit as the dial 1/1 rule). */
+.k-kbd.has-asset.k-rotary .cap,
+.k-kbd.has-asset.k-rotary .rot-crown,
+.k-kbd.has-asset.k-rotary .rot-pin {
+  inset: auto !important;
+  top: 50% !important;
+  left: 50% !important;
+  height: 100% !important;
+  width: auto !important;
+  max-width: 100% !important;
+  aspect-ratio: 1 / 1;
+  translate: -50% -50% !important;
+}
+/* Modern rotary backlight. No .btn-backlight class exists. The housing PNG is an
+   opaque disc, so its alpha cannot mask the marks. Each mask is only the engraved
+   pictograms. The layer sits above the night lightmap (otherwise the multiply
+   swallows it) but the mask keeps the light off the housing and off the fascia.
+   It does not rotate and does not take clicks. Opacity follows --cabin:
+   0.15 by day, 0.60 at night. Soviet rotaries are not .k-modern, so they get none. */
+#panel > .rotary-backlights {
+  position: absolute;
+  inset: 0;
+  z-index: 102;
+  pointer-events: none;
+  overflow: hidden;
+}
+#panel > .rotary-backlights i {
+  position: absolute;
+  background: #ffd6a0;
+  opacity: calc(0.15 + 0.45 * var(--cabin, 0));
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 100% 100%;
+  mask-mode: alpha;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 100% 100%;
+}
+#panel > .rotary-backlights i[data-mark="lights"] {
+  mask-image: url("skins/modern/mod_rotary_lights_mask.png");
+  -webkit-mask-image: url("skins/modern/mod_rotary_lights_mask.png");
+}
+#panel > .rotary-backlights i[data-mark="wipers"] {
+  mask-image: url("skins/modern/mod_rotary_wipers_mask.png");
+  -webkit-mask-image: url("skins/modern/mod_rotary_wipers_mask.png");
+}
+@media (prefers-reduced-motion: reduce) {
+  #panel > .rotary-backlights i { transition: none; }
 }

@@ -49,6 +49,41 @@ function migrateAtomicLayout(data) {
     }
   };
 }
+// Board-scoped saves preserve every other mapping from the latest disk state.
+function mergeAtomicBoard(previous, report) {
+  const key = report.boardKey;
+  if (!['eu_frame', 'sov_frame', 'sov_white', 'sov_military'].includes(key)) throw new Error('bad boardKey');
+  const board = report.boards && report.boards[key];
+  if (!board || !board.orientations) throw new Error('missing board');
+  for (const mode of ['landscape', 'portrait']) {
+    const orientation = board.orientations[mode];
+    if (!orientation) throw new Error('missing orientation');
+    const ids = new Set();
+    for (const kind of ['buttons', 'zones']) {
+      if (!Array.isArray(orientation[kind])) throw new Error('bad elements');
+      for (const item of orientation[kind]) {
+        if (!item || typeof item.id !== 'string' || !item.id || ids.has(item.id)
+            || item.position || !['x', 'y', 'w', 'h'].every((field) => Number.isFinite(item[field]))
+            || item.x < 0 || item.y < 0 || item.x > 100 || item.y > 100
+            || item.w <= 0 || item.h <= 0 || item.w > 100 || item.h > 100) throw new Error('bad flat geometry');
+        ids.add(item.id);
+      }
+    }
+  }
+  const assets = new Map(((previous && previous.customAssets) || []).map((asset) => [asset.id, asset]));
+  if (report.customAssets !== undefined && !Array.isArray(report.customAssets)) throw new Error('bad assets');
+  (report.customAssets || []).forEach((asset) => {
+    if (!asset || typeof asset.id !== 'string' || typeof asset.src !== 'string') throw new Error('bad asset');
+    if (assets.has(asset.id) && assets.get(asset.id).src !== asset.src) throw new Error('custom asset conflict');
+    assets.set(asset.id, asset);
+  });
+  return {
+    ...previous, schema: report.schema,
+    boards: { ...(previous && previous.boards), [key]: board },
+    customAssets: Array.from(assets.values())
+  };
+}
+
 function readAtomicLayout() {
   const data = readJson(ATOMIC_LAYOUT_FILE, null);
   const migrated = migrateAtomicLayout(data);
@@ -505,7 +540,7 @@ const server = http.createServer(async (req, res) => {
 
     if (route === '/api/layouts' && req.method === 'PUT') {
       const text = await readBody(req, 2 * 1024 * 1024);
-      const incoming = JSON.parse(text); // reject garbage before it replaces a good file
+      let incoming = JSON.parse(text); // reject garbage before it replaces a good file
 
       // Key bindings are the most expensive thing in this file to recreate: they
       // are entered by hand, one function at a time. A save that arrives with no
@@ -552,7 +587,7 @@ const server = http.createServer(async (req, res) => {
       // placement, backgrounds, custom assets as base64). Those assets inflate the payload
       // well past the 2 MB layouts.json limit, hence the larger cap here.
       const text = await readBody(req, 16 * 1024 * 1024);
-      const incoming = JSON.parse(text); // reject garbage before it replaces a good file
+      let incoming = JSON.parse(text); // reject garbage before it replaces a good file
       if (!incoming || incoming.schema !== ATOMIC_LAYOUT_SCHEMA) {
         json(res, 400, { error: 'bad schema' });
         return;
@@ -563,6 +598,7 @@ const server = http.createServer(async (req, res) => {
       // applied. Counts both skins together so this guard still catches a wipe regardless of
       // which skin tab was open when it happened.
       const prev = readAtomicLayout();
+      if (Object.prototype.hasOwnProperty.call(incoming, 'boardKey')) incoming = mergeAtomicBoard(prev, incoming);
       if (prev) {
         const boardButtonCount = (board) => {
           if (!board || !board.orientations) return 0;
@@ -575,7 +611,13 @@ const server = http.createServer(async (req, res) => {
         };
         const buttonCount = (o) => {
           if (!o || !o.boards) return 0;
-          return boardButtonCount(o.boards.eu_frame) + boardButtonCount(o.boards.sov_frame);
+          return boardButtonCount(o.boards.eu_frame)
+            + boardButtonCount(o.boards.sov_frame)
+            + boardButtonCount(o.boards.sov_white)
+            + boardButtonCount(o.boards.sov_military)
+            // Legacy dual military boards (pre shared sov_military) still count if present.
+            + boardButtonCount(o.boards.sov_military1)
+            + boardButtonCount(o.boards.sov_military2);
         };
         const before = buttonCount(prev), after = buttonCount(incoming);
         // Same reasoning as layouts.json above: a save that drops from e.g. 26 buttons to 5
@@ -592,7 +634,7 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      fs.writeFileSync(ATOMIC_LAYOUT_FILE + '.tmp', text);
+      fs.writeFileSync(ATOMIC_LAYOUT_FILE + '.tmp', JSON.stringify(incoming));
       fs.renameSync(ATOMIC_LAYOUT_FILE + '.tmp', ATOMIC_LAYOUT_FILE);
       // Tell every connected tablet/painel to refetch: without this they only pick up an
       // editor save on their next full connect()/reload, which is what made saves on the

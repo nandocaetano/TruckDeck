@@ -128,8 +128,11 @@ function fn(id, cat, name, label, icon, keys, extra) {
 
 const FUNCTION_LIST = [
   // Engine & brakes
-  fn('engine', 'engine', 'Start / stop engine', 'START\nSTOP', 'power', ['e'], { latch: true, tel: 'engine' }),
-  fn('electrics', 'engine', 'Ignition (electrics)', 'IGNITION', 'key', ['insert'], { bind: true, latch: true, tel: 'electric', led: 'amber' }),
+  fn('engine', 'engine', 'Engine Only (Start/Stop)', 'START\nSTOP', 'power', ['e'], { latch: true, tel: 'engine' }),
+  fn('electrics', 'engine', 'Electrics Only', 'IGNITION', 'key', ['insert'], { bind: true, latch: true, tel: 'electric', led: 'amber' }),
+  // Combined key-slot: app owns the dual-stage state machine (electrics → timer → engine).
+  // keys:[] — never sent raw; pressIgn / tapIgnCombined emit electrics + engine in order.
+  fn('ign_combined', 'engine', 'Combined (Electrics + Engine)', 'IGN\nKEY', 'key', [], { latch: false, led: 'amber' }),
   fn('parking_brake', 'engine', 'Parking brake', 'PARK\nBRAKE', 'parking', ['space'], { latch: true, tel: 'park', led: 'red' }),
   fn('engine_brake', 'engine', 'Engine brake (hold)', 'ENG BRAKE', 'engbrake', ['b'], { mode: 'hold', tel: 'motorBrake', led: 'amber' }),
   fn('engine_brake_toggle', 'engine', 'Engine brake toggle', 'ENG BRAKE', 'engbrake', ['b'], { latch: true, tel: 'motorBrake', led: 'amber' }),
@@ -298,7 +301,7 @@ for (const f of FUNCTION_LIST) FUNCTIONS[f.id] = f;
 // Printed on the keys of panels whose language is Portuguese (the Brazilian dashboards).
 // Written the way Brazilian drivers name the controls, not translated word for word.
 const LABELS_PT = {
-  engine: 'PARTIDA', electrics: 'IGNI\u00c7\u00c3O', parking_brake: 'FREIO\nESTAC.', engine_brake: 'FREIO\nMOTOR',
+  engine: 'PARTIDA', electrics: 'IGNI\u00c7\u00c3O', ign_combined: 'CHAVE\nIGNI\u00c7\u00c3O', parking_brake: 'FREIO\nESTAC.', engine_brake: 'FREIO\nMOTOR',
   engine_brake_toggle: 'FREIO\nMOTOR', engine_brake_up: 'FREIO\nMOTOR\u00a0+', engine_brake_down: 'FREIO\nMOTOR\u00a0\u2212',
   retarder_auto: 'RETARDER\nAUTOM.', lane_assist: 'MANT.\nFAIXA', emergency_brake: 'FREIO\nEMERG.', hud: 'HUD',
   susp_front_up: 'FRENTE\nSOBE', susp_front_down: 'FRENTE\nDESCE', susp_rear_up: 'TRASEIRA\nSOBE', susp_rear_down: 'TRASEIRA\nDESCE', susp_reset: 'REDEF.\nSUSP.',

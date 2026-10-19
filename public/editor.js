@@ -15,9 +15,34 @@
     sigabem: 'Siga Bem',
     vivamexico: 'Viva México'
   };
+  // Source aliases: 380.jpg = Siga Bem, 378.jpg = Viva México (Fernando's numbered masters).
+  const SOV_BG_ALIASES = {
+    '380': 'sigabem', '380.jpg': 'sigabem', siga: 'sigabem', siga_bem: 'sigabem',
+    'siga bem': 'sigabem', sigabem: 'sigabem',
+    '378': 'vivamexico', '378.jpg': 'vivamexico', viva: 'vivamexico', viva_mexico: 'vivamexico',
+    'viva mexico': 'vivamexico', 'viva méxico': 'vivamexico', vivamexico: 'vivamexico',
+    white: 'white', branca: 'white', enamel: 'white',
+    military1: 'military1', mil1: 'military1', military2: 'military2', mil2: 'military2'
+  };
+  function normalizeSovBg(sovBg) {
+    const raw = String(sovBg == null ? 'white' : sovBg).trim();
+    if (!raw) return 'white';
+    const key = raw.toLowerCase().replace(/\\+/g, '/').split('/').pop();
+    const bare = key.replace(/\.(jpe?g|png|webp)$/i, '');
+    const hit = SOV_BG_ALIASES[key] || SOV_BG_ALIASES[bare]
+      || SOV_BG_ALIASES[bare.replace(/[-_\s]+/g, '')]
+      || SOV_BG_ALIASES[raw.toLowerCase()];
+    if (hit) return hit;
+    if (/siga/.test(bare)) return 'sigabem';
+    if (/viva|mexico|méxico/.test(bare)) return 'vivamexico';
+    if (/military?\s*2|mil2/.test(bare)) return 'military2';
+    if (/military?\s*1|mil1|military/.test(bare)) return 'military1';
+    if (/white|branca|enamel|esmalt/.test(bare)) return 'white';
+    return SOV_BG_VARIANTS.includes(bare) ? bare : 'white';
+  }
   function officialOf(mode) {
     if (state.skin === 'sov_frame') {
-      const variant = SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'white';
+      const variant = normalizeSovBg(state.sovBg);
       const name = 'bg-' + variant + '-' + mode + '.jpg';
       return mode === 'landscape'
         ? { name: name, src: 'skins/sov/bg/' + name, width: 2752, height: 1536 }
@@ -37,15 +62,39 @@
     'engine_red.png': { label: 'Motor vermelho', defaultSize: [8, 8] },
     'hazard_black.png': { label: 'Alerta preto', defaultSize: [8, 8] },
     'hazard_sq_blk.png': { label: 'Alerta quadrado', defaultSize: [8, 8] },
-    'parking.png': { label: 'Estacionamento', defaultSize: [8, 8] }
+    'parking.png': { label: 'Estacionamento', defaultSize: [8, 8] },
+    // Modern-only rotaries. The app owns the detent table (stages + measured legend angles);
+    // the palette entry is the static housing. The knob PNG is not a separate tool.
+    'mod_rotary_lights.png': { label: 'Seletor de luzes', defaultSize: [12, 12] },
+    'mod_rotary_wipers.png': { label: 'Seletor do limpa-para-brisas', defaultSize: [12, 12] }
   };
   const ASSETS_SOV = {
+    'btn-rocker-v.png': { label: 'Rocker V', defaultSize: [5.5, 13] },
     'sov_key.png': { label: 'Key', defaultSize: [8, 10] },
+    'sov_key_slot.png': { label: 'Key slot', defaultSize: [8, 10] },
     'sov_sq.png': { label: 'Square', defaultSize: [8, 8] },
+    'sov_sq_boss.png': { label: 'Square boss', defaultSize: [8, 8] },
+    'sov_sq_flat.png': { label: 'Square flat', defaultSize: [8, 8] },
+    'sov_sq_waffle.png': { label: 'Square waffle', defaultSize: [8, 8] },
+    'sov_sq_grid.png': { label: 'Square grid', defaultSize: [8, 8] },
     'sov_push.png': { label: 'Push', defaultSize: [8, 8] },
+    'sov_push_dish.png': { label: 'Push dish', defaultSize: [7, 7] },
+    'sov_push_worn.png': { label: 'Push worn', defaultSize: [7, 7] },
+    // Passive glass overlay, not a push. Single entry; the legacy sov_push_lens.png name is
+    // still resolved by app.js for layouts saved before the rename, but is not offered here.
+    'sov_lens.png': { label: 'Gauge lens', defaultSize: [12, 12] },
+    'sov_push_scratched.png': { label: 'Push scratched', defaultSize: [7, 7] },
+    'sov_push_parking_brake.png': { label: 'Parking Brake Push', defaultSize: [7, 7] },
+    'sov_push_hazard.png': { label: 'Hazard Push', defaultSize: [7, 7] },
+    'sov_push_hazard_off.png': { label: 'Hazard off', defaultSize: [7, 7] },
+    'sov_push_hazard_on.png': { label: 'Hazard on', defaultSize: [7, 7] },
+    'sov_rotary_dial.png': { label: 'Seletor rotativo (luzes)', defaultSize: [10, 10] },
     'sov_tog_up.png': { label: 'Toggle up', defaultSize: [6, 12] },
     'sov_tog_mid.png': { label: 'Toggle mid', defaultSize: [6, 12] },
     'sov_tog_down.png': { label: 'Toggle down', defaultSize: [6, 12] },
+    'sov_toggle_parking_brake.png': { label: 'Parking Brake Toggle', defaultSize: [8, 10] },
+    'sov_toggle_parking_brake_up.png': { label: 'Parking Brake Toggle up', defaultSize: [8, 8] },
+    'sov_toggle_parking_brake_down.png': { label: 'Parking Brake Toggle down', defaultSize: [8, 8] },
     'sov_lamp_red_off.png': { label: 'Lamp red off', defaultSize: [7, 7] },
     'sov_lamp_red_on.png': { label: 'Lamp red on', defaultSize: [7, 7] },
     'sov_lamp_green_off.png': { label: 'Lamp green off', defaultSize: [7, 7] },
@@ -67,27 +116,49 @@
   ];
   // Lamps are passive telemetry telltales — never vehicle command keys. Catalog filtered by
   // lamp colour (red/green/blue/amber) from the asset filename.
+  // Passive telltale catalog (editor-only). `behavior` drives blink vs steady in app.js.
+  // Legacy ids (ind_*, blinker_*, lights, engine, retarder_auto) stay accepted via LAMP_ID_ALIASES.
   const LAMP_TELEMETRY = {
     red: [
-      { id: 'ind_speed_alert', name: 'Alerta de Velocidade Excedida', tel: 'speedWarn' },
-      { id: 'ind_air_critical', name: 'Pressão de Ar Crítica', tel: 'airWarn' },
-      { id: 'parking_brake', name: 'Freio de Mão Ativado', tel: 'park' },
-      { id: 'ind_engine_overheat', name: 'Superaquecimento do Motor', tel: 'waterWarn' }
-    ],
-    green: [
-      { id: 'blinker_left', name: 'Seta / Pisca Esquerda', tel: 'blinkL' },
-      { id: 'blinker_right', name: 'Seta / Pisca Direita', tel: 'blinkR' },
-      { id: 'lights', name: 'Luz de Presença / Farol Baixo', tel: 'lightsOn' },
-      { id: 'engine', name: 'Status de Motor Ligado', tel: 'engine' }
-    ],
-    blue: [
-      { id: 'high_beam', name: 'Farol Alto (High beam)', tel: 'high' }
+      { id: 'hazard_alert', name: 'Hazard / Pisca-Alerta', tel: 'hazard', behavior: 'blink' },
+      { id: 'trailer_brake', name: 'Freio do Reboque', tel: 'trailerBrake', behavior: 'steady' },
+      { id: 'engine_stalled', name: 'Motor Desligado / Morreu', tel: 'engineStalled', behavior: 'steady' },
+      { id: 'parking_brake', name: 'Freio de Mão Ativado', tel: 'park', behavior: 'steady' },
+      { id: 'over_speed_alert', name: 'Alerta de Velocidade Excedida', tel: 'speedWarn', behavior: 'blink' },
+      { id: 'air_pressure_critical', name: 'Pressão de Ar Crítica', tel: 'airWarn', behavior: 'blink' },
+      { id: 'engine_overheat', name: 'Superaquecimento do Motor', tel: 'waterWarn', behavior: 'steady' }
     ],
     amber: [
-      { id: 'ind_fuel_reserve', name: 'Reserva de Combustível', tel: 'fuelWarn' },
-      { id: 'retarder_auto', name: 'Retardador / Freio Motor Ativo', tel: 'retarderOn' },
-      { id: 'diff_lock', name: 'Bloqueio de Diferencial', tel: 'diff' }
+      { id: 'hazard_alert', name: 'Hazard / Pisca-Alerta', tel: 'hazard', behavior: 'blink' },
+      { id: 'fuel_reserve', name: 'Reserva de Combustível', tel: 'fuelWarn', behavior: 'steady' },
+      { id: 'retarder_active', name: 'Retardador / Freio Motor Ativo', tel: 'retarderOn', behavior: 'steady' },
+      { id: 'diff_lock', name: 'Bloqueio de Diferencial', tel: 'diff', behavior: 'steady' }
+    ],
+    green: [
+      { id: 'turn_signal_single', name: 'Pisca Combinado Genérico', tel: 'blinkEither', behavior: 'blink' },
+      { id: 'left_turn_signal', name: 'Seta Esquerda', tel: 'blinkL', behavior: 'blink' },
+      { id: 'right_turn_signal', name: 'Seta Direita', tel: 'blinkR', behavior: 'blink' },
+      { id: 'low_beam', name: 'Luz de Presença / Farol Baixo', tel: 'lightsOn', behavior: 'steady' },
+      { id: 'parking_lights', name: 'Luzes de Presença (só parking)', tel: 'parking', behavior: 'steady' },
+      { id: 'engine_running', name: 'Status do Motor Ligado', tel: 'engine', behavior: 'steady' }
+    ],
+    blue: [
+      { id: 'high_beam', name: 'Farol Alto', tel: 'high', behavior: 'steady' }
     ]
+  };
+  const LAMP_ID_ALIASES = {
+    ind_speed_alert: 'over_speed_alert',
+    ind_air_critical: 'air_pressure_critical',
+    ind_engine_overheat: 'engine_overheat',
+    ind_fuel_reserve: 'fuel_reserve',
+    blinker_left: 'left_turn_signal',
+    blinker_right: 'right_turn_signal',
+    lights: 'low_beam',
+    parking_light: 'parking_lights',
+    position_lights: 'parking_lights',
+    presence: 'parking_lights',
+    engine: 'engine_running',
+    retarder_auto: 'retarder_active'
   };
   const DASHBOARDS = {
     'dash-obd': { label: 'Tela OBD', defaultSize: [38, 15] },
@@ -138,6 +209,82 @@
   function isLampAsset(asset) {
     return /(?:^|[_-])lamp[_-]|sov_lamp_/i.test(String(asset || ''));
   }
+  // Analogue dial faces — passive gauges in the live app (no click, no LED, needle from telemetry).
+  function isDialAsset(asset) {
+    return /sov_dial_(speed|rpm|fuel|air)|(?:^|[_-])dial[_-](speed|rpm|fuel|air)\b/i.test(String(asset || ''));
+  }
+  function isCircularOverlayAsset(asset) {
+    return isDialAsset(asset) || /(?:^|\/)sov_(?:push_)?lens\.png$/i.test(String(asset || ''));
+  }
+  // Rotary selector: static housing photo (sov_rotary_dial) + rotating knob crop
+  // (sov_rotary_knob). The CSS icon crown is only drawn for housings with no printed legend.
+  function isRotaryAsset(asset) {
+    return /sov_rotary_(?:dial|base)/i.test(String(asset || ''))
+      || /mod_rotary_(?:lights|wipers)\.png$/i.test(String(asset || ''));
+  }
+  // Measured off the printed legends (0deg = 12 o'clock, clockwise positive).
+  // Lights: AUTO 0, bulb -68.2, dipped beam 179.
+  // Wipers: AUTO 91.4 (3h), normal 0.6 (12h), fast -84.8 (9h), OFF 180 (6h).
+  // Stages stay in app.js (telemetry). The editor only stores the knob geometry.
+  function modernRotaryPreset(asset) {
+    const key = String(asset || '');
+    if (/mod_rotary_lights\.png$/i.test(key)) {
+      return {
+        functionId: 'lights',
+        pinAsset: 'mod_rotary_lights_knob.png',
+        pinLen: 56.4,
+        pinBake: 27.3,
+        states: [
+          { id: 'auto', deg: 0 },
+          { id: 'lamp', deg: -68.2 },
+          { id: 'beam', deg: 179 }
+        ]
+      };
+    }
+    if (/mod_rotary_wipers\.png$/i.test(key)) {
+      return {
+        functionId: 'wipers',
+        pinAsset: 'mod_rotary_wipers_knob.png',
+        pinLen: 57.6,
+        pinBake: 26.5,
+        states: [
+          { id: 'auto', deg: 91.4 },
+          { id: 'norm', deg: 0.6 },
+          { id: 'fast', deg: -84.8 },
+          { id: 'off', deg: 180 }
+        ]
+      };
+    }
+    return null;
+  }
+  // One position per line: id | deg | label | icon  (icon validated against the catalog in app.js)
+  function parseRotaryStates(text) {
+    return String(text || '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean).slice(0, 8)
+      .map((line, i) => {
+        const cell = line.split('|').map((part) => part.trim());
+        const deg = Number(cell[1]);
+        return {
+          id: (cell[0] || ('p' + i)).replace(/[^\w-]/g, '').slice(0, 20) || ('p' + i),
+          stage: i,
+          deg: Number.isFinite(deg) ? clamp(deg, -180, 180) : (i * 45 - 90),
+          label: String(cell[2] || '').slice(0, 6),
+          icon: String(cell[3] || '').replace(/[^\w-]/g, '').slice(0, 24)
+        };
+      });
+  }
+  function rotaryStatesText(states) {
+    return (Array.isArray(states) ? states : []).map((st) => [st.id, st.deg, st.label || '', st.icon || ''].join(' | ')).join('\n');
+  }
+  function normalizeRotaryStates(raw) {
+    if (!Array.isArray(raw) || !raw.length) return undefined;
+    return parseRotaryStates(rotaryStatesText(raw.map((st, i) => ({
+      id: String((st && st.id) || ('p' + i)),
+      deg: Number((st && st.deg)),
+      label: (st && st.label) || '',
+      icon: (st && st.icon) || ''
+    }))));
+  }
+
   function lampColorOf(asset) {
     const name = String(asset || '').toLowerCase();
     if (name.includes('red')) return 'red';
@@ -148,6 +295,20 @@
   }
   function lampIndicatorsFor(asset) {
     return LAMP_TELEMETRY[lampColorOf(asset)] || LAMP_TELEMETRY.red;
+  }
+  function resolveLampFunctionId(functionId) {
+    const id = String(functionId || '');
+    if (!id) return '';
+    if (LAMP_ID_ALIASES[id]) return LAMP_ID_ALIASES[id];
+    return id;
+  }
+  // Stock asset names are identity only; custom tags (PARKING, HAZARD…) paint as overlay.
+  function buttonOverlayLabel(item) {
+    const label = String(item && item.label || '').trim();
+    if (!label) return '';
+    const def = getAssetDef(item.asset);
+    if (def && label === def.label) return '';
+    return label;
   }
   function packageIdForSkin(skin) {
     return skin === 'sov_frame' ? 'soviet' : 'modern';
@@ -171,6 +332,12 @@
     return customAssets.find((asset) => asset.id === key) || null;
   }
   function assetImageSrc(key) {
+    // Modern rotary housings and their knob crops always live under skins/modern,
+    // even if the piece is dropped onto another board.
+    if (/^mod_rotary_/i.test(String(key || ''))) return 'skins/modern/' + key;
+    if (/^sov_rotary_knob\.png$/i.test(String(key || ''))) return 'skins/sov/btn/' + key;
+    // Prefer the active skin's pack when a key exists in both (e.g. btn-rocker-v.png).
+    if (state.skin === 'sov_frame' && ASSETS_SOV[key]) return 'skins/sov/btn/' + key;
     if (ASSETS_MODERN[key]) return 'skins/modern/' + key;
     if (ASSETS_SOV[key]) return 'skins/sov/btn/' + key;
     const custom = customAssets.find((asset) => asset.id === key);
@@ -199,9 +366,20 @@
       guides: true,
       boards: {
         eu_frame: freshBoard(),
-        sov_frame: freshBoard()
+        sov_frame: freshBoard(),
+        // White enamel niches differ from Siga/Viva — isolated empty board for remapping.
+        sov_white: freshBoard(),
+        // Military 1 + 2 share one skeleton (same pattern as Siga/Viva → sov_frame).
+        sov_military: freshBoard()
       }
     };
+  }
+  function sovBoardKey(sovBg) {
+    const v = normalizeSovBg(sovBg);
+    if (v === 'white') return 'sov_white';
+    if (v === 'military1' || v === 'military2') return 'sov_military';
+    // sigabem | vivamexico | 380 | 378 → shared Siga Bem / Viva México skeleton
+    return 'sov_frame';
   }
 
   function defaultZones(mode) {
@@ -236,13 +414,12 @@
     try { return localStorage.getItem('truckdeck.pin') || ''; } catch (error) { return ''; }
   }
 
-  // Boards-aware: v2 payloads nest buttons under boards.eu_frame / boards.sov_frame.
-  // Legacy flat payloads (top-level orientations, no boards) still count as having buttons
-  // so a stale localStorage cache can seed an empty server without wiping a good board.
+  // Boards-aware: v2 payloads nest buttons under boards.eu_frame / boards.sov_frame
+  // (+ sov_white / sov_military). Legacy flat payloads still count.
   function hasAnyButtons(payload) {
     if (!payload) return false;
     const boards = payload.boards
-      ? [payload.boards.eu_frame, payload.boards.sov_frame]
+      ? [payload.boards.eu_frame, payload.boards.sov_frame, payload.boards.sov_white, payload.boards.sov_military]
       : [payload];
     return boards.some((board) => {
       if (!board || !board.orientations) return false;
@@ -269,7 +446,7 @@
     const fresh = initialState();
     if (!saved || saved.schema !== fresh.schema) return fresh;
     fresh.skin = saved.skin === 'sov_frame' ? 'sov_frame' : 'eu_frame';
-    fresh.sovBg = SOV_BG_VARIANTS.includes(saved.sovBg) ? saved.sovBg : 'white';
+    fresh.sovBg = normalizeSovBg(saved.sovBg);
     customAssets = Array.isArray(saved.customAssets)
       ? saved.customAssets.filter((item) => item && typeof item.id === 'string' && typeof item.src === 'string').map((item) => ({
         id: item.id,
@@ -282,10 +459,15 @@
     // no `boards`) is migrated here by reading it as the eu_frame board only -- it predates the
     // Soviet skin, so nothing of substance can be sitting in a sov_frame board that old shape
     // never had.
-    ['eu_frame', 'sov_frame'].forEach((skinKey) => {
-      const savedBoard = (saved.boards && saved.boards[skinKey])
-        || (skinKey === 'eu_frame' && !saved.boards ? saved : null);
+    ['eu_frame', 'sov_frame', 'sov_white', 'sov_military'].forEach((skinKey) => {
+      // Legacy dual military boards collapse into shared sov_military.
+      let savedBoard = saved.boards && saved.boards[skinKey];
+      if (!savedBoard && skinKey === 'sov_military' && saved.boards) {
+        savedBoard = saved.boards.sov_military1 || saved.boards.sov_military2 || null;
+      }
+      if (!savedBoard && skinKey === 'eu_frame' && !saved.boards) savedBoard = saved;
       if (!savedBoard || !savedBoard.orientations) return;
+      if (!fresh.boards[skinKey]) fresh.boards[skinKey] = freshBoard();
       ['landscape', 'portrait'].forEach((mode) => {
         const source = savedBoard.orientations[mode];
         if (!source) return;
@@ -314,15 +496,26 @@
   let pushTimer = null;
   function schedulePush() {
     clearTimeout(pushTimer);
-    pushTimer = setTimeout(pushToServer, 600);
+    pushTimer = setTimeout(() => {
+      // Initial offline-cache recovery must seed every board, not only the selected one.
+      const boards = {};
+      Object.entries(state.boards).forEach(([key, board]) => {
+        const orientations = {};
+        Object.entries(board.orientations).forEach(([mode, data]) => {
+          orientations[mode] = { buttons: data.buttons.map(exportElement), zones: data.zones.map(exportElement) };
+        });
+        boards[key] = { orientations };
+      });
+      pushToServer({ ...state, boards, customAssets });
+    }, 600);
   }
   // Only two callers left: saveNow() (explicit Salvar button / Ctrl+S) and the one-time boot
   // reconciliation (needsSeedPush) that seeds the bridge when it has no board yet but this
   // browser's localStorage does. Neither fires on a plain edit anymore -- see persist() above.
   // Always reports a failure -- a silently-ignored res.ok used to make "PIN wrong" or "bridge
   // offline" look identical to "saved fine", which is what made the tablet desync invisible.
-  async function pushToServer() {
-    const text = JSON.stringify({ ...state, customAssets });
+  async function pushToServer(payload = buildReport()) {
+    const text = JSON.stringify(payload);
     try {
       const res = await fetch('/api/atomic-layout', {
         method: 'PUT',
@@ -393,15 +586,29 @@
       pictogram: normalizePictogram(item.pictogram),
       pictogramHidden: Boolean(item.pictogramHidden),
       slots: hasSlots(asset) ? normalizeSlots(item.slots) : undefined,
-      x: clamp(Number(item.x) || 10, 0, 99),
-      y: clamp(Number(item.y) || 10, 0, 99),
-      width: clamp(Number(item.width) || def.defaultSize[0], .2, 100),
-      height: clamp(Number(item.height) || def.defaultSize[1], .2, 100),
+      x: clamp(numOr(item.x, 10), 0, 99),
+      y: clamp(numOr(item.y, 10), 0, 99),
+      width: clamp(Number(item.w ?? item.width) || def.defaultSize[0], .2, 100),
+      height: clamp(Number(item.h ?? item.height) || def.defaultSize[1], .2, 100),
       zIndex: Number(item.zIndex) || 10,
       hidden: Boolean(item.hidden)
     };
     const color = normalizeElementColor(item.color);
     if (color) out.color = color;
+    if (isRotaryAsset(asset)) {
+      // Rotary extras survive save / export / import (normalizeButton is a strict whitelist).
+      // Modern detents are NOT written here: line order would replace the telemetry stage.
+      // An empty `states` array lets app.js apply the measured preset for that asset.
+      const preset = modernRotaryPreset(asset);
+      if (!out.functionId && preset) out.functionId = preset.functionId;
+      const states = normalizeRotaryStates(item.states);
+      if (states) out.states = states;
+      const pinAsset = item.pinAsset || (preset && preset.pinAsset);
+      if (pinAsset) out.pinAsset = String(pinAsset).slice(0, 120);
+      out.crownR = clamp(numOr(item.crownR, 42), 0, 48);
+      out.pinLen = clamp(numOr(item.pinLen, preset ? preset.pinLen : 58), 20, 100);
+      out.pinBake = clamp(numOr(item.pinBake, preset ? preset.pinBake : 24.1), -180, 180);
+    }
     return out;
   }
 
@@ -413,10 +620,10 @@
       id: String(item.id || uid(type)),
       type,
       label: String(item.label || DASHBOARDS[type].label),
-      x: clamp(Number(item.x) || 10, 0, 99),
-      y: clamp(Number(item.y) || 10, 0, 99),
-      width: clamp(Number(item.width) || DASHBOARDS[type].defaultSize[0], .2, 100),
-      height: clamp(Number(item.height) || DASHBOARDS[type].defaultSize[1], .2, 100),
+      x: clamp(numOr(item.x, 10), 0, 99),
+      y: clamp(numOr(item.y, 10), 0, 99),
+      width: clamp(Number(item.w ?? item.width) || DASHBOARDS[type].defaultSize[0], .2, 100),
+      height: clamp(Number(item.h ?? item.height) || DASHBOARDS[type].defaultSize[1], .2, 100),
       zIndex: Number(item.zIndex) || 1,
       hidden: Boolean(item.hidden)
     };
@@ -476,7 +683,15 @@
     if (redoButton) redoButton.disabled = !redoStack.length;
   }
 
-  function activeBoard() { return state.boards[state.skin]; }
+  function activeBoardKey() {
+    if (state.skin === 'sov_frame') return sovBoardKey(state.sovBg);
+    return state.skin;
+  }
+  function activeBoard() {
+    const key = activeBoardKey();
+    if (!state.boards[key]) state.boards[key] = freshBoard();
+    return state.boards[key];
+  }
   function currentBoard() { return activeBoard().orientations[orientation]; }
   function allElements() { return currentBoard().buttons.map((item) => ({ kind: 'button', item })).concat(currentBoard().zones.map((item) => ({ kind: 'zone', item }))); }
   function findElement(kind, id) { return allElements().find((entry) => entry.kind === kind && entry.item.id === id); }
@@ -525,7 +740,12 @@
         announce(buttonsLocked ? 'Teclas bloqueadas — arraste só o pictograma.' : 'Teclas desbloqueadas.');
       });
     }
-    $('#fitButton').addEventListener('click', () => { $('.canvas-scroll').scrollTo({ top: 0, left: 0, behavior: 'smooth' }); announce('Prancheta ajustada à área visível.'); });
+    $('#fitButton').addEventListener('click', () => {
+      fitStage(officialOf(orientation));
+      $('.canvas-scroll').scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      announce('Prancheta ajustada à área visível.');
+    });
+    window.addEventListener('resize', () => fitStage(officialOf(orientation)));
     const clearOrientBtn = $('#clearOrientationButton');
     if (clearOrientBtn) clearOrientBtn.addEventListener('click', clearOrientation);
     const clearAllBtn = $('#clearAllButton');
@@ -574,8 +794,17 @@
         announce('Cor do elemento aplicada.');
       });
     }
+    const applyRotaryBtn = $('#applyRotaryButton');
+    if (applyRotaryBtn) applyRotaryBtn.addEventListener('click', applySelectedRotary);
     $('#resetPictogramButton').addEventListener('click', resetPictogram);
-    ['selectedX', 'selectedY', 'selectedW', 'selectedH'].forEach((id) => $('#' + id).addEventListener('change', updateSelectedCoordinates));
+    ['selectedX', 'selectedY'].forEach((id) => $('#' + id).addEventListener('change', updateSelectedCoordinates));
+    [['selectedWRange', 'selectedW'], ['selectedHRange', 'selectedH'], ['selectedSizeRange', 'selectedSize']].forEach(([rangeId, numberId]) => {
+      const range = $('#' + rangeId);
+      const number = $('#' + numberId);
+      range.addEventListener('input', () => { number.value = range.value; updateSelectedCoordinates(); });
+      number.addEventListener('input', () => { range.value = number.value; updateSelectedCoordinates(); });
+      number.addEventListener('change', updateSelectedCoordinates);
+    });
     $('#selectedUnit').addEventListener('change', renderInspector);
     const stage = $('#stage');
     stage.addEventListener('dragover', (event) => { event.preventDefault(); stage.classList.add('is-dragover'); });
@@ -662,7 +891,7 @@
     const skin = next === 'sov_frame' ? 'sov_frame' : 'eu_frame';
     if (state.skin === skin) return;
     state.skin = skin;
-    if (!SOV_BG_VARIANTS.includes(state.sovBg)) state.sovBg = 'white';
+    state.sovBg = normalizeSovBg(state.sovBg);
     // Cascade palette follows the skin tab by default (exclusive package view).
     activePackageId = packageIdForSkin(skin);
     const packageSelect = $('#packageSelect');
@@ -674,14 +903,21 @@
   }
 
   function setSovBg(variant) {
-    const next = SOV_BG_VARIANTS.includes(variant) ? variant : 'white';
+    const next = normalizeSovBg(variant);
     if (state.sovBg === next) return;
+    const prevKey = activeBoardKey();
     state.sovBg = next;
+    // Ensure the isolated military board exists before paint; never copy/overwrite sov_frame.
+    if (!state.boards[activeBoardKey()]) state.boards[activeBoardKey()] = freshBoard();
     // Drop session override so the official variant plate paints immediately.
     delete runtimeBackgrounds[orientation];
+    selection = [];
     persist();
     render();
-    announce('Fundo soviético: ' + (SOV_BG_LABELS[next] || next) + '.');
+    const note = (prevKey !== activeBoardKey())
+      ? ' (mapa isolado: ' + activeBoardKey() + ')'
+      : '';
+    announce('Fundo soviético: ' + (SOV_BG_LABELS[next] || next) + note + '.');
   }
 
   function renderShippedAssetTools() {
@@ -731,6 +967,21 @@
     if (packageSelect) packageSelect.value = pack.id;
   }
 
+  // Scale the stage box with object-fit:contain math so portrait (tall) plates
+  // fit fully inside .canvas-scroll — no top/bottom crop from overflow:hidden + cover.
+  function fitStage(bg) {
+    const scroll = $('.canvas-scroll');
+    const wrap = $('.stage-wrap');
+    if (!scroll || !wrap || !bg) return;
+    const pad = 40; // matches .canvas-scroll padding
+    const availW = Math.max(120, scroll.clientWidth - pad);
+    const availH = Math.max(120, scroll.clientHeight - pad);
+    const ar = bg.width / bg.height;
+    const maxW = Math.min(availW, 1050);
+    const w = Math.min(maxW, availH * ar);
+    wrap.style.width = Math.round(w) + 'px';
+  }
+
   function render() {
     const board = currentBoard();
     const bg = officialOf(orientation);
@@ -739,6 +990,7 @@
     stage.dataset.skin = state.skin;
     stage.style.setProperty('--stage-aspect', bg.width + ' / ' + bg.height);
     stage.style.backgroundImage = 'url("' + (runtimeBackgrounds[orientation] || bg.src) + '")';
+    fitStage(bg);
     stage.classList.toggle('has-elements', board.buttons.length + board.zones.length > 0);
     $('#backgroundSwatch').style.backgroundImage = 'url("' + (runtimeBackgrounds[orientation] || bg.src) + '")';
     $('#backgroundMode').textContent = orientation.toUpperCase();
@@ -755,7 +1007,7 @@
     const modernBgNote = $('#modernBgNote');
     if (modernBgNote) modernBgNote.hidden = state.skin !== 'eu_frame';
     const sovSelect = $('#sovBgSelect');
-    if (sovSelect) sovSelect.value = SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'white';
+    if (sovSelect) sovSelect.value = normalizeSovBg(state.sovBg);
     $('#snapToggle').checked = state.snap;
     $('#guidesToggle').checked = state.guides;
     $('#gridStep').value = state.gridStep;
@@ -768,6 +1020,7 @@
 
   function renderStage() {
     const root = $('#stageItems');
+    const stage = $('#stage');
     root.innerHTML = '';
     const ordered = allElements().sort((a, b) => (a.item.zIndex || 0) - (b.item.zIndex || 0));
     ordered.forEach(({ kind, item }) => {
@@ -781,12 +1034,44 @@
       node.style.height = item.height + '%';
       node.style.zIndex = item.zIndex || 1;
       if (kind === 'button') {
+        // aspect-ratio cannot override two definite inline dimensions. Gauges and the glass
+        // lens therefore receive a real square box, centred inside the mapped rectangle.
+        const rotary = isRotaryAsset(item.asset);
+        if (isCircularOverlayAsset(item.asset) || rotary) {
+          const boxW = stage.clientWidth * item.width / 100;
+          const boxH = stage.clientHeight * item.height / 100;
+          const side = Math.min(boxW, boxH);
+          if (!rotary) node.classList.add('is-circular-overlay');
+          if (rotary) node.classList.add('is-rotary');
+          node.style.left = 'calc(' + item.x + '% + ' + ((boxW - side) / 2) + 'px)';
+          node.style.top = 'calc(' + item.y + '% + ' + ((boxH - side) / 2) + 'px)';
+          node.style.width = side + 'px';
+          node.style.height = side + 'px';
+        }
         const img = document.createElement('img');
         img.src = assetImageSrc(item.asset);
         img.alt = item.label || item.asset;
         node.appendChild(img);
+        if (rotary) {
+          const preset = modernRotaryPreset(item.asset);
+          const states = (item.states && item.states.length) ? item.states : (preset && preset.states);
+          const st = states && states[0];
+          const deg = st && Number.isFinite(Number(st.deg)) ? Number(st.deg) : 0;
+          const bake = numOr(item.pinBake, preset ? preset.pinBake : 24.1);
+          const pinLen = numOr(item.pinLen, preset ? preset.pinLen : 58);
+          const pinKey = item.pinAsset || (preset && preset.pinAsset) || 'sov_rotary_knob.png';
+          const pin = document.createElement('img');
+          pin.className = 'rotary-pin';
+          pin.alt = '';
+          pin.src = assetImageSrc(pinKey);
+          pin.style.setProperty('--pin-size', pinLen + '%');
+          pin.style.setProperty('--pin-turn', (deg - bake) + 'deg');
+          node.appendChild(pin);
+        }
         if (item.color) {
           node.classList.add('has-tint');
+          const artSrc = assetImageSrc(item.asset);
+          if (artSrc) node.style.setProperty('--art-url', 'url("' + artSrc.replace(/\\/g, '/').replace(/"/g, '\\"') + '")');
           const tint = document.createElement('span');
           tint.className = 'tint-overlay';
           tint.style.background = item.color;
@@ -796,8 +1081,8 @@
         hit.className = 'hit';
         node.appendChild(hit);
         const f = fnOf(item);
-        // Lamps are telltales — no vehicle-action pictogram overlay on top of the lamp PNG.
-        if (f && !item.pictogramHidden && !isLampAsset(item.asset)) {
+        // Lamps / dials are passive — no vehicle-action pictogram overlay on the PNG.
+        if (f && !item.pictogramHidden && !isLampAsset(item.asset) && !isDialAsset(item.asset) && !isRotaryAsset(item.asset)) {
           const picto = item.pictogram || defaultPictogram();
           const overlay = document.createElement('span');
           overlay.className = 'pictogram-overlay' + (buttonsLocked ? ' is-editable' : '');
@@ -816,6 +1101,13 @@
             overlay.appendChild(pictoHandle);
           }
           node.appendChild(overlay);
+        }
+        const textLabel = buttonOverlayLabel(item);
+        if (textLabel) {
+          const labelEl = document.createElement('span');
+          labelEl.className = 'key-label';
+          labelEl.textContent = textLabel.toUpperCase();
+          node.appendChild(labelEl);
         }
       } else {
         node.textContent = item.label;
@@ -1062,7 +1354,10 @@
     const item = primary.item;
     const kind = primary.kind;
     const lamp = kind === 'button' && isLampAsset(item.asset);
-    $('#selectedType').textContent = kind === 'button' ? (lamp ? 'Lâmpada / indicador' : 'Botão atómico') : 'Zona global';
+    const dial = kind === 'button' && isDialAsset(item.asset);
+    $('#selectedType').textContent = kind === 'button'
+      ? (lamp ? 'Lâmpada / indicador' : dial ? 'Mostrador analógico (passivo)' : isRotaryAsset(item.asset) ? 'Seletor rotativo' : 'Botão atómico')
+      : 'Zona global';
     $('#selectedAsset').textContent = kind === 'button' ? item.asset : item.type;
     const preview = $('#selectedPreview');
     preview.innerHTML = '';
@@ -1070,11 +1365,14 @@
     if (kind === 'button') { const img = document.createElement('img'); img.src = assetImageSrc(item.asset); img.alt = ''; preview.appendChild(img); } else preview.textContent = item.type === 'dash-obd' ? 'OBD' : 'SPD';
     $('#selectedId').value = item.id;
     // Swap the function dropdown between vehicle actions and lamp telemetry catalog.
+    // Dials are passive gauges — no function binding (telemetry drives the needle in app.js).
     const fnSelect = $('#selectedFunctionId');
-    const prevValue = item.functionId || '';
-    fnSelect.innerHTML = lamp ? buildLampOptionsHtml(item.asset) : buildFunctionOptionsHtml();
-    fnSelect.value = prevValue;
-    if (prevValue && fnSelect.value !== prevValue) {
+    const prevValue = lamp ? (resolveLampFunctionId(item.functionId) || item.functionId || '') : (item.functionId || '');
+    fnSelect.innerHTML = dial
+      ? '<option value="">— mostrador passivo (telemetria) —</option>'
+      : (lamp ? buildLampOptionsHtml(item.asset) : buildFunctionOptionsHtml());
+    fnSelect.value = dial ? '' : prevValue;
+    if (!dial && prevValue && fnSelect.value !== prevValue) {
       // Keep a custom/stale id visible so the mapping is not silently dropped.
       const orphan = document.createElement('option');
       orphan.value = prevValue;
@@ -1082,9 +1380,9 @@
       fnSelect.appendChild(orphan);
       fnSelect.value = prevValue;
     }
-    fnSelect.disabled = kind !== 'button';
+    fnSelect.disabled = kind !== 'button' || dial;
     const fnLabel = $('#functionFieldLabel');
-    if (fnLabel) fnLabel.textContent = lamp ? 'Indicador de telemetria' : 'Função (catálogo)';
+    if (fnLabel) fnLabel.textContent = dial ? 'Telemetria (automática)' : lamp ? 'Indicador de telemetria' : 'Função (catálogo)';
     const lampHint = $('#lampHint');
     if (lampHint) lampHint.hidden = !lamp;
     $('#selectedLabel').value = item.label || '';
@@ -1092,6 +1390,7 @@
     if (tintRow) tintRow.hidden = kind !== 'button';
     const elementColor = $('#selectedElementColor');
     if (elementColor) elementColor.value = item.color || '#ffffff';
+    renderRotaryFields(kind === 'button' ? item : null);
     renderPictogramFields(kind === 'button' ? item : null);
     $('#selectedUnit').value = $('#selectedUnit').value || 'percent';
     const unit = $('#selectedUnit').value;
@@ -1100,6 +1399,25 @@
     $('#selectedY').value = dimensions.y;
     $('#selectedW').value = dimensions.width;
     $('#selectedH').value = dimensions.height;
+    const circular = kind === 'button' && (isCircularOverlayAsset(item.asset) || isRotaryAsset(item.asset));
+    const bg = officialOf(orientation);
+    const maxWidth = unit === 'px' ? bg.width * (100 - item.x) / 100 : 100 - item.x;
+    const maxHeight = unit === 'px' ? bg.height * (100 - item.y) / 100 : 100 - item.y;
+    const sidePx = Math.min(item.width * bg.width / 100, item.height * bg.height / 100);
+    const size = unit === 'px' ? sidePx : sidePx / Math.min(bg.width, bg.height) * 100;
+    [['selectedWRange', dimensions.width, maxWidth], ['selectedHRange', dimensions.height, maxHeight]].forEach(([id, value, max]) => {
+      const input = $('#' + id);
+      input.max = Math.max(.2, max);
+      input.value = value;
+    });
+    const sizeMaxPx = Math.min(bg.width * (100 - item.x) / 100, bg.height * (100 - item.y) / 100);
+    const sizeMax = unit === 'px' ? sizeMaxPx : sizeMaxPx / Math.min(bg.width, bg.height) * 100;
+    $('#selectedSizeRange').max = Math.max(.2, sizeMax);
+    $('#selectedSizeRange').value = size;
+    $('#selectedSize').value = Number(size.toFixed(2));
+    $('#selectedWField').hidden = circular;
+    $('#selectedHField').hidden = circular;
+    $('#selectedSizeField').hidden = !circular;
     $('#positionNote').textContent = unit === 'percent' ? 'Valores relativos ao fundo; o CSS exportado usa %.': 'Campos em px; serão convertidos para % no relatório e no CSS.';
   }
 
@@ -1136,8 +1454,8 @@
   function renderPictogramFields(item) {
     const fieldset = $('#pictogramFields');
     const noPictogramField = $('#noPictogramField');
-    // Lamps never get vehicle-action pictogram chrome — the PNG is the indicator.
-    if (!item || isLampAsset(item.asset) || !fnOf(item)) {
+    // Lamps / dials never get vehicle-action pictogram chrome — the PNG is the face.
+    if (!item || isLampAsset(item.asset) || isDialAsset(item.asset) || isRotaryAsset(item.asset) || !fnOf(item)) {
       fieldset.hidden = true;
       noPictogramField.hidden = true;
       return;
@@ -1153,6 +1471,34 @@
     $('#selectedPictoY').value = picto.offsetY;
     $('#selectedPictoOpacity').value = picto.opacity;
     $('#selectedPictoColor').value = picto.color || '#ffffff';
+  }
+
+  function renderRotaryFields(item) {
+    const box = $('#rotaryFields');
+    if (!box) return;
+    if (!item || !isRotaryAsset(item.asset)) { box.hidden = true; return; }
+    box.hidden = false;
+    const preset = modernRotaryPreset(item.asset);
+    $('#selectedCrownR').value = numOr(item.crownR, 42);
+    $('#selectedPinLen').value = numOr(item.pinLen, preset ? preset.pinLen : 58);
+    $('#selectedPinBake').value = numOr(item.pinBake, preset ? preset.pinBake : 24.1);
+    $('#selectedRotStates').value = rotaryStatesText(item.states);
+  }
+
+  function applySelectedRotary() {
+    const primary = primarySelected();
+    if (!primary || primary.kind !== 'button' || !isRotaryAsset(primary.item.asset)) return;
+    pushHistory();
+    const item = primary.item;
+    item.crownR = clamp(numOr($('#selectedCrownR').value, 42), 0, 48);
+    item.pinLen = clamp(numOr($('#selectedPinLen').value, 58), 20, 100);
+    item.pinBake = clamp(numOr($('#selectedPinBake').value, 24.1), -180, 180);
+    const states = parseRotaryStates($('#selectedRotStates').value);
+    if (states.length) item.states = states; else delete item.states;
+    persist();
+    renderStage();
+    renderInspector();
+    announce(states.length ? ('Seletor: ' + states.length + ' posicoes aplicadas.') : 'Seletor: preset da funcao (sem posicoes manuais).');
   }
 
   function applySelectedElementColor() {
@@ -1232,8 +1578,18 @@
     const previousId = primary.item.id;
     const id = $('#selectedId').value.trim();
     if (id && !allElements().some(({ item }) => item.id === id && item !== primary.item)) primary.item.id = id;
-    primary.item.functionId = primary.kind === 'button' ? $('#selectedFunctionId').value.trim() : '';
-    primary.item.label = $('#selectedLabel').value.trim() || (primary.kind === 'button' ? (getAssetDef(primary.item.asset) || ASSETS_MODERN['btn-square.png']).label : DASHBOARDS[primary.item.type].label);
+    let nextFn = primary.kind === 'button' ? $('#selectedFunctionId').value.trim() : '';
+    // Dials stay function-less — needle angle comes from truck.speed / rpm / fuel / air only.
+    if (primary.kind === 'button' && isDialAsset(primary.item.asset)) nextFn = '';
+    if (primary.kind === 'button' && isLampAsset(primary.item.asset) && nextFn) {
+      nextFn = resolveLampFunctionId(nextFn) || nextFn;
+    }
+    primary.item.functionId = nextFn;
+    // Text label overlay: keep typed value (incl. empty). Layers fall back to asset/id when blank.
+    const typedLabel = $('#selectedLabel').value.trim();
+    if (typedLabel) primary.item.label = typedLabel;
+    else if (primary.kind === 'button') primary.item.label = (getAssetDef(primary.item.asset) || ASSETS_MODERN['btn-square.png']).label;
+    else primary.item.label = DASHBOARDS[primary.item.type].label;
     selection = selection.map((entry) => entry.kind === primary.kind && entry.id === previousId ? { kind: primary.kind, id: primary.item.id } : entry);
     persist(); renderStage(); renderInspector();
   }
@@ -1250,8 +1606,15 @@
     };
     primary.item.x = clamp(value('selectedX', bg.width), 0, 99.8);
     primary.item.y = clamp(value('selectedY', bg.height), 0, 99.8);
-    primary.item.width = clamp(value('selectedW', bg.width), .2, 100 - primary.item.x);
-    primary.item.height = clamp(value('selectedH', bg.height), .2, 100 - primary.item.y);
+    if (primary.kind === 'button' && (isCircularOverlayAsset(primary.item.asset) || isRotaryAsset(primary.item.asset))) {
+      const raw = Number($('#selectedSize').value);
+      const sidePx = unit === 'px' ? raw : raw / 100 * Math.min(bg.width, bg.height);
+      primary.item.width = clamp(sidePx / bg.width * 100, .2, 100 - primary.item.x);
+      primary.item.height = clamp(sidePx / bg.height * 100, .2, 100 - primary.item.y);
+    } else {
+      primary.item.width = clamp(value('selectedW', bg.width), .2, 100 - primary.item.x);
+      primary.item.height = clamp(value('selectedH', bg.height), .2, 100 - primary.item.y);
+    }
     persist(); render();
   }
 
@@ -1391,8 +1754,8 @@
     const copies = clipboard.map(({ kind, item }) => {
       const clone = JSON.parse(JSON.stringify(item));
       clone.id = String(item.id) + '-paste' + clipboardPasteCount;
-      clone.x = clamp(Number(item.x) + offset, 0, 100 - Number(item.width));
-      clone.y = clamp(Number(item.y) + offset, 0, 100 - Number(item.height));
+      clone.x = clamp(Number(item.x) + offset, 0, 100 - Number(item.w ?? item.width));
+      clone.y = clamp(Number(item.y) + offset, 0, 100 - Number(item.h ?? item.height));
       return { kind, item: kind === 'button' ? normalizeButton(clone) : normalizeZone(clone) };
     });
     copies.forEach(({ kind, item }) => {
@@ -1403,43 +1766,58 @@
     persist(); render(); announce(copies.length + ' elemento(s) colado(s).');
   }
 
+  // Export and PUT share the exact runtime board representation.
   function buildReport() {
+    const boardKey = activeBoardKey();
     const orientations = {};
     ['landscape', 'portrait'].forEach((mode) => {
-      const bg = officialOf(mode);
       const board = activeBoard().orientations[mode];
       orientations[mode] = {
-        background: { file: bg.src, width: bg.width, height: bg.height, localPreviewLoaded: Boolean(runtimeBackgrounds[mode]) },
-        zones: board.zones.map((zone) => exportElement(zone, 'dashboard', mode)),
-        buttons: board.buttons.map((button) => exportElement(button, 'button', mode))
+        buttons: board.buttons.map(exportElement),
+        zones: board.zones.map(exportElement)
       };
     });
     return {
-      schema: state.schema,
-      version: 1,
-      skin: state.skin,
-      sovBg: state.skin === 'sov_frame' ? (SOV_BG_VARIANTS.includes(state.sovBg) ? state.sovBg : 'white') : undefined,
-      generatedAt: new Date().toISOString(),
-      grid: { snap: state.snap, stepPercent: state.gridStep, guides: state.guides },
-      customAssets,
-      orientations
+      schema: state.schema, boardKey, skin: state.skin, sovBg: state.sovBg,
+      customAssets, boards: { [boardKey]: { orientations } }
     };
   }
 
-  function exportElement(item, kind, mode) {
-    const bg = officialOf(mode);
-    const result = { id: item.id, type: kind, label: item.label, position: { unit: 'percent', x: round(item.x), y: round(item.y), width: round(item.width), height: round(item.height) }, pixels: { x: round(item.x / 100 * bg.width, 2), y: round(item.y / 100 * bg.height, 2), width: round(item.width / 100 * bg.width, 2), height: round(item.height / 100 * bg.height, 2) }, zIndex: item.zIndex || 1 };
-    if (kind === 'button') {
-      Object.assign(result, {
-        asset: item.asset,
-        functionId: item.functionId || '',
-        pictogram: item.pictogram || defaultPictogram(),
-        pictogramHidden: Boolean(item.pictogramHidden),
-        slots: Array.isArray(item.slots) ? item.slots : undefined
-      });
-      if (item.color) result.color = item.color;
-    } else result.dashboard = item.type;
-    return result;
+  function resolveImportBoardKey(report) {
+    if (!report || !['eu_frame', 'sov_frame', 'sov_white', 'sov_military'].includes(report.boardKey)) {
+      throw new Error('Missing or invalid boardKey. Import cancelled.');
+    }
+    return report.boardKey;
+  }
+
+  function exportElement(item) {
+    const { width, height, ...rest } = item;
+    return { ...rest, w: width, h: height };
+  }
+
+  function validateReport(report) {
+    const key = resolveImportBoardKey(report);
+    if (report.schema !== state.schema) throw new Error('Unsupported layout schema.');
+    const board = report.boards && report.boards[key];
+    if (!board || !board.orientations) throw new Error('Missing board orientations. Export this layout again.');
+    for (const mode of ['landscape', 'portrait']) {
+      const orientation = board.orientations[mode];
+      if (!orientation) throw new Error('Missing orientation: ' + mode);
+      const ids = new Set();
+      for (const kind of ['buttons', 'zones']) {
+        if (!Array.isArray(orientation[kind])) throw new Error('Invalid ' + kind + ' in ' + mode);
+        for (const item of orientation[kind]) {
+          if (!item || typeof item.id !== 'string' || !item.id || ids.has(item.id)
+              || item.position || !['x', 'y', 'w', 'h'].every((field) => Number.isFinite(item[field]))
+              || item.x < 0 || item.y < 0 || item.x > 100 || item.y > 100
+              || item.w <= 0 || item.h <= 0 || item.w > 100 || item.h > 100) {
+            throw new Error('Invalid flat layout element in ' + mode + '. Import cancelled.');
+          }
+          ids.add(item.id);
+        }
+      }
+    }
+    return key;
   }
 
   function buildCss(report) {
@@ -1451,13 +1829,13 @@
       '.modern-atomic-canvas > .modern-atomic-button { background-repeat: no-repeat; background-position: center; background-size: 100% 100%; }',
       '.modern-atomic-canvas > .modern-atomic-dashboard { border: 1px dashed rgba(117,199,192,.8); }'
     ];
-    Object.entries(report.orientations).forEach(([mode, data]) => {
+    Object.entries(report.boards[report.boardKey].orientations).forEach(([mode, data]) => {
       const bg = officialOf(mode);
       lines.push('', '.modern-atomic-canvas[data-orientation="' + mode + '"] {', '  aspect-ratio: ' + bg.width + ' / ' + bg.height + ';', '  background-image: url("' + bg.src + '");', '}');
       data.zones.concat(data.buttons).forEach((item) => {
         const selector = '.modern-atomic-canvas[data-orientation="' + mode + '"] > [data-layout-id="' + cssQuote(item.id) + '"]';
         const assetSrc = item.asset ? assetImageSrc(item.asset) : '';
-        lines.push(selector + ' {', '  left: ' + item.position.x + '%;', '  top: ' + item.position.y + '%;', '  width: ' + item.position.width + '%;', '  height: ' + item.position.height + '%;', '  z-index: ' + item.zIndex + ';', assetSrc ? '  background-image: url("' + assetSrc + '");' : '', item.functionId ? '  --function-id: "' + cssQuote(item.functionId) + '";' : '', '}');
+        lines.push(selector + ' {', '  left: ' + item.x + '%;', '  top: ' + item.y + '%;', '  width: ' + item.w + '%;', '  height: ' + item.h + '%;', '  z-index: ' + item.zIndex + ';', assetSrc ? '  background-image: url("' + assetSrc + '");' : '', item.functionId ? '  --function-id: "' + cssQuote(item.functionId) + '";' : '', '}');
       });
     });
     return lines.filter((line) => line !== undefined).join('\n');
@@ -1467,9 +1845,11 @@
 
   function exportAll() {
     const report = buildReport();
-    download('layout-report.json', JSON.stringify(report, null, 2), 'application/json');
-    download('layout.generated.css', buildCss(report), 'text/css');
-    announce('JSON e CSS exportados.');
+    const key = report.boardKey || activeBoardKey() || 'board';
+    // Named exports prevent generic layout-report.json from being applied to the wrong board.
+    download('layout-report-' + key + '.json', JSON.stringify(report, null, 2), 'application/json');
+    download('css-' + key + '.css', buildCss(report), 'text/css');
+    announce('Exportado: layout-report-' + key + '.json + css-' + key + '.css');
   }
 
   function download(name, contents, type) {
@@ -1479,47 +1859,50 @@
     setTimeout(() => URL.revokeObjectURL(link.href), 500);
   }
 
-  function importReport(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const report = JSON.parse(reader.result);
-        pushHistory();
-        if (Array.isArray(report.customAssets)) {
-          report.customAssets.forEach((item) => {
-            if (!item || typeof item.id !== 'string' || typeof item.src !== 'string') return;
-            if (customAssets.some((asset) => asset.id === item.id)) return;
-            customAssets.push({
-              id: item.id,
-              label: String(item.label || 'Personalizado'),
-              src: item.src,
-              defaultSize: Array.isArray(item.defaultSize) && item.defaultSize.length === 2 ? item.defaultSize : [8, 8]
-            });
-          });
-          renderCustomAssetTools();
-        }
-        // A report targets exactly one skin (whichever was active when it was exported) --
-        // set state.skin FIRST so the import writes into that skin's own board, never into
-        // whatever tab happened to be open before the import.
-        const importSkin = report.skin === 'sov_frame' ? 'sov_frame' : 'eu_frame';
-        state.skin = importSkin;
-        ['landscape', 'portrait'].forEach((mode) => {
-          const source = report.orientations && report.orientations[mode];
-          if (!source) return;
-          state.boards[importSkin].orientations[mode] = {
-            buttons: (source.buttons || []).map((item) => normalizeButton({ id: item.id, asset: item.asset, label: item.label, functionId: item.functionId, pictogram: item.pictogram, pictogramHidden: item.pictogramHidden, slots: item.slots, color: item.color, ...(item.position || {}) })),
-            zones: (source.zones || []).map((item) => normalizeZone({ id: item.id, type: item.dashboard || item.type, label: item.label, ...(item.position || {}) }))
-          };
-        });
-        if (report.grid) { state.gridStep = clamp(Number(report.grid.stepPercent) || 1, .25, 10); state.snap = report.grid.snap !== false; state.guides = report.grid.guides !== false; }
-        state.sovBg = SOV_BG_VARIANTS.includes(report.sovBg) ? report.sovBg : 'white';
-        activePackageId = packageIdForSkin(importSkin);
-        persist(); selection = []; renderShippedAssetTools(); render(); announce('Relatório importado.');
-      } catch (error) { announce('Não foi possível importar este JSON.'); }
-    };
-    reader.readAsText(file); event.target.value = '';
+  let importing = false;
+  async function importReport(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    if (!file || importing) return;
+    importing = true;
+    $('#importButton').disabled = true;
+    try {
+      const report = JSON.parse(await file.text());
+      const key = validateReport(report); // Validate everything before touching state or history.
+      const assets = new Map(customAssets.map((asset) => [asset.id, asset]));
+      if (report.customAssets !== undefined && !Array.isArray(report.customAssets)) throw new Error('Invalid custom assets.');
+      (report.customAssets || []).forEach((asset) => {
+        if (!asset || typeof asset.id !== 'string' || typeof asset.src !== 'string') throw new Error('Invalid custom asset.');
+        if (assets.has(asset.id) && assets.get(asset.id).src !== asset.src) throw new Error('Custom asset conflict: ' + asset.id);
+        assets.set(asset.id, asset);
+      });
+      pushHistory();
+      customAssets = Array.from(assets.values());
+      state.skin = key === 'eu_frame' ? 'eu_frame' : 'sov_frame';
+      const bg = normalizeSovBg(report.sovBg);
+      state.sovBg = sovBoardKey(bg) === key ? bg
+        : key === 'sov_white' ? 'white' : key === 'sov_military' ? 'military1' : 'sigabem';
+      // Geometry is flat on disk; the editor retains its DOM sizing field names.
+      const orientations = {};
+      for (const mode of ['landscape', 'portrait']) {
+        const source = report.boards[key].orientations[mode];
+        const editable = ({ w, h, ...item }) => ({ ...item, width: w, height: h });
+        orientations[mode] = { buttons: source.buttons.map(editable), zones: source.zones.map(editable) };
+      }
+      state.boards[key] = { orientations };
+      activePackageId = packageIdForSkin(state.skin);
+      selection = [];
+      persist(); renderCustomAssetTools(); renderShippedAssetTools(); render();
+      clearTimeout(pushTimer);
+      announce('Saving imported layout...');
+      if (await pushToServer(buildReport())) announce('Imported and saved: ' + key + '. Tablet update sent.');
+    } catch (error) {
+      announce('Import failed: ' + error.message);
+    } finally {
+      input.value = '';
+      importing = false;
+      $('#importButton').disabled = false;
+    }
   }
 
   function announce(message) { $('#statusMessage').textContent = message; }

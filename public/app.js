@@ -54,6 +54,8 @@
     phase: true,          // flasher phase for hazard / indicator lamps when no game drives them
     obc: false,           // on-board computer showing instead of the panel
     bulbUntil: 0,         // telltale bulb-check deadline (ms)
+    rotLocal: {},         // rotary detent held until telemetry leaves the stage the click started from
+    lightHold: null,      // same hold for the lights rotary; low_beam follows it while unconfirmed
   };
 
   // Modern (eu_frame) ignition boot sequence — logo → bulb check → gauge sweep → data reveal.
@@ -229,7 +231,8 @@
     onJob: true, cargo: 'Machine parts', mass: 21500, cityFrom: 'Rotterdam', compFrom: 'EuroGoodies', cityTo: 'Lyon', compTo: 'Tradeaux', income: 18450,
     jobKm: 942, due: 2 * 1440 + 6 * 60, truck: 'Demo', model: 'Truck', odo: 184230, range: 1480, fuelAvg: 0.31, adblue: 62, adblueCap: 80,
     oilP: 58, oilT: 96, waterT: 84, batt: 27.6, brakeT: 110, limit: 25, wear: [4, 7, 2, 5, 3], game: 1,
-    high: true, park: false, blinkL: false, blinkR: false, oilWarn: false, battWarn: false, lift: false, trailerLift: false };
+    high: true, park: false, parking: true, low: true, electric: true, engine: true,
+    blinkL: false, blinkR: false, oilWarn: false, battWarn: false, lift: false, trailerLift: false };
   // Trucks report the gear as a bare number; crawler gears (C1, C2) are that same count
   // started early. "Auto" reads the gearbox size from the game, the rest pin it by hand.
   // Gearbox display layouts — these mirror the game's own "Layout do câmbio" list so a player
@@ -310,10 +313,76 @@
   // — this is the other half of the 2026-10-16 fix). A legacy payload synced before that change
   // is still a flat {orientations,...} with a single top-level skin tag; read it as eu_frame
   // only, since Soviet boards didn't exist in that shape.
-  function boardFor(skin) {
+  // Soviet empty-plate boards (3 keys for 5 visual backgrounds):
+  //   white              → boards.sov_white     (isolated)
+  //   military1|military2 → boards.sov_military (shared skeleton)
+  //   sigabem|vivamexico → boards.sov_frame     (shared skeleton)
+  // Canonical variants + aliases (380.jpg = Siga Bem, 378.jpg = Viva México).
+  const SOV_BG_VARIANTS = ['white', 'military1', 'military2', 'sigabem', 'vivamexico'];
+  const SOV_BG_ALIASES = {
+    '380': 'sigabem', '380.jpg': 'sigabem', siga: 'sigabem', siga_bem: 'sigabem',
+    sigabem: 'sigabem', 'siga bem': 'sigabem', sigabem_landscape: 'sigabem',
+    '378': 'vivamexico', '378.jpg': 'vivamexico', viva: 'vivamexico', viva_mexico: 'vivamexico',
+    vivamexico: 'vivamexico', 'viva mexico': 'vivamexico', 'viva méxico': 'vivamexico',
+    vivamexico_landscape: 'vivamexico',
+    white: 'white', branca: 'white', enamel: 'white', esmaltada: 'white',
+    military1: 'military1', mil1: 'military1', military_1: 'military1',
+    military2: 'military2', mil2: 'military2', military_2: 'military2'
+  };
+  function normalizeSovBg(sovBg) {
+    const raw = String(sovBg == null ? 'white' : sovBg).trim();
+    if (!raw) return 'white';
+    const key = raw.toLowerCase().replace(/\\+/g, '/').split('/').pop();
+    const bare = key.replace(/\.(jpe?g|png|webp)$/i, '');
+    const hit = SOV_BG_ALIASES[key] || SOV_BG_ALIASES[bare] || SOV_BG_ALIASES[bare.replace(/[-_\s]+/g, '')]
+      || SOV_BG_ALIASES[raw.toLowerCase()] || SOV_BG_ALIASES[raw.toLowerCase().replace(/[-_\s]+/g, '')];
+    if (hit) return hit;
+    // Fuzzy: any token containing sigabem / vivamexico / military
+    if (/siga/.test(bare)) return 'sigabem';
+    if (/viva|mexico|méxico/.test(bare)) return 'vivamexico';
+    if (/military?\s*2|mil2/.test(bare)) return 'military2';
+    if (/military?\s*1|mil1|military/.test(bare)) return 'military1';
+    if (/white|branca|enamel|esmalt/.test(bare)) return 'white';
+    return SOV_BG_VARIANTS.includes(bare) ? bare : 'white';
+  }
+  function sovBoardKey(sovBg) {
+    const v = normalizeSovBg(sovBg);
+    if (v === 'white') return 'sov_white';
+    if (v === 'military1' || v === 'military2') return 'sov_military';
+    // sigabem | vivamexico | aliases 380/378 → shared Siga/Viva skeleton
+    return 'sov_frame';
+  }
+  // White / Militar plates are remapped from scratch — empty board must stay empty
+  // (never inherit Siga Bem / Viva México buttons from boards.sov_frame).
+  // Siga Bem / Viva México (and aliases 380/378) are NOT empty-plate — they use sov_frame buttons.
+  function isEmptyPlateSovBg(sovBg) {
+    const v = normalizeSovBg(sovBg);
+    return v === 'white' || v === 'military1' || v === 'military2';
+  }
+  function emptyAtomicBoard(skinKey) {
+    return {
+      skin: skinKey || 'sov_white',
+      orientations: {
+        landscape: { buttons: [], zones: [] },
+        portrait: { buttons: [], zones: [] }
+      }
+    };
+  }
+  function boardFor(skin, sovBg) {
     const board = atomicBoard();
     if (!board) return null;
-    if (board.boards) return board.boards[skin] || null;
+    if (board.boards) {
+      if (skin === 'sov_frame') {
+        const bg = sovBg != null ? sovBg : (layout() && layout().sovBg);
+        const key = sovBoardKey(bg);
+        if (isEmptyPlateSovBg(bg)) {
+          // Isolated boards only — never fall back to sov_frame (Siga/Viva).
+          return board.boards[key] || emptyAtomicBoard(key);
+        }
+        return board.boards[key] || board.boards.sov_frame || null;
+      }
+      return board.boards[skin] || null;
+    }
     if (skin === 'eu_frame' && board.orientations) return board;
     return null;
   }
@@ -337,8 +406,15 @@
     return false;
   }
   function hasAtomicButtons(skin) {
+    if (skin === 'sov_frame') {
+      // Include shared Siga/Viva board (sigabem) plus isolated white/military plates.
+      return boardHasButtons(boardFor('sov_frame', 'sigabem'))
+        || boardHasButtons(boardFor('sov_frame', 'white'))
+        || boardHasButtons(boardFor('sov_frame', 'military1'))
+        || boardHasButtons(boardFor('sov_frame', 'military2'));
+    }
     if (skin) return boardHasButtons(boardFor(skin));
-    return boardHasButtons(boardFor('eu_frame')) || boardHasButtons(boardFor('sov_frame'));
+    return boardHasButtons(boardFor('eu_frame')) || hasAtomicButtons('sov_frame');
   }
   // If the Layout Editor saved buttons, open a panel for whichever skin actually has them so
   // widgetsOf() paints them. Call again after connect() sync — the PC store can overwrite
@@ -357,11 +433,64 @@
   // Only the two dashboard zone types are read here; the editor's buttons are bridged
   // separately by atomicDashButtons()/atomicDashButtonsSig() below.
   function atomicDashZones(cut, skin) {
-    const board = boardFor(skin || 'eu_frame');
+    const resolvedSkin = skin || 'eu_frame';
+    const board = boardFor(resolvedSkin, resolvedSkin === 'sov_frame' ? sovBgOf(layout()) : null);
     const mode = cut === 'P' ? 'portrait' : 'landscape';
     const o = board && board.orientations && board.orientations[mode];
     if (!o || !Array.isArray(o.zones)) return [];
     return o.zones.filter((z) => z && !z.hidden && (z.type === 'dash-obd' || z.type === 'dash-speedometer'));
+  }
+
+  // Passive lamp telltales from the Layout Editor (mirrors editor.js LAMP_TELEMETRY).
+  // keys:[] so press() never sends a vehicle command; lighting comes from tel + behavior.
+  const LAMP_INDICATORS = {
+    hazard_alert: { tel: 'hazard', behavior: 'blink' },
+    trailer_brake: { tel: 'trailerBrake', behavior: 'steady' },
+    engine_stalled: { tel: 'engineStalled', behavior: 'steady' },
+    parking_brake: { tel: 'park', behavior: 'steady' },
+    over_speed_alert: { tel: 'speedWarn', behavior: 'blink' },
+    air_pressure_critical: { tel: 'airWarn', behavior: 'blink' },
+    engine_overheat: { tel: 'waterWarn', behavior: 'steady' },
+    fuel_reserve: { tel: 'fuelWarn', behavior: 'steady' },
+    retarder_active: { tel: 'retarderOn', behavior: 'steady' },
+    diff_lock: { tel: 'diff', behavior: 'steady' },
+    turn_signal_single: { tel: 'blinkEither', behavior: 'blink' },
+    left_turn_signal: { tel: 'blinkL', behavior: 'blink' },
+    right_turn_signal: { tel: 'blinkR', behavior: 'blink' },
+    low_beam: { tel: 'low', behavior: 'steady' },
+    parking_lights: { tel: 'parking', behavior: 'steady' },
+    engine_running: { tel: 'engine', behavior: 'steady' },
+    high_beam: { tel: 'high', behavior: 'steady' }
+  };
+  const LAMP_ID_ALIASES = {
+    ind_speed_alert: 'over_speed_alert',
+    ind_air_critical: 'air_pressure_critical',
+    ind_engine_overheat: 'engine_overheat',
+    ind_fuel_reserve: 'fuel_reserve',
+    blinker_left: 'left_turn_signal',
+    blinker_right: 'right_turn_signal',
+    lights: 'low_beam',
+    parking_light: 'parking_lights',
+    position_lights: 'parking_lights',
+    presence: 'parking_lights',
+    engine: 'engine_running',
+    retarder_auto: 'retarder_active'
+  };
+  function resolveLampIndicatorId(functionId) {
+    const id = String(functionId || '');
+    if (!id) return '';
+    if (LAMP_INDICATORS[id]) return id;
+    if (LAMP_ID_ALIASES[id] && LAMP_INDICATORS[LAMP_ID_ALIASES[id]]) return LAMP_ID_ALIASES[id];
+    return '';
+  }
+  function isLampAssetKey(asset) {
+    return /(?:^|[_-])lamp[_-]|sov_lamp_/i.test(String(asset || ''));
+  }
+  // Photoreal Soviet dial faces from the Layout Editor — passive gauges, never keys.
+  function dialFieldFromAsset(asset) {
+    const m = String(asset || '').match(/(?:^|[_-])dial[_-](speed|rpm|fuel|air)\b/i)
+      || String(asset || '').match(/sov_dial_(speed|rpm|fuel|air)/i);
+    return m ? m[1].toLowerCase() : '';
   }
 
   // The editor lets a player type any free-text functionId; this maps the ones already saved
@@ -411,6 +540,7 @@
     if (!key) return null;
     const custom = Array.isArray(customAssets) && customAssets.find((a) => a && a.id === key);
     if (custom) return custom.src || null;
+    if (typeof key === 'string' && /^mod_rotary_/i.test(key)) return SKIN_PATH + 'modern/' + key;
     if (typeof key === 'string' && key.indexOf('sov_') === 0) return SKIN_PATH + 'sov/btn/' + key;
     if (skin === 'sov_frame') return SKIN_PATH + 'sov/btn/' + key;
     return SKIN_PATH + 'modern/' + key;
@@ -441,24 +571,178 @@
     }
     return picto;
   }
+  // True when `label` is only the asset/function identity (not a player-typed caption).
+  function isIdentityKeyLabel(label, asset, fnId) {
+    const raw = String(label || '').trim();
+    if (!raw) return true;
+    const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const n = norm(raw);
+    if (fnId && n === norm(fnId)) return true;
+    const base = String(asset || '').replace(/\.[^.]+$/, '');
+    if (base) {
+      if (n === norm(base) || n === norm(base.replace(/^sov_/, '').replace(/^btn-/, ''))) return true;
+    }
+    // Shipped ASSETS_* titles from the Layout Editor palette.
+    if (/^(rocker\s*[vh]|toggle(\s+(up|mid|down))?|push(\s+\w+)?|square(\s+\w+)?|key(\s+\w+)?|lamp\s+\w+(\s+\w+)?|dial\s+\w+|parking brake(\s+\w+)?|hazard(\s+\w+)?)$/i.test(raw)) return true;
+    return false;
+  }
+  function atomicOverlayLabel(rawLabel, asset, fnId, hasPicto) {
+    if (rawLabel && !isIdentityKeyLabel(rawLabel, asset, fnId)) return rawLabel;
+    if (!hasPicto || !fnId || !FUNCTIONS[fnId]) return '';
+    return String(FUNCTIONS[fnId].label || FUNCTIONS[fnId].name || '').replace(/\n/g, ' ').trim();
+  }
   function atomicDashButtons(cut, skin) {
     const resolvedSkin = skin || 'eu_frame';
-    const board = boardFor(resolvedSkin);
+    const board = boardFor(resolvedSkin, resolvedSkin === 'sov_frame' ? sovBgOf(layout()) : null);
     const customAssets = atomicBoard() && atomicBoard().customAssets;
     const mode = cut === 'P' ? 'portrait' : 'landscape';
     const o = board && board.orientations && board.orientations[mode];
     if (!o || !Array.isArray(o.buttons)) return [];
-    return o.buttons.filter((b) => b && !b.hidden).map((b) => {
-      const resolved = resolveFn(b.functionId);
-      return {
+    const mapped = o.buttons.filter((b) => b && !b.hidden).map((b) => {
+      const dialField = dialFieldFromAsset(b.asset);
+      const rect = [Number(b.x) || 0, Number(b.y) || 0, Number(b.w ?? b.width) || 1, Number(b.h ?? b.height) || 1];
+      // Dial PNGs are analogue faces: emit sgauge (passive, needle from telemetry) — never kbd.
+      if (dialField) {
+        return {
+          id: 'atomic-' + b.id,
+          t: 'sgauge',
+          field: dialField,
+          r: rect,
+          zIndex: Math.max(Number(b.zIndex) || 10, 60)
+        };
+      }
+      // Soviet key slot → 3 ignition modes from Editor functionId:
+      //   electrics     → Electrics Only (simple latch kbd)
+      //   engine        → Engine Only start/stop (simple latch kbd)
+      //   ign_combined / ign / empty → Combined dual-stage (t:'ign')
+      const assetKeyRaw = String(b.asset || '').replace(/\s+/g, '');
+      // Glass lens (sov_lens.png; legacy name sov_push_lens.png): a decorative sheet of glass
+      // parked over a dial niche. NOT a button: no press, no telemetry, no sink, no pointer events.
+      // Rides above the dial faces by default so the reflection sits on top of the glass.
+      if (/^sov_(?:push_)?lens(?:\.png)?$/i.test(assetKeyRaw)) {
+        return {
+          id: 'atomic-' + b.id,
+          t: 'lens',
+          r: rect,
+          zIndex: Math.max(Number(b.zIndex) || 10, 70),
+          asset: resolveAtomicAsset(customAssets, resolvedSkin, b.asset)
+        };
+      }
+      if (/^sov_key(?:_slot|_kamaz)?(?:\.png)?$/i.test(assetKeyRaw)) {
+        const keyFn = String(b.functionId || '').trim();
+        const assetSrc = resolveAtomicAsset(customAssets, resolvedSkin, b.asset);
+        if (keyFn === 'electrics' || keyFn === 'engine') {
+          return {
+            id: 'atomic-' + b.id,
+            t: 'kbd',
+            fn: keyFn,
+            r: rect,
+            zIndex: Number(b.zIndex) || 10,
+            asset: assetSrc,
+            keyTurn: true,
+            pictogramHidden: true
+          };
+        }
+        return {
+          id: 'atomic-' + b.id,
+          t: 'ign',
+          st: 'btn',
+          ignMode: 'combined',
+          r: rect,
+          zIndex: Number(b.zIndex) || 10,
+          asset: assetSrc
+        };
+      }
+      const isLamp = isLampAssetKey(b.asset);
+      let lampId = isLamp ? resolveLampIndicatorId(b.functionId) : '';
+      const assetKey = String(b.asset || '');
+      // Absolute rule (Fernando, 2026-10-18): colour NEVER determines function.
+      // A lamp with an empty functionId stays inert until mapped in the Editor.
+      // Multi-stage lever family: editor places ONE state (mid/off/up); app swaps up/down art.
+      const isParkTog = /sov_toggle_parking_brake/i.test(assetKey);
+      const isTog = isParkTog || /^sov_tog_(?:up|mid|down)(?:\.|$)/i.test(assetKey) || /sov_toggle_/i.test(assetKey);
+      const isRocker = /btn-rocker/i.test(assetKey);
+      const isModLights = /mod_rotary_lights\.png$/i.test(assetKey);
+      const isModWipers = /mod_rotary_wipers\.png$/i.test(assetKey);
+      const isRotary = /sov_rotary_(?:dial|base)/i.test(assetKey) || isModLights || isModWipers;
+      // Hazard rule (definitive):
+      //   sov_push_hazard.png          → plain physical push (sink on press, no lamp swap)
+      //   sov_push_hazard_{off,on}.png → static body; only internal light OFF↔ON synced to tel
+      const isHazLit = /sov_push_hazard_(?:off|on)(?:\.|$)/i.test(assetKey);
+      const isHazPush = /sov_push_hazard(?:\.|$)/i.test(assetKey) && !isHazLit;
+      // Function-named Soviet photos bind their catalog command when the editor left functionId empty.
+      let fnHint = b.functionId;
+      if (!fnHint) {
+        if (isParkTog || /sov_toggle_parking_brake|sov_push_parking_brake/i.test(assetKey)) fnHint = 'parking_brake';
+        else if (isHazLit || isHazPush) fnHint = 'hazard';
+        else if (isModWipers) fnHint = 'wipers';
+        else if (isRotary) fnHint = 'lights';
+        else if (lampId) fnHint = lampId;
+      }
+      const resolved = lampId || (isLamp ? (fnHint || 'custom') : resolveFn(fnHint));
+      // Parking/hazard photos already carry Soviet legends — never overlay a catalog pictogram.
+      const hidePicto = !!(b.pictogramHidden || isRotary || /parking_brake/i.test(assetKey) || /sov_push_hazard/i.test(assetKey) || /sov_key/i.test(assetKey));
+      const picto = (isLamp || hidePicto) ? null : atomicButtonPicto(resolved, b.pictogram);
+      // Label rule: custom typed text, else the pictogram/function display name — never
+      // technical ids (parking_brake) or stock asset titles (Rocker V, Lamp red off).
+      const rawLabel = String(b.label || '').trim();
+      const overlayLabel = atomicOverlayLabel(rawLabel, assetKey, resolved, !!picto);
+      const out = {
         id: 'atomic-' + b.id,
         t: 'kbd',
         fn: resolved,
-        r: [Number(b.x) || 0, Number(b.y) || 0, Number(b.width) || 1, Number(b.height) || 1],
+        r: rect,
         zIndex: Number(b.zIndex) || 10,
         asset: resolveAtomicAsset(customAssets, resolvedSkin, b.asset),
-        picto: b.pictogramHidden ? null : atomicButtonPicto(resolved, b.pictogram)
+        picto: picto
       };
+      if (isLamp) out.lamp = true;
+      // engine_running telltale keeps the alternator --lv flicker; presence/low_beam follows lightsOn.
+      if (lampId === 'engine_running') out.eng = true;
+      if (isTog) out.tog = true;
+      if (isParkTog) out.parkTog = true;
+      if (isHazLit) out.hazardFail = true; // class name kept; means "lit indicator, static body"
+      if (isRocker) out.rocker = true;
+      // Yellow parking push: the black bezel is bolted to the panel and must NOT move, so the
+      // photo ships as two layers — _frame (static housing + dark recess) and _core (the yellow
+      // cap alone). Only the core gets the :active sink. JSON keeps the original asset name.
+      if (/sov_push_parking_brake(?:\.png)?$/i.test(assetKeyRaw)) {
+        out.asset = String(out.asset).replace(/sov_push_parking_brake\.png/i, 'sov_push_parking_brake_frame.png');
+        out.pbCore = String(out.asset).replace(/_frame\.png$/i, '_core.png');
+      }
+      if (isRotary) {
+        out.rotary = true;
+        if (isModLights) out.modRotary = 'lights';
+        if (isModWipers) out.modRotary = 'wipers';
+        out.states = normalizeRotaryStates(b.states, resolved, assetKey);
+        const pinName = b.pinAsset || (isModLights ? 'mod_rotary_lights_knob.png'
+          : isModWipers ? 'mod_rotary_wipers_knob.png' : 'sov_rotary_knob.png');
+        out.pinAsset = resolveAtomicAsset(customAssets, resolvedSkin, pinName);
+        out.crownR = clamp(Number(b.crownR) || 42, 0, 48);
+        // Knob disc diameter as a % of the dial square. 58 = the Soviet well.
+        // Modern crops are measured: lights 56.4, wipers 57.6.
+        const lenDefault = isModLights ? 56.4 : isModWipers ? 57.6 : 58;
+        out.pinLen = clamp(Number(b.pinLen) || lenDefault, 20, 100);
+        // The knob art is photographed already turned; subtract its baked angle so a state's
+        // `deg` is the real legend angle printed on the housing (0 = 12 o'clock, cw +).
+        const bakeDefault = isModLights ? 27.3 : isModWipers ? 26.5 : 24.1;
+        out.pinBake = Number.isFinite(Number(b.pinBake)) ? Number(b.pinBake) : bakeDefault;
+      }
+      // "Down" half of a rocker tilts the other way while held.
+      if (isRocker && /(?:^|_)(?:down|off|minus|slower)(?:_|$)/i.test(String(resolved || ''))) out.rockerDn = true;
+      if (overlayLabel) out.label = overlayLabel;
+      if (b.color) out.color = b.color;
+      return out;
+    });
+    // Dial faces are hub-transparent; a stray widget parked on the same niche shows its green LED
+    // through the centre. Drop any non-dial widget whose centre sits inside a dial rect.
+    // The glass lens is the one exception: it exists to be laid over a dial.
+    const dials = mapped.filter((w) => w.t === 'sgauge');
+    if (!dials.length) return mapped;
+    return mapped.filter((w) => {
+      if (w.t === 'sgauge' || w.t === 'lens') return true;
+      const cx = w.r[0] + w.r[2] / 2, cy = w.r[1] + w.r[3] / 2;
+      return !dials.some((d) => cx >= d.r[0] && cx <= d.r[0] + d.r[2] && cy >= d.r[1] && cy <= d.r[1] + d.r[3]);
     });
   }
   // Cheap fingerprint for the memo key in widgetsOf(): id/functionId/asset-key/zIndex plus
@@ -466,15 +750,16 @@
   // pictogram edits both invalidate the cache. Never the resolved asset src -- that can be a
   // multi-MB base64 data URI.
   function atomicDashButtonsSig(cut, skin) {
-    const board = boardFor(skin || 'eu_frame');
+    const board = boardFor(skin || 'eu_frame', (skin || 'eu_frame') === 'sov_frame' ? sovBgOf(layout()) : null);
     const mode = cut === 'P' ? 'portrait' : 'landscape';
     const o = board && board.orientations && board.orientations[mode];
     if (!o || !Array.isArray(o.buttons)) return '';
     return o.buttons.filter((b) => b && !b.hidden).map((b) => {
       const p = b.pictogram || {};
       return b.id + ':' + (b.functionId || '') + ':' + (b.asset || '') + ':' + (b.zIndex || '') + ':' + (b.pictogramHidden ? 1 : 0)
-        + ':' + (b.x || 0) + ',' + (b.y || 0) + ',' + (b.width || 0) + ',' + (b.height || 0)
-        + ':' + (p.width || 0) + ',' + (p.height || 0) + ',' + (p.offsetX || 0) + ',' + (p.offsetY || 0) + ',' + (p.opacity || 0) + ',' + (p.color || '');
+        + ':' + (b.x || 0) + ',' + (b.y || 0) + ',' + (b.w ?? b.width ?? 0) + ',' + (b.h ?? b.height ?? 0)
+        + ':' + (p.width || 0) + ',' + (p.height || 0) + ',' + (p.offsetX || 0) + ',' + (p.offsetY || 0) + ',' + (p.opacity || 0) + ',' + (p.color || '')
+        + ':' + (b.label || '') + ':' + (b.color || '');
     }).join('|');
   }
 
@@ -508,7 +793,14 @@
   // the player's own, not a panel's: they live once in store.prefs and are copied onto every panel
   // (the rest of the app keeps reading them from the panel). Changing one on any panel changes it
   // on all of them, and a panel added later starts with the same settings.
-  const GLOBAL_KEYS = ['lang', 'units', 'temp', 'gearCrawlers', 'lights', 'cabin', 'brightness', 'names', 'autoRotate', 'obdTheme'];
+  const GLOBAL_KEYS = ['lang', 'units', 'temp', 'gearCrawlers', 'lights', 'cabin', 'brightness', 'names', 'keyLabels', 'pictograms', 'labelFont', 'autoRotate', 'obdTheme'];
+  const LABEL_FONTS = [
+    ['barlow', 'Barlow Condensed'],
+    ['share', 'Share Tech Mono'],
+    ['arialn', 'Arial Narrow'],
+    ['roboto', 'Roboto Condensed'],
+    ['oswald', 'Oswald'],
+  ];
   function ensurePrefs() {
     const st = S.store;
     let migrated = false;
@@ -538,9 +830,13 @@
       st.prefs = { lang: ['pt', 'de', 'es', 'fr'].includes(a.lang) ? a.lang : 'en', units: a.units === 'mph' ? 'mph' : 'kmh',
         gearCrawlers: gearboxKey(a.gearCrawlers), lights: a.lights || 'auto', cabin: a.cabin || 'off', brightness: a.brightness || 'auto',
         temp: a.temp === 'f' ? 'f' : 'c',
-        names: a.names || 'show', autoRotate: a.autoRotate !== false, obdTheme: a.obdTheme || 'v8-blue', binds };
+        names: a.names || 'show', keyLabels: a.keyLabels || 'show', pictograms: a.pictograms || 'show',
+        labelFont: a.labelFont || 'barlow', autoRotate: a.autoRotate !== false, obdTheme: a.obdTheme || 'v8-blue', binds };
     }
     if (!st.prefs.obdTheme) st.prefs.obdTheme = 'v8-blue';   // devices set up before the OBD theme engine shipped
+    if (!st.prefs.keyLabels) st.prefs.keyLabels = st.prefs.names || 'show';
+    if (!st.prefs.pictograms) st.prefs.pictograms = 'show';
+    if (!st.prefs.labelFont) st.prefs.labelFont = 'barlow';
     // One-off: auto-rotate was left switched off on devices set up while the vertical panels were being
     // reworked, which keeps the horizontal art on an upright screen. Turn it back on once; the player can
     // still switch it off again in the menu.
@@ -575,10 +871,9 @@
   // finished panel: skins/<id>-<cut>v.jpg, listed here with its aspect ratio. Modern uses its
   // canonical background pair instead; a cut with no capture borrows the landscape one.
   const PREVIEWS = { eu_frame: { T: 2752 / 1536, P: 1152 / 1728 }, sov_frame: { T: 2752 / 1536, P: 1536 / 2752 }, scania25_frame: { T: 1.792 } };
-  const SOV_BG_VARIANTS = ['white', 'military1', 'military2', 'sigabem', 'vivamexico'];
   function sovBgOf(l) {
-    const v = (l && l.sovBg) || 'white';
-    return SOV_BG_VARIANTS.includes(v) ? v : 'white';
+    // Always normalize so aliases (380/378, SigaBem, …) resolve before the whitelist.
+    return normalizeSovBg((l && l.sovBg) || 'white');
   }
   // Empty-plate background for frame skins. Modern uses the leather pair; Soviet uses one of
   // the parked variants under skins/sov/bg/ (default white enamel). layoutRef lets the gallery
@@ -606,38 +901,57 @@
   const skinOf = (pg) => (pg.skin && SKINS[pg.skin] ? SKINS[pg.skin][skinCut(pg)] : null);
   // A saved Layout Editor zone becomes the same widget shape frames.js already ships for
   // eu_frame's fixed dash-speedometer (gps/hero) and dash-obd (rtext/two/utility) slots, just
-  // positioned by the zone's own r instead of the preset's.
-  function dashWidgetFromZone(z) {
-    return z.type === 'dash-speedometer'
-      ? { t: 'gps', hero: 1, r: [z.x, z.y, z.width, z.height], id: z.id }
-      : { t: 'rtext', two: true, utility: 1, r: [z.x, z.y, z.width, z.height], id: z.id, bg: '#010203', ink: '#d9f4ff' };
+  // positioned by the zone's own r instead of the preset's. On sov_frame, dash-obd is the
+  // Soviet VFD (green segment display) — same shape as frames_sov w_info — not the Modern
+  // 5-page OBD cluster.
+  function dashWidgetFromZone(z, skin) {
+    const r = [z.x, z.y, z.w ?? z.width, z.h ?? z.height];
+    if (z.type === 'dash-speedometer') {
+      return { t: 'gps', hero: 1, r: r, id: z.id };
+    }
+    if (skin === 'sov_frame') {
+      return { t: 'gps', vfd: 1, r: r, id: z.id };
+    }
+    return { t: 'rtext', two: true, utility: 1, r: r, id: z.id, bg: '#010203', ink: '#d9f4ff' };
   }
   let skinMemo = { key: '', list: [] };
   // Each skin reads only its own board (boardFor(pg.skin)) so eu_frame and sov_frame can
-  // never leak into each other. An untouched board (e.g. sov_frame right after migration)
-  // has zero buttons, so its pages fall through to the normal fixed/factory widgets instead
-  // of painting an empty atomic layer.
+  // never leak into each other. Siga Bem / Viva México (boards.sov_frame) keep normal atomic
+  // loading. White / Militar empty-plate boards ALWAYS take the atomic path — even with
+  // buttons:[] — so factory spr/sgauge never inherit onto a clean enamel plate.
   function atomicApplies(pg) {
     if (pg.skin !== 'eu_frame' && pg.skin !== 'sov_frame') return false;
-    return boardHasButtons(boardFor(pg.skin));
+    const bg = pg.skin === 'sov_frame' ? sovBgOf(layout()) : null;
+    if (pg.skin === 'sov_frame' && isEmptyPlateSovBg(bg)) return true;
+    return boardHasButtons(boardFor(pg.skin, bg));
   }
   function widgetsOf(pg) {
     const skin = skinOf(pg);
     if (!skin) return pg.widgets || [];
     const cut = skinCut(pg);
     const useAtomic = atomicApplies(pg);
+    const sovBg = pg.skin === 'sov_frame' ? sovBgOf(layout()) : null;
+    const emptyPlate = pg.skin === 'sov_frame' && isEmptyPlateSovBg(sovBg);
     const zones = useAtomic ? atomicDashZones(cut, pg.skin) : [];
     const buttons = useAtomic ? atomicDashButtons(cut, pg.skin) : [];
     const buttonsSig = useAtomic ? atomicDashButtonsSig(cut, pg.skin) : '';
-    const key = pg.id + cut + JSON.stringify(pg.over || {}) + JSON.stringify(zones) + buttonsSig;
+    const key = pg.id + cut + (sovBg || '') + JSON.stringify(pg.over || {}) + JSON.stringify(zones) + buttonsSig;
     if (skinMemo.key !== key) {
       // Zones from the editor replace the preset's fixed w_drive/w_media slots wholesale; a
       // saved set of buttons replaces the preset's whole fixed key grid (the upper/brakes/
       // utility/system groups built by modernSet/modernSystem in frames.js) the same way --
       // all or nothing, so a board with no buttons leaves the factory grid byte-for-byte stock.
+      // Soviet factory parts (spr/sgauge/VFD) have no `g` group tag — filtering only `!w.g`
+      // left them stacked under the atomic board (double gauges + double switches). When the
+      // sov_frame board has buttons — OR when white/military empty-plate is active — drop
+      // those factory widgets so only empty plate + JSON remain (zero DOM keys if array []).
       let base = zones.length ? skin.w.filter((w) => w.id !== 'w_drive' && w.id !== 'w_media') : skin.w;
-      if (buttons.length) base = base.filter((w) => !w.g);
-      const list = base.concat(zones.map(dashWidgetFromZone)).concat(buttons);
+      if (pg.skin === 'sov_frame' && (buttons.length || emptyPlate)) {
+        base = base.filter((w) => w.t !== 'spr' && w.t !== 'sgauge' && w.t !== 'kbd' && w.t !== 'tell' && w.id !== 'w_info');
+      } else if (buttons.length) {
+        base = base.filter((w) => !w.g);
+      }
+      const list = base.concat(zones.map((z) => dashWidgetFromZone(z, pg.skin))).concat(buttons);
       skinMemo = { key, list: list.map((w) => Object.assign({ sk: true }, w, (pg.over || {})[cut + ':' + w.id])) };
     }
     return skinMemo.list;
@@ -648,11 +962,16 @@
   // cut; key changes are kept per cut, so nothing is lost by turning back.
   function syncOrientation() {
     const l = layout();
-    if (S.edit || l.autoRotate === false) return false;
+    if (S.edit) return false;
     const want = autoSize();
+    // autoRotate off freezes a panel on the cut it last used. Soviet was left
+    // on the phone cut, so a horizontal screen kept painting the portrait board.
+    // That skin follows the screen. Other panels still honour the switch.
+    const follow = l.autoRotate !== false;
     let changed = false;
     for (const pg of l.pages) {
-      if (pg.skin && pg.size !== want) { pg.size = want; changed = true; }
+      if (!pg.skin || pg.size === want) continue;
+      if (follow || pg.skin === 'sov_frame') { pg.size = want; changed = true; }
     }
     return changed;
   }
@@ -734,11 +1053,34 @@
 
   // ---- Functions, keys and state -----------------------------------------------------------
   // Pieces that show something but are not pressed.
-  const PASSIVE = new Set(['display', 'plate', 'gps', 'gauge', 'cgauge', 'sc25', 'sc25bg', 'sc25clock', 'sc25palette', 'scaniapalette', 'radio_widget', 'status', 'live', 'tell', 'rtext', 'fbar', 'cover', 'knob', 'sticker', 'ign', 'sgauge']);
+  const PASSIVE = new Set(['display', 'plate', 'gps', 'gauge', 'cgauge', 'sc25', 'sc25bg', 'sc25clock', 'sc25palette', 'scaniapalette', 'radio_widget', 'status', 'live', 'tell', 'rtext', 'fbar', 'cover', 'knob', 'sticker', 'ign', 'sgauge', 'lens']);
 
   // Resolve a widget to the function it performs, with per-widget overrides applied.
   function fnOf(w) {
     if (PASSIVE.has(w.t)) return null;
+    // Atomic lamp telltales (w.lamp): passive, no keys. Lamp-only ids (not in FUNCTIONS) also
+    // resolve here so over_speed_alert etc. light without becoming pressable catalog keys.
+    // Shared ids (parking_brake, high_beam, diff_lock, trailer_brake) stay catalog commands
+    // unless the widget is explicitly a lamp asset.
+    const lampId = w.lamp
+      ? resolveLampIndicatorId(w.fn)
+      : (LAMP_INDICATORS[w.fn] && !FUNCTIONS[w.fn] ? w.fn : '');
+    if (lampId && LAMP_INDICATORS[lampId]) {
+      const ind = LAMP_INDICATORS[lampId];
+      return {
+        id: lampId,
+        name: lampId,
+        label: w.label != null ? w.label : lampId,
+        icon: 'dot',
+        keys: [],
+        mode: 'tap',
+        latch: true,
+        tel: ind.tel,
+        led: 'green',
+        bind: false,
+        behavior: ind.behavior
+      };
+    }
     const base = w.fn === 'custom' || !FUNCTIONS[w.fn]
       ? { id: 'custom', name: 'Custom key', label: 'CUSTOM', icon: 'dot', keys: [], mode: 'tap', latch: false, tel: null, led: 'green', bind: false }
       : FUNCTIONS[w.fn];
@@ -765,32 +1107,207 @@
   function telValue(key) {
     const t = S.tel;
     if (!t || !t.sdk) return undefined;
-    if (key === 'lightsOn') return t.low || t.parking;
+    if (key === 'lightsOn') return !!(t.low || t.parking);
+    if (key === 'high') return !!(t.high || t.highBeam);
+    if (key === 'parking') return !!(t.parking || t.parkingLights);
     if (key === 'retarderOn') return t.retarder > 0;
     // warning lamps of the painted telltale rows
     // (the truck's own warning flags when the helper sends them, a threshold otherwise)
     if (key === 'airlow') return t.airWarn !== undefined ? t.airWarn : t.air < 65;
     if (key === 'check') return !!(t.oilWarn || t.waterWarn) || t.dmgTruck >= 10;
     if (key === 'batt') return t.battWarn !== undefined ? t.battWarn || (!!t.electric && !t.engine) : !!t.electric && !t.engine;
+    // Lamp-indicator derived flags (editor LAMP_TELEMETRY → app interpreter).
+    if (key === 'blinkEither') return !!(t.blinkL || t.blinkR);
+    if (key === 'speedWarn') return t.limit > 0.5 && Math.abs(t.speed) > t.limit;
+    if (key === 'engineStalled') return !!(t.electric && !t.engine && (Number(t.rpm) || 0) === 0);
+    if (key === 'trailerBrake') return t.trailerBrake !== undefined ? !!t.trailerBrake : false; // stub: SDK gap
+    if (key === 'engine') return t.engine !== undefined ? !!t.engine : (Number(t.rpm) || 0) > 0;
+    // `diff` passes through t.diff when the helper sends it (frames_scania25 already maps diffLock).
     return t[key];
   }
 
   // 0 = off, 1 = auto, 2 = parking/dash, 3 = low beam. The SDK only reports parking/low-beam
-  // booleans (no "auto" flag exists in ETS2 telemetry), so live truth collapses to 3 stages;
-  // the 4-stage dial only shows while unpowered by telemetry (S.lightLocal, e.g. demo/offline).
-  function lightStage() {
+  // booleans (no "auto"), so a live frame collapses to 0/2/3. A click holds its detent until
+  // that frame leaves the stage the click started from.
+  // SDK stage, or null when the game is not reporting. Never reads the click hold.
+  function telLightStage() {
     const t = S.tel && S.tel.sdk ? S.tel : null;
-    return t ? (t.low ? 3 : t.parking ? 2 : 0) : (S.lightLocal || 0);
+    return t ? (t.low ? 3 : t.parking ? 2 : 0) : null;
   }
+  // Stage the last lights-rotary click asked for, while telemetry is still on the stage
+  // that click left. Null once the game confirms or moves somewhere else.
+  function unconfirmedLightStage() {
+    const h = S.lightHold;
+    if (!h || h.stage == null) return null;
+    const live = telLightStage();
+    if (live === null || live === h.from) return h.stage;
+    return null;
+  }
+  function lightStage() {
+    const held = unconfirmedLightStage();
+    if (held !== null) return held;
+    const live = telLightStage();
+    return live === null ? (S.lightLocal || 0) : live;
+  }
+
+  // ---- Rotary selector (sov_rotary_base + pin) ---------------------------------------------
+  // `stage` is the ENGINE's own stage number for that function, never a private counter:
+  //   lights → lightStage() 0=off 1=auto 2=parking 3=low  (1 only reachable offline: the SDK
+  //            has no "auto" flag, so live truth collapses to 0/2/3 — see lightStage)
+  //   wipers → 0..3 speed count (the game key cycles; the SDK only reports a boolean)
+  // A state with stage:null never lights up from telemetry — it stays a mirror position.
+  const ROTARY_PRESETS = {
+    // Angles measured off the printed legends of sov_rotary_dial.png (0deg = 12 o'clock, cw +):
+    //   crossed headlight +58 (off) | AUTO 0 | bulb -66 (parking) | low beam 180.
+    // No label/icon: this housing already carries its own silkscreen, so the CSS crown stays empty.
+    lights: [
+      { id: 'off', stage: 0, deg: 58 },
+      { id: 'auto', stage: 1, deg: 0 },
+      { id: 'parking', stage: 2, deg: -66 },
+      { id: 'low', stage: 3, deg: 180 }
+    ],
+    wipers: [
+      { id: 'off', stage: 0, deg: -90, label: '0' },
+      { id: 'w1', stage: 1, deg: 0, label: 'I' },
+      { id: 'w2', stage: 2, deg: 45, label: 'II' },
+      { id: 'w3', stage: 3, deg: 90, label: 'III' }
+    ],
+    // Modern housings (Pacote Moderno only). Angles measured on the printed legends.
+    // Lights art is AUTO / bulb / dipped-beam D — three detents, not the Soviet four.
+    mod_lights: [
+      { id: 'auto', stage: 1, deg: 0 },
+      { id: 'lamp', stage: 2, deg: -68.2 },
+      { id: 'beam', stage: 3, deg: 179 }
+    ],
+    // Wipers art: AUTO at 3 o'clock, normal at 12, fast at 9, OFF at 6.
+    // Click order is that list. stage 0 is only the telemetry-off detent.
+    mod_wipers: [
+      { id: 'auto', stage: 1, deg: 91.4 },
+      { id: 'norm', stage: 2, deg: 0.6 },
+      { id: 'fast', stage: 3, deg: -84.8 },
+      { id: 'off', stage: 0, deg: 180 }
+    ]
+  };
+  // Icons come from the shared catalog only (allowlist); an unknown name draws nothing instead
+  // of a placeholder dot, so a typo in the JSON fails visibly.
+  function rotaryIcon(name) {
+    const key = String(name || '');
+    return (key && typeof ICONS !== 'undefined' && ICONS[key]) ? key : '';
+  }
+  function rotaryPresetList(fnId, assetKey) {
+    const key = String(assetKey || '');
+    if (/mod_rotary_lights/i.test(key)) return ROTARY_PRESETS.mod_lights;
+    if (/mod_rotary_wipers/i.test(key)) return ROTARY_PRESETS.mod_wipers;
+    return ROTARY_PRESETS[fnId];
+  }
+  function normalizeRotaryStates(raw, fnId, assetKey) {
+    const list = Array.isArray(raw) && raw.length ? raw : rotaryPresetList(fnId, assetKey);
+    if (!Array.isArray(list) || !list.length) return [];
+    return list.slice(0, 8).map((s, i) => {
+      const src = s && typeof s === 'object' ? s : {};
+      const stage = Number(src.stage);
+      return {
+        id: String(src.id || ('p' + i)),
+        stage: Number.isFinite(stage) ? stage : null,
+        deg: Number.isFinite(Number(src.deg)) ? Number(src.deg) : (i * 45 - 90),
+        label: String(src.label == null ? '' : src.label).slice(0, 6),
+        icon: rotaryIcon(src.icon)
+      };
+    });
+  }
+  // Live stage for a rotary's function. For lights this is raw telemetry (null offline);
+  // the click hold is applied in rotaryIndex / lightStage, not here.
+  function rotaryStage(w, f) {
+    if (f && f.id === 'lights') return telLightStage();
+    if (f && f.id === 'wipers') {
+      const live = telValue('wipers');
+      if (live === false) return 0;
+      if (live === true) return clamp(Number(S.wipLvl) || 1, 1, 3);
+      return clamp(Number(S.wipLvl) || 0, 0, 3);
+    }
+    return null;
+  }
+  // 1 = wipers reported on, 0 = reported off, null = no telemetry. Ignores the local speed count.
+  function telWiperOn() {
+    const live = telValue('wipers');
+    if (live === true) return 1;
+    if (live === false) return 0;
+    return null;
+  }
+  function rotaryIndex(w, f) {
+    const states = w.states || [];
+    if (!states.length) return 0;
+    const local = S.rotLocal[w.id];
+    // Modern wiper: hold the clicked detent until the on/off bit actually changes.
+    // wipLvl is not the hold key — writing it would release the pin on the same frame.
+    if (w.modRotary === 'wipers') {
+      const tel = telWiperOn();
+      if (local && local.index != null && (tel === null || tel === local.telFrom)) {
+        return clamp(Number(local.index) || 0, 0, states.length - 1);
+      }
+      if (local && local.index != null) delete S.rotLocal[w.id];
+      const stage = tel === 1 ? clamp(Number(S.wipLvl) || 1, 1, 3) : 0;
+      let best = -1;
+      for (let i = 0; i < states.length; i += 1) {
+        const st = states[i].stage;
+        if (st === null) continue;
+        if (st === stage) return i;
+        if (st < stage && (best < 0 || st > states[best].stage)) best = i;
+      }
+      return best < 0 ? 0 : best;
+    }
+    const lights = !!(f && f.id === 'lights');
+    // Hold the detent until telemetry leaves the stage the click started from.
+    // A 1.5s timeout snapped the pin back when the game never applied the key.
+    const live = lights ? telLightStage() : rotaryStage(w, f);
+    if (local && local.index != null && (live === null || live === local.from)) {
+      return clamp(Number(local.index) || 0, 0, states.length - 1);
+    }
+    if (local && local.index != null) {
+      delete S.rotLocal[w.id];
+      if (lights) S.lightHold = null;
+    }
+    const stage = lights ? (live === null ? (S.lightLocal || 0) : live) : live;
+    if (stage === null || !states.some((s) => s.stage !== null)) {
+      return clamp(Number(local && local.index != null ? local.index : 0) || 0, 0, states.length - 1);
+    }
+    let best = -1;
+    for (let i = 0; i < states.length; i += 1) {
+      const st = states[i].stage;
+      if (st === null) continue;
+      if (st === stage) return i;
+      if (st < stage && (best < 0 || st > states[best].stage)) best = i;
+    }
+    return best < 0 ? 0 : best;
+  }
+
+  // Lamps are passive (keys:[]), so they never build a latch of their own: when the helper
+  // never reports the field the telltale would stay dark forever. These mirror the control
+  // the driver actually pressed. Only consulted when telemetry is undefined — a reported
+  // false always wins (see isOn).
+  const LAMP_FALLBACK = {
+    hazard_alert: () => !!S.latched.hazard,
+    high_beam: () => !!S.latched.high_beam,
+    parking_brake: () => !!S.latched.parking_brake,
+    low_beam: () => (S.lightLocal || 0) >= 3,
+    parking_lights: () => (S.lightLocal || 0) >= 2
+  };
 
   function isOn(w) {
     const f = fnOf(w);
     if (!f) return false;
+    // Lights rotary: the clicked detent owns these lamps until telemetry leaves `from`.
+    if (f.id === 'low_beam' || f.id === 'parking_lights') {
+      const held = unconfirmedLightStage();
+      if (held !== null) return f.id === 'low_beam' ? held >= 3 : held >= 2;
+    }
     // Truth comes from the game whenever it reports this state...
     const live = f.tel ? telValue(f.tel) : undefined;
     if (live !== undefined) return !!live;
     // ...otherwise from our own memory of the last press (can drift if the key is also
     // pressed on the keyboard; unavoidable without telemetry).
+    const mirror = LAMP_FALLBACK[f.id];
+    if (mirror) return mirror();
     if (f.latch) return !!S.latched[f.id === 'custom' ? w.id : f.id];
     return S.pressed.has(w.id);
   }
@@ -1393,6 +1910,24 @@
     return false;
   }
 
+  // fit() has already sized the panel; percentages alone can inherit its stretch.
+  function squareSkinNode(node, r) {
+    const pw = parseFloat(panel.style.width), ph = parseFloat(panel.style.height);
+    const width = pw * r[2] / 100, height = ph * r[3] / 100;
+    const side = Math.min(width, height);
+    node.style.left = (pw * r[0] / 100 + (width - side) / 2) + 'px';
+    node.style.top = (ph * r[1] / 100 + (height - side) / 2) + 'px';
+    node.style.width = side + 'px';
+    node.style.height = side + 'px';
+  }
+  function mountKeyCore(node, w) {
+    node.classList.add('key-turn');
+    squareSkinNode(node, w.r);
+    const slot = /sov_key_(?:slot|kamaz)/i.test(w.asset);
+    node.style.setProperty('--key-radius', slot ? '19.5%' : '17.5%');
+    node.innerHTML += '<i class="key-core" aria-hidden="true"></i>';
+  }
+
   function skinWidgetEl(w) {
     const node = document.createElement('div');
     node.className = 'w sk k-' + w.t + (w.recess ? ' recess' : '');
@@ -1483,6 +2018,16 @@
       node.setAttribute('role', 'button');
       node.setAttribute('aria-label', 'Ignition key');
       const ar = skinOf(page()).ar;
+      // Photoreal key-slot from the Layout Editor: same hitbox pattern as has-asset keys.
+      if (w.asset) {
+        node.classList.add('has-asset', 'lampst', 'hit-full');
+        node.style.cssText = 'left:' + pct(w.r[0]) + ';top:' + pct(w.r[1]) + ';width:' + pct(w.r[2]) + ';height:' + pct(w.r[3]);
+        node.style.setProperty('--asset', cssUrl(w.asset));
+        if (w.zIndex) node.style.zIndex = w.zIndex;
+        node.innerHTML = '<i class="cap"></i><i class="hit" aria-hidden="true"></i>';
+        mountKeyCore(node, w);
+        return node;
+      }
       if (w.st === 'lamp' || w.st === 'btn') {
         // the panel's own START key or button: its lamp / glow shows the stage (amber = electrics, green = running)
         node.classList.add('lampst');
@@ -1513,9 +2058,22 @@
       node.setAttribute('aria-hidden', 'true');
       return node;
     }
+    if (w.t === 'lens') {
+      // Decorative glass over a dial niche. Pure overlay: aria-hidden, no role, no LED, no press;
+      // pointer-events:none in CSS so taps fall through to whatever sits underneath.
+      node.className = 'w sk k-lens';
+      squareSkinNode(node, w.r);
+      if (w.zIndex) node.style.zIndex = w.zIndex;
+      if (w.asset) node.style.setProperty('--asset', cssUrl(w.asset));
+      node.setAttribute('aria-hidden', 'true');
+      return node;
+    }
     if (w.t === 'sgauge') {
       // Real dial photo (face, numerals and bezel baked in); the app only draws the needle on top.
+      // Passive: no role=button, no LED, no press — pointer-events:none in CSS.
       node.className = 'w sk k-sgauge k-vgauge' + (w.small ? ' small' : '');
+      squareSkinNode(node, w.r);
+      if (w.zIndex) node.style.zIndex = w.zIndex;
       node.innerHTML = '<div class="sg sg-' + w.field + '">' + sovGaugeSvg(w.field) + '</div>';
       return node;
     }
@@ -1556,12 +2114,88 @@
       // player set for overlapping free-position buttons.
       if (w.asset) node.style.setProperty('--asset', cssUrl(w.asset));
       if (w.zIndex) node.style.zIndex = w.zIndex;
+      if (w.lamp) node.classList.add('passive', 'atomic-lamp');
+      if (w.eng) node.classList.add('engl');
+      if (w.tog) node.classList.add('asset-tog');
+      if (w.hazardFail) node.classList.add('hazard-fail');
+      if (w.rocker) node.classList.add('asset-rocker');
+      if (w.pbCore) node.classList.add('pb-split');
+      if (w.rockerDn) node.classList.add('is-dn');
       node.innerHTML = widgetHtml({ id: w.id, t: w.k || 'rocker', fn: w.fn });
-      if (w.asset) node.innerHTML += '<i class="hit" aria-hidden="true"></i>';
+      // Photo assets already carry their own lamps/legends — strip the synthetic LED strip.
+      if (w.asset) {
+        node.querySelectorAll('.led').forEach((el) => el.remove());
+        node.innerHTML += '<i class="hit" aria-hidden="true"></i>';
+      }
+      // Atomic lamp photos ship as *_off.png; app swaps to *_on.png + glow by colour (Regra 3).
+      if (w.lamp && w.asset) {
+        node.dataset.lampOff = w.asset;
+        node.dataset.lampOn = String(w.asset).replace(/_off(\.[^.]+)$/i, '_on$1');
+        const color = ((String(w.asset).match(/sov_lamp_(red|green|amber|blue|white)/i) || [])[1] || '').toLowerCase();
+        if (color) {
+          node.dataset.lampColor = color;
+          node.style.setProperty('--lamp-glow', LAMP_COLORS[color] || LAMP_COLORS.green);
+        }
+      }
+      // Hazard OFF/ON lit pair: static body; updateKey swaps --asset with blink/telemetry phase.
+      if (w.hazardFail) {
+        node.dataset.hazardOff = 'skins/sov/btn/sov_push_hazard_off.png';
+        node.dataset.hazardOn = 'skins/sov/btn/sov_push_hazard_on.png';
+        node.style.setProperty('--asset', cssUrl(node.dataset.hazardOff));
+        node.style.setProperty('--haz-glow', LAMP_COLORS.amber);
+        node.style.setProperty('--haz-light', cssUrl(node.dataset.hazardOff));
+        node.innerHTML += '<i class="hazard-light" aria-hidden="true"></i>';
+      }
+      // Soviet toggle shells: remember up/down art so .on can flip the lever photo.
+      if (w.tog) {
+        if (w.parkTog || /sov_toggle_parking_brake/i.test(String(w.asset || ''))) {
+          node.dataset.togDown = 'skins/sov/btn/sov_toggle_parking_brake_down.png';
+          node.dataset.togUp = 'skins/sov/btn/sov_toggle_parking_brake_up.png';
+        } else {
+          node.dataset.togDown = 'skins/sov/btn/sov_tog_down.png';
+          node.dataset.togUp = 'skins/sov/btn/sov_tog_up.png';
+        }
+      }
+      // Parking push: the yellow cap is its own layer so only it can sink into the bezel.
+      if (w.pbCore) {
+        node.style.setProperty('--pb-core', cssUrl(w.pbCore));
+        node.innerHTML += '<i class="pb-core" aria-hidden="true"></i>';
+      }
+      // Rotary selector: static base (.cap) + static icon crown + the pin as the ONLY moving
+      // layer. The crown counter-rotates each tick so labels stay upright.
+      if (w.rotary && (w.states || []).length) {
+        node.classList.add('k-rotary');
+        squareSkinNode(node, w.r);
+        if (w.pinAsset) node.style.setProperty('--pin', cssUrl(w.pinAsset));
+        node.style.setProperty('--rot-rn', String((w.crownR || 42) / 100));   // fraction of --k (the square side)
+        node.style.setProperty('--pin-size', (w.pinLen || 58) + '%');
+        node.style.setProperty('--pin-bake', (w.pinBake || 0) + 'deg');
+        // A housing with its legends already printed (sov_rotary_dial) needs no CSS crown.
+        const drawCrown = w.states.some((st) => st.icon || st.label);
+        const crown = !drawCrown ? '' : w.states.map((st) => '<i class="rot-tick" data-p="' + esc(st.id) + '" style="--a:' + st.deg + 'deg">'
+          + (st.icon ? '<span class="rot-ico">' + iconSvg(st.icon) + '</span>'
+            : (st.label ? '<span class="rot-txt">' + esc(st.label) + '</span>' : '')) + '</i>').join('');
+        node.innerHTML += (crown ? '<i class="rot-crown" aria-hidden="true">' + crown + '</i>' : '')
+          + '<i class="rot-pin" aria-hidden="true"></i>';
+      }
+      if (w.keyTurn) mountKeyCore(node, w);
       if (w.asset && w.picto) {
         node.innerHTML += '<span class="atomic-picto" style="left:' + w.picto.ox + '%;top:' + w.picto.oy
           + '%;width:' + w.picto.w + '%;height:' + w.picto.h + '%;opacity:' + w.picto.op
           + (w.picto.color ? ';color:' + w.picto.color : '') + '">' + iconSvg(w.picto.icon) + '</span>';
+      }
+      if (w.label) {
+        const lb = w.labelBox || {};
+        const hasBox = lb && (lb.w || lb.h || lb.ox || lb.oy);
+        const style = hasBox
+          ? 'left:' + (Number(lb.ox) || 0) + '%;top:' + (Number(lb.oy) || 0) + '%;width:' + (Number(lb.w) || 84) + '%;height:' + (Number(lb.h) || 18) + '%;right:auto;bottom:auto;'
+          : '';
+        node.innerHTML += '<span class="key-label' + (hasBox ? ' is-placed' : '') + '"'
+          + (style ? ' style="' + style + '"' : '') + '>' + esc(String(w.label).toUpperCase()) + '</span>';
+      }
+      if (w.color) {
+        node.classList.add('has-tint');
+        node.innerHTML += '<span class="tint-overlay" style="background:' + esc(w.color) + '"></span>';
       }
       return node;
     }
@@ -1795,7 +2429,9 @@
   }
 
   // Functions whose lamp flashes while they are on, like the real switches.
-  const BLINK = new Set(['hazard', 'blinker_left', 'blinker_right', 'fs_hazard', 'fs_left', 'fs_right']);
+  // Lamp-indicator ids with behavior:'blink' join this set so updateKey reuses the flasher.
+  const BLINK = new Set(['hazard', 'blinker_left', 'blinker_right', 'fs_hazard', 'fs_left', 'fs_right']
+    .concat(Object.keys(LAMP_INDICATORS).filter((id) => LAMP_INDICATORS[id].behavior === 'blink')));
 
   // Key backlight: on a real dash the legends light up with the first stage of the lights.
   // 'auto' follows the truck (parking lights or low beam); with no game connected the panel
@@ -1830,17 +2466,57 @@
     if (on && BLINK.has(f.id)) {
       const t = S.tel && S.tel.sdk ? S.tel : null;
       if (!t) shown = S.phase;
-      else if (f.id === 'hazard') shown = !!(t.blinkL || t.blinkR);
-      else if ((f.id === 'blinker_left' || f.id === 'blinker_right') && t.hazard) shown = !!(t.blinkL || t.blinkR);
+      else if (f.id === 'hazard' || f.id === 'hazard_alert' || f.id === 'turn_signal_single') shown = !!(t.blinkL || t.blinkR);
+      else if ((f.id === 'blinker_left' || f.id === 'left_turn_signal') && t.hazard) shown = !!(t.blinkL || t.blinkR);
+      else if ((f.id === 'blinker_right' || f.id === 'right_turn_signal') && t.hazard) shown = !!(t.blinkL || t.blinkR);
+      else if (f.behavior === 'blink' || (LAMP_INDICATORS[f.id] && LAMP_INDICATORS[f.id].behavior === 'blink')) {
+        const tel = (LAMP_INDICATORS[f.id] && LAMP_INDICATORS[f.id].tel) || f.tel;
+        // blinkL/R/Either already pulse from SDK; steady flags (speedWarn, airWarn…) use local phase.
+        if (tel !== 'blinkL' && tel !== 'blinkR' && tel !== 'blinkEither' && tel !== 'hazard') shown = S.phase;
+      }
     }
+    if (w.keyTurn) node.style.setProperty('--key-deg', on ? '45deg' : '0deg');
     node.classList.toggle('on', shown);
-    node.classList.toggle('idle', !shown && f.id !== 'hazard' && (f.latch || !!f.tel));
+    // Physical retention follows the latched/telemetry truth (`on`), not the blink phase (`shown`),
+    // so hazard/parking stay visually pressed while their lamp may flash.
+    node.classList.toggle('in', !!(f.latch && on));
+    node.classList.toggle('idle', !shown && f.id !== 'hazard' && f.id !== 'hazard_alert' && (f.latch || !!f.tel));
     node.classList.toggle('down', S.pressed.has(w.id));
     node.classList.toggle('sel', S.edit && S.sel === w.id);
+    // Atomic lamp off/on photo swap (engl / low-beam flicker owns --asset via its timer).
+    if (node.dataset.lampOff && !node.classList.contains('engl') && !node.dataset.hazardOff) {
+      node.style.setProperty('--asset', cssUrl(shown ? (node.dataset.lampOn || node.dataset.lampOff) : node.dataset.lampOff));
+    }
+    // Hazard lit pair: body stays put; only internal light follows blink/telemetry (`shown`).
+    if (node.dataset.hazardOff && node.dataset.hazardOn) {
+      const latched = !!(f.latch ? on : shown);
+      node.style.setProperty('--haz-light', cssUrl(latched && shown ? node.dataset.hazardOn : node.dataset.hazardOff));
+    }
+    // Rotary selector: only the pin turns. Index from the engine stage (telemetry first),
+    // mirror index as fallback for functions the engine has no stage for.
+    if (w.rotary && (w.states || []).length) {
+      const idx = rotaryIndex(w, f);
+      const st = w.states[idx];
+      node.dataset.s = String(idx);
+      node.dataset.pos = st.id;
+      node.style.setProperty('--rot-deg', st.deg + 'deg');
+      node.querySelectorAll('.rot-tick').forEach((el, i) => el.classList.toggle('is-live', i === idx));
+    }
+    // Soviet toggle levers: swap PNG by latch/telemetry.
+    // Parking brake is mechanically inverted vs a normal switch:
+    //   OFF (released) = lever UP · ON (set) = lever DOWN.
+    if (node.dataset.togDown && node.dataset.togUp) {
+      const engaged = !!(f.latch ? on : shown);
+      const parkLever = !!(w.parkTog || f.id === 'parking_brake');
+      const art = parkLever
+        ? (engaged ? node.dataset.togDown : node.dataset.togUp)
+        : (engaged ? node.dataset.togUp : node.dataset.togDown);
+      node.style.setProperty('--asset', cssUrl(art));
+    }
   }
 
   function updateSkinNode(w, node) {
-    if (w.t === 'knob' || w.t === 'sticker' || w.t === 'plate') return;
+    if (w.t === 'knob' || w.t === 'sticker' || w.t === 'plate' || w.t === 'lens') return;
     if (w.t === 'status') {
       // skin status bar: update damage figures and trip info, same logic as grid status
       const t = S.tel && S.tel.sdk ? S.tel : (S.bridge === 'demo' ? DEMO_TEL : null);
@@ -1873,9 +2549,11 @@
       return;
     }
     if (w.t === 'sgauge') {
+      // Angle from telemetry value only — widget width/height never enter this formula.
       const spec = sovSpec(w.field);
       const v = deadNow() ? 0 : gaugeValue(w.field);
-      node.querySelector('.needle').style.transform = 'rotate(' + (SWEEP * clamp(v / spec.max, 0, 1)).toFixed(1) + 'deg)';
+      const needle = node.querySelector('.needle');
+      if (needle) needle.style.transform = 'rotate(' + (SWEEP * clamp(v / spec.max, 0, 1)).toFixed(1) + 'deg)';
       return;
     }
     if (w.t === 'sc25' || w.t === 'sc25bg') return;
@@ -1883,7 +2561,12 @@
       updateCgauge(w, node);
       return;
     }
-    if (w.t === 'ign') { node.dataset.s = String(ignState()); return; }
+    if (w.t === 'ign') {
+      const state = ignState();
+      node.dataset.s = String(state);
+      node.style.setProperty('--key-deg', (state === 2 ? 90 : state ? 45 : 0) + 'deg');
+      return;
+    }
     if (w.t === 'live' || w.t === 'rtext' || w.t === 'fbar') node.classList.toggle('dead', deadNow());   // keeps its dark backing, loses the figures
     if (w.t === 'gauge') {
       node.querySelector('.sneedle').style.transform = 'rotate(' + skinNeedleAngle(w).toFixed(1) + 'deg)';
@@ -1994,6 +2677,12 @@
         node.querySelectorAll('.tell').forEach((el) => {
           const flag = el.dataset.flag;
           let on = !!(tl && tl[flag]);
+          // Lights rotary detent owns the position-lamp and dipped-beam telltales until
+          // telemetry leaves the stage the click started from. `park` stays the brake.
+          if (flag === 'low' || flag === 'parking') {
+            const held = unconfirmedLightStage();
+            if (held !== null) on = flag === 'low' ? held >= 3 : held >= 2;
+          }
           if ((flag === 'lift' || flag === 'trailerLift') && now < (S.liftFlashUntil || 0) && S.liftFlashFlag === flag) on = true;
           if (bulbCheck) on = true; // ignition bulb check / modern boot
           el.classList.toggle('lit', on);
@@ -2085,13 +2774,18 @@
         // hazard key (reported as a steady state) borrows them. Without it, our own flasher.
         const t = S.tel && S.tel.sdk ? S.tel : null;
         if (!t) shown = S.phase;
-        else if (f.id === 'hazard') shown = !!(t.blinkL || t.blinkR);
-        else if ((f.id === 'blinker_left' || f.id === 'blinker_right') && t.hazard) shown = !!(t.blinkL || t.blinkR);
+        else if (f.id === 'hazard' || f.id === 'hazard_alert' || f.id === 'turn_signal_single') shown = !!(t.blinkL || t.blinkR);
+        else if ((f.id === 'blinker_left' || f.id === 'left_turn_signal') && t.hazard) shown = !!(t.blinkL || t.blinkR);
+        else if ((f.id === 'blinker_right' || f.id === 'right_turn_signal') && t.hazard) shown = !!(t.blinkL || t.blinkR);
+        else if (f.behavior === 'blink' || (LAMP_INDICATORS[f.id] && LAMP_INDICATORS[f.id].behavior === 'blink')) {
+          const tel = (LAMP_INDICATORS[f.id] && LAMP_INDICATORS[f.id].tel) || f.tel;
+          if (tel !== 'blinkL' && tel !== 'blinkR' && tel !== 'blinkEither' && tel !== 'hazard') shown = S.phase;
+        }
       }
       node.classList.toggle('on', shown);
       node.classList.toggle('plain', f.id === 'wipers_back');
       // a switch that is off is not lit in colour (controls that ARE coloured keep it)
-      node.classList.toggle('idle', !shown && !w.solid && w.fn !== 'hazard' && (f.latch || !!f.tel));
+      node.classList.toggle('idle', !shown && !w.solid && w.fn !== 'hazard' && w.fn !== 'hazard_alert' && (f.latch || !!f.tel));
       node.classList.toggle('down', S.pressed.has(w.id));
       node.classList.toggle('sel', S.edit && S.sel === w.id);
     }
@@ -2127,21 +2821,26 @@
   // the finger is down and springs back), press 3 = engine off, then electrics off.
   let ignTried = 0;   // when "electrics" was last sent without the game reacting
   function pressIgn(node) {
-    // Two real cycles, like turning a physical key: OFF -> ELECTRICS (tap 'electrics', boot
-    // video) -> ENGINE START (tap 'engine', no video, key springs back from START) -> OFF
-    // (both keys released, shutdown video). The boot/shutdown video itself is never started
-    // here: updateStates() already watches ignState() for the 0 <-> powered edge and drives it.
+    // Combined (Electrics + Engine) state machine on one physical key:
+    //   stage 0 → 1st tap: electrics ON + red timer ring on the key
+    //   stage 1/3 → 2nd tap: engine START
+    //   stage 2 → tap: engine OFF then electrics OFF
     const l = layout();
-    const keyOf = (id) => l.binds[id] || FUNCTIONS[id].keys;
+    const keyOf = (id) => (l.binds && l.binds[id]) || (FUNCTIONS[id] && FUNCTIONS[id].keys) || [];
     const before = ignState();
     buzz(before === 0 ? 14 : 30);
     if (before === 0) {
       send('tap', keyOf('electrics'));
       ignLocal = 1;
       if (!S.tel || !S.tel.sdk) S.latched.engine = false;
+      // Visual timer: red spinning ring while electrics come up (not a hold-to-confirm).
+      if (node) {
+        node.classList.add('holding', 'ign-timer');
+        const clear = () => { node.classList.remove('holding', 'ign-timer'); };
+        setTimeout(clear, 1100);
+      }
     } else if (before === 1 || before === 3) {
       send('tap', keyOf('engine'));
-      // the key is held at START while the finger is down, then springs back
       if (node) {
         node.classList.add('crank');
         const back = () => { node.classList.remove('crank'); node.removeEventListener('pointerup', back); node.removeEventListener('pointercancel', back); node.removeEventListener('pointerleave', back); };
@@ -2151,7 +2850,6 @@
       ignLocal = 2;
       if (!S.tel || !S.tel.sdk) S.latched.engine = true;
     } else {
-      // stage 2 (running): engine off, then electrics off — same order as turning the key back
       send('tap', keyOf('engine'));
       setTimeout(() => send('tap', keyOf('electrics')), 120);
       ignLocal = 0;
@@ -2161,8 +2859,13 @@
     updateStates();
   }
 
+  // Photoreal key-slot (has-asset): tap advances the Combined machine immediately.
+  function tapIgnCombined(node) {
+    pressIgn(node);
+  }
+
   function holdIgnition(node) {
-    // Keep the same deliberate one-second start/stop gesture on classic key and Scania rocker.
+    // Classic / non-photo keys still need a deliberate 1 s hold so a brush never kills the engine.
     let done = false;
     node.classList.add('holding');
     const cancel = () => {
@@ -2205,8 +2908,10 @@
     // the needle is drawn pointing at the first mark and turned by CSS
     const a = SWEEP_START * Math.PI / 180;
     const tip = [100 + 78 * Math.cos(a), 100 + 78 * Math.sin(a)], tail = [100 - 14 * Math.cos(a), 100 - 14 * Math.sin(a)];
-    return '<svg viewBox="0 0 200 200" aria-hidden="true"><g class="nums">' + nums + '</g><text class="unit" x="100" y="165">' + esc(spec.unit) + '</text>' +
-      '<g class="needle"><line x1="' + tail[0].toFixed(1) + '" y1="' + tail[1].toFixed(1) + '" x2="' + tip[0].toFixed(1) + '" y2="' + tip[1].toFixed(1) + '"/></g>' +
+    // Needle is drawn already at SWEEP_START (135°). CSS rotate(SWEEP * v/max) adds only the
+    // telemetry angle — widget width/height never enter the formula. Pivot = viewBox (100,100).
+    return '<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><g class="nums">' + nums + '</g><text class="unit" x="100" y="165">' + esc(spec.unit) + '</text>' +
+      '<g class="needle" style="transform-box:view-box;transform-origin:100px 100px"><line x1="' + tail[0].toFixed(1) + '" y1="' + tail[1].toFixed(1) + '" x2="' + tip[0].toFixed(1) + '" y2="' + tip[1].toFixed(1) + '"/></g>' +
       '<circle class="hub" cx="100" cy="100" r="7"/><circle class="hub2" cx="100" cy="100" r="2.6"/></svg>';
   }
   // Engine lamp beside the key: an old bulb fed by a tired alternator. Off with the engine off, a faint
@@ -2214,7 +2919,8 @@
   // weak and stuttering at idle (with the odd drop-out), strong and steady at speed.
   let engLv = 0;
   setInterval(() => {
-    const nodes = panel.querySelectorAll('.k-spr.engl');
+    // Factory .k-spr.engl and atomic .k-kbd.engl (low-beam telltale) share the same --lv flicker.
+    const nodes = panel.querySelectorAll('.engl');
     if (!nodes.length) return;
     const t = curTel();
     let target = 0;
@@ -2230,8 +2936,18 @@
     }
     engLv += (clamp(target, 0, 1.1) - engLv) * 0.55;             // a filament does not switch instantly
     const v = engLv.toFixed(3);
-    nodes.forEach((n) => { n.style.setProperty('--lv', v); n.classList.toggle('lit', engLv > 0.05); });
+    const lit = engLv > 0.05;
+    nodes.forEach((n) => {
+      n.style.setProperty('--lv', v);
+      n.classList.toggle('lit', lit);
+      if (n.dataset.lampOn && n.dataset.lampOff) {
+        n.style.setProperty('--asset', cssUrl(lit ? n.dataset.lampOn : n.dataset.lampOff));
+      }
+    });
   }, 70);
+
+  // Hazard lit (hazard-fail): no erratic fail-flicker. Light OFF↔ON is owned by updateKey
+  // and stays in sync with blink/telemetry phase. Body never sinks (CSS transform:none).
 
   // Polyvox-style amber gauge glow: each gauge has its own flickering bulb on tired Soviet wiring.
   // Follows dash lights (backlit()), intensity tracks RPM, each gauge flickers independently.
@@ -2258,7 +2974,8 @@
           const flick = (0.06 - 0.05 * k) * (Math.random() * 2 - 1);
           // sine-wave micro-tremor offset by the gauge's own seed
           const tremor = Math.sin(Date.now() * 0.003 + seed * 628) * 0.012 * (1 - k * 0.8);
-          target = 0.24 + 0.50 * k + flick + tremor;
+          // Keep the face readable while capping the high-RPM peak ~30% lower.
+          target = 0.17 + 0.35 * k + flick * 0.7 + tremor * 0.7;
           // occasional dropout at low RPM: the bulb "misses" — old wiring
           if (k < 0.15 && Math.random() < (0.008 + seed * 0.005)) target *= 0.4;
         }
@@ -2402,21 +3119,22 @@
     if (lit) for (const k of lmSrc.keys) {
       const active = isOn(k.w0);
       const col = active ? k.col : (panel.classList.contains('scania-sr') ? lmCssv(panel, '--scania-accent') || '#54a9ff' : '#ffdcb0');
-      const a = k.kind === 'ico' ? (active ? 0.9 : 0.42) : k.kind === 'lbl' ? (active ? 0.5 : 0.26) : (active ? 0.45 : 0.2);
+      const a = 0.85 * (k.kind === 'ico' ? (active ? 0.9 : 0.42) : k.kind === 'lbl' ? (active ? 0.5 : 0.26) : (active ? 0.45 : 0.2));
       const sz = Math.min(k.w, k.h);
       lmGlow(m, col, sz * 0.12, a, lmRect(k, 0));
       lmGlow(m, col, sz * 0.5, a * 0.3, lmRect(k, 0));
     }
     // warning and status lamps: small, intense, strongly coloured
+    const ledGlow = 0.72 + 0.43 * c; // restrained by day, broader/brighter in a dark cabin
     for (const l of lmSrc.lamps) {
       if (l.tell ? l.w0.classList.contains('off') : !isOn(l.w0)) continue;
       const a = l.engl ? Math.min(1, parseFloat(l.w0.style.getPropertyValue('--lv')) || 0) : 1;
       if (a <= 0.02) continue;
       const cx = l.x + l.w / 2, cy = l.y + l.h / 2, r = Math.max(l.w, l.h) / 2;
-      lmGlow(m, l.col, r * 1.6, 0.9 * a, lmDisc(cx, cy, r * 0.55));
-      lmGlow(m, l.col, r * 6, 0.45 * a, lmDisc(cx, cy, r * 0.6));
+      lmGlow(m, l.col, r * (1.35 + 0.45 * c), 0.9 * a * ledGlow, lmDisc(cx, cy, r * 0.55));
+      lmGlow(m, l.col, r * (4.5 + 2.2 * c), 0.45 * a * ledGlow, lmDisc(cx, cy, r * 0.6));
       m.globalAlpha = a; m.fillStyle = '#fff'; m.beginPath(); m.arc(cx, cy, r * 0.6, 0, Math.PI * 2); m.fill();
-      lmGlow(bl, l.col, r * 3, 0.6 * a, lmDisc(cx, cy, r));
+      lmGlow(bl, l.col, r * (2.2 + 1.5 * c), 0.6 * a * ledGlow, lmDisc(cx, cy, r));
     }
     // the bloom never washes over a screen's own figures
     bl.globalCompositeOperation = 'destination-out'; bl.globalAlpha = 1; bl.fillStyle = '#000';
@@ -3066,8 +3784,18 @@
       const MAXS = skin.frame ? 1.42 : 1.1;               // largest allowed stretch per axis
       let w = Math.min(availW, availH * ar);              // "contain"
       let h = w / ar;
-      w = Math.floor(Math.min(availW, w * MAXS));         // then grow towards the screen, capped
-      h = Math.floor(Math.min(availH, h * MAXS));
+      // Soviet landscape plates are 2752×1536. Growing height on its own
+      // turned that wide cut into a taller frame, so horizontal showed the
+      // portrait shape. Keep this cut's ratio and only scale it uniformly.
+      if (p.skin === 'sov_frame' && ar >= 1) {
+        const grow = Math.min(MAXS, availW / w, availH / h);
+        w = Math.floor(Math.min(availW, w * grow));
+        h = Math.floor(w / ar);
+        if (h > availH) { h = Math.floor(availH); w = Math.floor(h * ar); }
+      } else {
+        w = Math.floor(Math.min(availW, w * MAXS));         // then grow towards the screen, capped
+        h = Math.floor(Math.min(availH, h * MAXS));
+      }
       panel.style.width = w + 'px';
       panel.style.height = h + 'px';
       layoutExtras(0, 0);
@@ -3106,12 +3834,42 @@
     }
   }
 
+  // The night lightmap covers every widget, so a glow inside the rotary is multiplied
+  // away. This layer sits above that map. CSS masks it to the engraved marks and
+  // sets the opacity from --cabin. Positions only; no per-function colour.
+  function syncRotaryGlow() {
+    const prev = panel.querySelector(':scope > .rotary-backlights');
+    if (prev) prev.remove();
+    if (!panel.classList.contains('eu-modern')) return;
+    const nodes = panel.querySelectorAll('.k-modern.k-rotary');
+    if (!nodes.length) return;
+    const host = document.createElement('div');
+    host.className = 'rotary-backlights';
+    const pr = panel.getBoundingClientRect();
+    nodes.forEach((el) => {
+      const id = el.dataset.id || '';
+      const key = /mod_rotary_wipers/.test(id) ? 'wipers' : (/mod_rotary_lights/.test(id) ? 'lights' : '');
+      if (!key) return;
+      const r = el.getBoundingClientRect();
+      const mark = document.createElement('i');
+      mark.dataset.mark = key;
+      mark.style.left = (r.left - pr.left) + 'px';
+      mark.style.top = (r.top - pr.top) + 'px';
+      mark.style.width = r.width + 'px';
+      mark.style.height = r.height + 'px';
+      host.appendChild(mark);
+    });
+    panel.appendChild(host);
+  }
+
   function renderPanel() {
     fit();
     const p = page();
     const skin = skinOf(p);
     panel.classList.toggle('edit', S.edit);
-    panel.classList.toggle('hide-labels', layout().names === 'hide');   // one switch hides the key names on every key family
+    panel.classList.toggle('hide-labels', layout().names === 'hide' || layout().keyLabels === 'hide');
+    panel.classList.toggle('hide-pictograms', layout().pictograms === 'hide');
+    panel.dataset.labelFont = layout().labelFont || 'barlow';
     panel.classList.toggle('skin', !!skin);
     panel.classList.toggle('eu-modern', !!skin && p.skin === 'eu_frame');
     panel.classList.toggle('scania-sr', !!skin && p.skin === 'scania_frame');
@@ -3133,6 +3891,7 @@
     }
     if (p.skin === 'eu_frame' && modernBooting()) ensureIgnBootOverlay();
     mountModernGrids(p);
+    syncRotaryGlow();
     panel.classList.toggle('deco', !!S.deco);
     decoNodes();
     if (!skin && !p.widgets.length) {
@@ -3474,6 +4233,8 @@
   function press(w, node, ev) {
     const f = fnOf(w);
     if (!f) return;
+    // Atomic lamps are passive telltales — never send keys or flip local latches.
+    if (w.lamp || (f.keys && f.keys.length === 0 && LAMP_INDICATORS[f.id])) return;
     if (f.long) {
       // a key that must not fire by accident (roadside assistance...): hold it for one second
       node.classList.add('holding');
@@ -3485,7 +4246,29 @@
     }
     const keys = keysOf(w);
     S.pressed.add(w.id);
-    if (f.id === 'lights') S.lightLocal = ((S.lightLocal || 0) + 1) % 4;
+    if (w.rotary && (w.states || []).length) {
+      // Index first, then write lightLocal. Incrementing lightLocal before rotaryIndex
+      // made lightStage() already return the new step, so the dial jumped two detents offline.
+      const prevRotary = rotaryIndex(w, f);
+      const nextRotary = (prevRotary + 1) % w.states.length;
+      const nextStage = w.states[nextRotary].stage;
+      const liveNow = f.id === 'lights' ? telLightStage() : rotaryStage(w, f);
+      const fromStage = (liveNow === null || liveNow === undefined) ? w.states[prevRotary].stage : liveNow;
+      const hold = {
+        index: nextRotary,
+        stage: Number.isFinite(nextStage) ? nextStage : null,
+        from: Number.isFinite(fromStage) ? fromStage : null
+      };
+      if (w.modRotary === 'wipers') hold.telFrom = telWiperOn();
+      S.rotLocal[w.id] = hold;
+      if (f.id === 'lights' && Number.isFinite(nextStage)) {
+        S.lightLocal = nextStage;
+        S.lightHold = hold;
+      }
+    } else if (f.id === 'lights') {
+      S.lightLocal = ((S.lightLocal || 0) + 1) % 4;
+    }
+
     // Suspension telltales: brief local flash, then settle to SDK lift/trailerLift state.
     if (/^susp_/.test(f.id)) {
       S.liftFlashUntil = Date.now() + 800;
@@ -3493,10 +4276,24 @@
     }
     let skipSend = false;
     if (f.id === 'wipers') {
-      // The game's wiper key cycles: off, 1, 2, 3, off... The app counts the steps; at the top it
-      // stays put (a further press would wrap to OFF, the opposite of "faster").
-      if (telValue('wipers') === false && !wipBusy) S.wipLvl = 0;
-      if ((S.wipLvl || 0) >= 3) skipSend = true; else S.wipLvl = (S.wipLvl || 0) + 1;
+      if (w.modRotary === 'wipers') {
+        // AUTO → normal → fast → OFF (6 o'clock) → AUTO. Each on-detent sends one
+        // cycle tap. OFF runs wiperOff(), which keeps tapping until the wipers stop.
+        const hold = S.rotLocal[w.id];
+        const st = hold && w.states[hold.index];
+        if (st && st.id === 'off') {
+          skipSend = true;
+          wiperOff();
+          S.wipLvl = 0;
+        } else {
+          S.wipLvl = st && Number.isFinite(Number(st.stage)) ? Number(st.stage) : 0;
+        }
+      } else {
+        // The game's wiper key cycles: off, 1, 2, 3, off... The app counts the steps; at the top it
+        // stays put (a further press would wrap to OFF, the opposite of "faster").
+        if (telValue('wipers') === false && !wipBusy) S.wipLvl = 0;
+        if ((S.wipLvl || 0) >= 3) skipSend = true; else S.wipLvl = (S.wipLvl || 0) + 1;
+      }
     }
     if (f.id === 'wipers_back') { S.latched.wipers = false; skipSend = true; wiperOff(); }   // off also releases the "on" key
     let holdKeepalive = null;
@@ -3511,6 +4308,7 @@
       const key = f.id === 'custom' ? w.id : f.id;
       S.latched[key] = !S.latched[key];
     }
+    if (w.modRotary === 'wipers') S.latched.wipers = (S.wipLvl || 0) > 0;
     buzz(12);
     updateStates();
 
@@ -3697,7 +4495,9 @@
     if (!node) return;
     // frame-method panels: only kbd buttons and media keys respond to touch
     const _fw = findWidget(node.dataset.id);
-    if (_fw && _fw.sk && skinOf(page()) && skinOf(page()).frame && _fw.t !== 'kbd' && _fw.t !== 'spr' && _fw.t !== 'gps' && !ev.target.closest('[data-media]')) return;
+    // Allow kbd/spr/gps/ign on frame panels. Ign was missing here — photoreal sov_key_slot
+    // never received presses (Regra 4: ignition/electrics).
+    if (_fw && _fw.sk && skinOf(page()) && skinOf(page()).frame && _fw.t !== 'kbd' && _fw.t !== 'spr' && _fw.t !== 'gps' && _fw.t !== 'ign' && !ev.target.closest('[data-media]')) return;
     ev.preventDefault();
     // the music player has its own keys inside one widget
     const mediaKey = ev.target.closest('[data-media]');
@@ -3711,8 +4511,10 @@
     const w = findWidget(node.dataset.id);
     if (w && w.t === 'knob') { startKnob(w, node, ev); return; }
     if (w && w.t === 'ign') {
-      // Start/stop needs a 1 s press, so a brush of the screen can never kill the engine.
-      holdIgnition(node);
+      // Photo key-slot: Combined = tap state machine (electrics → timer → engine).
+      // Classic painted key: keep the 1 s hold so a brush never kills the engine.
+      if (node.classList.contains('has-asset')) tapIgnCombined(node);
+      else holdIgnition(node);
       return;
     }
     if (w && w.t === 'kbd' && page().skin === 'scania_frame' && page().size === 'phone' && w.fn === 'engine') {
@@ -4229,12 +5031,12 @@
     }[S.bridge];
     const pr = S.store.prefs;
     openSheet('Truck Deck',
-      '<div class="group"><h3>Panels</h3>' +
+      '<div class="group menu-panel"><h3>Menu do Painel</h3>' +
       '<button class="item current" data-act="gallery">' + thumb(skinId) + '<span class="name">' + esc(l.name) +
       '<small>' + S.store.layouts.length + ' panels. Tap to choose another.</small></span></button>' +
       '<button class="btn primary" data-act="gallery">Choose a panel</button></div>' +
 
-      '<div class="group"><h3>Settings for all panels</h3>' +
+      '<div class="group menu-app-settings"><h3>Menu Geral</h3>' +
       '<div class="row"><label class="field grow"><span>Language</span><select data-field="lang">' + options([['en', 'English'], ['pt', 'Português'], ['de', 'Deutsch'], ['es', 'Español'], ['fr', 'Français']], pr.lang) + '</select></label>' +
       '<label class="field grow"><span>Speed</span><select data-field="units">' + options([['kmh', 'km/h'], ['mph', 'mph']], pr.units) + '</select></label>' +
       '<label class="field grow"><span>Temperature</span><select data-field="temp">' + options([['c', '\u00b0C'], ['f', '\u00b0F']], pr.temp || 'c') + '</select></label></div>' +
@@ -4243,6 +5045,9 @@
         ['auto', 'Auto: with the truck lights'], ['on', 'Always on'], ['off', 'Off'],
       ], pr.lights || 'auto') + '</select></label>' +
       '<label class="field grow"><span>Key names</span><select data-field="names">' + options([['show', 'Shown'], ['hide', 'Hidden']], pr.names || 'show') + '</select></label></div>' +
+      '<div class="row"><label class="field grow"><span>Text labels</span><select data-field="keyLabels">' + options([['show', 'Shown'], ['hide', 'Hidden']], pr.keyLabels || 'show') + '</select></label>' +
+      '<label class="field grow"><span>Pictograms</span><select data-field="pictograms">' + options([['show', 'Shown'], ['hide', 'Hidden']], pr.pictograms || 'show') + '</select></label></div>' +
+      '<label class="field"><span>Label font</span><select data-field="labelFont">' + options(LABEL_FONTS, pr.labelFont || 'barlow') + '</select></label>' +
       '<label class="field"><span>Dark cabin</span><select data-field="cabin">' + options([
         ['off', 'Off'], ['auto', 'Auto: follows the game clock'], ['dark', 'Always dark'],
       ], pr.cabin || 'off') + '</select></label>' +
@@ -4260,7 +5065,7 @@
       '<div class="row"><button class="btn grow" data-act="keys">Key setup</button><button class="btn grow" data-act="transfer">Export / import</button></div>' +
       '<p class="note">These stay the same on every panel, including the ones you add later.</p></div>' +
 
-      '<div class="group"><h3>This panel</h3>' +
+      '<div class="group menu-panel-detail"><h4>Painel ativo</h4>' +
       (l.locked ? '<p class="note"><b>' + esc(l.name) + '</b> is a built-in panel: its keys cannot be changed. Use it as a model to get a copy you can edit freely.</p>' +
       '<button class="btn primary" data-act="duplicate">Use as a model (editable copy)</button>'
         : '<label class="field"><span>Name</span><input type="text" data-field="name" value="' + esc(l.name) + '"></label>') +
@@ -4280,7 +5085,7 @@
       (l.game && !l.locked ? '<button class="btn" data-act="fill">Add all other functions as extra pages</button>' : '') +
       (l.locked ? '' : '<div class="row"><button class="btn grow" data-act="duplicate">Duplicate</button><button class="btn grow danger" data-act="delete">Delete panel</button></div>') + '</div>' +
 
-      '<div class="group"><h3>PC connection</h3><p class="note">' + esc(stateText) + '</p>' +
+      '<div class="group menu-general"><h3>Settings do App</h3><p class="note">' + esc(stateText) + '</p>' +
       '<div class="row"><input class="grow" type="text" id="pinInput" inputmode="numeric" maxlength="4" placeholder="PIN" value="' + esc(S.pin) + '" aria-label="PIN">' +
       '<button class="btn" data-act="pin">Connect</button></div>' +
       (window.HuntersApp ? '<button class="btn" data-act="changepc">Connect to another PC</button>' : '<button class="btn" data-act="fullscreen">Full screen</button>') +
