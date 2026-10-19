@@ -4513,6 +4513,16 @@ video::-webkit-media-controls-start-playback-button {
   transform: rotate(calc(var(--rot-deg, 0deg) - var(--pin-bake, 0deg))) !important;
   transform-origin: 50% 50% !important;
 }
+/* Rotary hitbox: the generic 50%-square .hit (inset 25%, see line ~1269) overlaps neighbour
+   knobs on dense Soviet panels. A rotary is a selector, not a push button — only the inner
+   pivot/knob (--pin-size, same var as .rot-pin/.rot-ico) needs to be tappable, so shrink the
+   tap target to that circle. Housing bezel + silkscreen stay visual-only, same as the dial 1:1
+   pivot rule. Placed after .hit-full above so it wins that tie-break too (one extra class each,
+   source order decides). */
+#panel.skin .w.k-kbd.has-asset.k-rotary .hit {
+  inset: calc((100% - var(--pin-size, 58%)) / 2);
+  border-radius: 50%;
+}
 #app #panel .w.key-turn .cap {
   translate: none !important;
   mask-image: radial-gradient(circle closest-side at 50% 50%, transparent calc(var(--key-radius) * 2 - .2%), #000 calc(var(--key-radius) * 2));

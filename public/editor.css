@@ -164,6 +164,13 @@ button { color: inherit; }
   pointer-events: auto;
   cursor: move;
 }
+/* Rotary: shrink the drag/select hitbox to the inner pivot circle (--pin-size, same var as
+   .rotary-pin above), matching the app's tap target so overlapping dial housings in the
+   Editor select the knob underneath instead of the bezel on top. */
+.layout-element.is-rotary .hit {
+  inset: calc((100% - var(--pin-size, 58%)) / 2);
+  border-radius: 50%;
+}
 .key-label {
   position: absolute;
   left: 8%;
