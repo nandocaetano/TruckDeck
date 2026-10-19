@@ -1389,8 +1389,8 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
    One single rule set — the authoritative one lives in the sov_frame block near the end of
    this file; nothing else may touch .hazard-fail. */
 /* Plain push shells (incl. sov_push_hazard.png): physical press sink. Lit hazard excluded above. */
-.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.lever-split):not(.k-rotary):not(.key-turn):not(.frame-static).in .cap,
-.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.lever-split):not(.k-rotary):not(.key-turn):not(.frame-static).down .cap {
+.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.lever-swap):not(.k-rotary):not(.key-turn):not(.frame-static).in .cap,
+.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.lever-swap):not(.k-rotary):not(.key-turn):not(.frame-static).down .cap {
   transform: scale(0.94) translateY(2%);
   filter: brightness(0.86);
 }
@@ -1420,21 +1420,20 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
   filter: brightness(0.86);
 }
 @media (prefers-reduced-motion: reduce) { .k-kbd.has-asset.pb-split .pb-core { transition: none; } }
-/* Soviet parking-brake lever (sov_toggle_parking_brake_frame + _lever_up/_down): frame.png is
-   cross-filled from both real photos and carries no lever at all, so .cap can stay 100% static
-   in every state — no scale/translateY/filter, ever. Only .lever-body swaps the up/down pose. */
-.k-kbd.has-asset.lever-split .cap,
-.k-kbd.has-asset.lever-split.on .cap,
-.k-kbd.has-asset.lever-split.in .cap,
-.k-kbd.has-asset.lever-split.down .cap,
-.w.down.k-kbd.has-asset.lever-split .cap {
+/* Soviet parking-brake lever (sov_toggle_parking_brake_up/down): a frame+lever-body split was
+   tried (2026-10-19) and reverted — the rod occupies the whole pivot-to-tip channel in BOTH
+   source photos, so no frame photo exists that is free of the lever in every state; any split
+   left a baked-in "ghost" rod under the swapped lever layer. Full-pose photo swap only — .cap
+   just needs to stay 100% static (no scale/translateY/filter) across states; --asset itself
+   swaps between the two real photos in updateKey(). */
+.k-kbd.has-asset.lever-swap .cap,
+.k-kbd.has-asset.lever-swap.on .cap,
+.k-kbd.has-asset.lever-swap.in .cap,
+.k-kbd.has-asset.lever-swap.down .cap,
+.w.down.k-kbd.has-asset.lever-swap .cap {
   transform: none !important;
   scale: none !important;
   filter: none !important;
-}
-.k-kbd.has-asset.lever-split .lever-body {
-  position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: var(--lever-asset) center / 100% 100% no-repeat;
 }
 /* Regra 3: LED telltales — off art in editor; on art + coloured glow from telemetry. */
 #app[data-style="sov_frame"] .k-kbd.has-asset.atomic-lamp.on .cap {
@@ -4487,15 +4486,29 @@ video::-webkit-media-controls-start-playback-button {
   transform: none !important;
   scale: none !important;
   filter: none !important;
-  transition: box-shadow 80ms ease !important;
+  box-shadow: none !important;
 }
-#app .k-kbd.has-asset.frame-static.on .cap,
-#app .k-kbd.has-asset.frame-static.in .cap,
-#app .k-kbd.has-asset.frame-static.down .cap,
-#app .w.down.k-kbd.has-asset.frame-static .cap {
+/* Sink shadow lives on its own layer (.well-sink), masked to the asset's own alpha silhouette —
+   same -webkit-mask technique as .tint-overlay. .cap's background-image fills the full widget
+   rect, which includes the ~10% transparent photo margin (see #panel .hit comment above); an
+   inset box-shadow painted on .cap itself showed as a black rectangle in that margin. */
+#app .k-kbd.has-asset.frame-static .well-sink {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  -webkit-mask-image: var(--asset); mask-image: var(--asset);
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center; mask-position: center;
+  opacity: 0;
+  transition: opacity 80ms ease;
+}
+#app .k-kbd.has-asset.frame-static.on .well-sink,
+#app .k-kbd.has-asset.frame-static.in .well-sink,
+#app .k-kbd.has-asset.frame-static.down .well-sink,
+#app .w.down.k-kbd.has-asset.frame-static .well-sink {
+  opacity: 1;
   box-shadow:
     inset 0 .14em .32em rgba(0, 0, 0, .82),
-    inset 0 0 .45em rgba(0, 0, 0, .5) !important;
+    inset 0 0 .45em rgba(0, 0, 0, .5);
 }
 /* Key barrels and rotary housings never inherit the generic push physics. */
 #app #panel .w.key-turn,

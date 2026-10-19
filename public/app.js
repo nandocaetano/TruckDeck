@@ -733,13 +733,11 @@
         out.asset = String(out.asset).replace(/sov_push_parking_brake\.png/i, 'sov_push_parking_brake_frame.png');
         out.pbCore = String(out.asset).replace(/_frame\.png$/i, '_core.png');
       }
-      // Parking lever (sov_toggle_parking_brake): same split idea, but the frame is cross-filled
-      // from both real photos (tools/build_parking_brake.py) so it carries no lever at all —
-      // the .cap shows the static frame; a separate lever-body layer swaps the up/down pose.
-      if (isParkTog) {
-        out.leverSplit = true;
-        out.asset = 'skins/sov/btn/sov_toggle_parking_brake_frame.png';
-      }
+      // Parking lever (sov_toggle_parking_brake): a frame+lever split was tried and reverted
+      // (2026-10-19) — the rod occupies the whole pivot-to-tip channel in BOTH source photos, so
+      // no clean lever-free frame exists to composite; any attempt left a baked-in "ghost" rod
+      // visible under the swapped lever-body layer. Full-pose photo swap only, .cap frozen via
+      // .lever-swap (same no-transform/no-filter convention as .hazard-fail / .frame-static).
       if (isRotary) {
         out.rotary = true;
         if (isModLights) out.modRotary = 'lights';
@@ -2154,12 +2152,12 @@
       if (w.zIndex) node.style.zIndex = w.zIndex;
       if (w.lamp) node.classList.add('passive', 'atomic-lamp');
       if (w.eng) node.classList.add('engl');
-      if (w.tog && !w.leverSplit) node.classList.add('asset-tog');
+      if (w.tog && !w.parkTog) node.classList.add('asset-tog');
+      if (w.parkTog) node.classList.add('lever-swap');
       if (w.hazardFail) node.classList.add('hazard-fail');
       if (w.frameStatic) node.classList.add('frame-static');
       if (w.rocker) node.classList.add('asset-rocker');
       if (w.pbCore) node.classList.add('pb-split');
-      if (w.leverSplit) node.classList.add('lever-split');
       if (w.rockerDn) node.classList.add('is-dn');
       node.innerHTML = widgetHtml({ id: w.id, t: w.k || 'rocker', fn: w.fn });
       // Photo assets already carry their own lamps/legends — strip the synthetic LED strip.
@@ -2189,23 +2187,23 @@
       // Soviet toggle shells: remember up/down art so .on can flip the lever photo.
       if (w.tog) {
         if (w.parkTog || /sov_toggle_parking_brake/i.test(String(w.asset || ''))) {
-          node.dataset.togDown = 'skins/sov/btn/sov_toggle_parking_brake_lever_down.png';
-          node.dataset.togUp = 'skins/sov/btn/sov_toggle_parking_brake_lever_up.png';
+          node.dataset.togDown = 'skins/sov/btn/sov_toggle_parking_brake_down.png';
+          node.dataset.togUp = 'skins/sov/btn/sov_toggle_parking_brake_up.png';
         } else {
           node.dataset.togDown = 'skins/sov/btn/sov_tog_down.png';
           node.dataset.togUp = 'skins/sov/btn/sov_tog_up.png';
         }
       }
-      // Parking lever split: .cap keeps the static cross-filled frame (set from w.asset above);
-      // a dedicated layer carries only the moving lever body and is the sole thing that swaps art.
-      if (w.leverSplit) {
-        node.style.setProperty('--lever-asset', cssUrl(node.dataset.togUp));
-        node.innerHTML += '<i class="lever-body" aria-hidden="true"></i>';
-      }
       // Parking push: the yellow cap is its own layer so only it can sink into the bezel.
       if (w.pbCore) {
         node.style.setProperty('--pb-core', cssUrl(w.pbCore));
         node.innerHTML += '<i class="pb-core" aria-hidden="true"></i>';
+      }
+      // Static-frame housings: the press "well" shadow lives on its own layer masked to the
+      // asset's own alpha silhouette, so it never paints the ~10% transparent photo margin
+      // around the object (that margin painted a visible black rectangle around the button).
+      if (w.frameStatic) {
+        node.innerHTML += '<i class="well-sink" aria-hidden="true"></i>';
       }
       // Rotary selector: static base (.cap) + static icon crown + the pin as the ONLY moving
       // layer. The crown counter-rotates each tick so labels stay upright.
@@ -2557,7 +2555,7 @@
       const art = parkLever
         ? (engaged ? node.dataset.togDown : node.dataset.togUp)
         : (engaged ? node.dataset.togUp : node.dataset.togDown);
-      node.style.setProperty(parkLever ? '--lever-asset' : '--asset', cssUrl(art));
+      node.style.setProperty('--asset', cssUrl(art));
     }
   }
 
