@@ -1381,13 +1381,20 @@
 
   // Fired when the bridge broadcasts 'atomic-layout' (the Editor just saved): pulls the new
   // board and repaints immediately, instead of waiting for this tablet's next full connect().
+  // Returns a promise of whether the fetch itself succeeded (not whether the board actually
+  // changed) — callers use that to decide if it's safe to advance lastAtomicSyncAt, so a
+  // dropped request doesn't get silently treated as "caught up" and skip the next retry.
   function refetchAtomicLayout() {
-    fetchJson('api/atomic-layout', { headers: { 'X-Pin': S.pin } }).then((atomicRes) => {
-      if (atomicRes && atomicRes.status === 200 && applyAtomicLayoutPayload(atomicRes.body)) {
-        preferAtomicModern();
-        renderAll();
+    return fetchJson('api/atomic-layout', { headers: { 'X-Pin': S.pin } }).then((atomicRes) => {
+      if (atomicRes && atomicRes.status === 200) {
+        if (applyAtomicLayoutPayload(atomicRes.body)) {
+          preferAtomicModern();
+          renderAll();
+        }
+        return true;
       }
-    }).catch(() => {});
+      return false;
+    }).catch(() => false);
   }
 
   // Long-poll fallback (Fernando, 2026-10-19): tablet wifi/SSE drops silently on some devices
@@ -1402,7 +1409,9 @@
     versionPollTimer = setInterval(() => {
       fetchJson('api/version', { headers: { 'X-Pin': S.pin } }).then((res) => {
         const v = res && res.status === 200 && res.body && res.body.version;
-        if (v && v > lastAtomicSyncAt) { lastAtomicSyncAt = v; refetchAtomicLayout(); }
+        // lastAtomicSyncAt only advances once the refetch actually lands; a failed/timed-out
+        // GET leaves it behind so the next tick retries instead of being treated as caught up.
+        if (v && v > lastAtomicSyncAt) refetchAtomicLayout().then((ok) => { if (ok) lastAtomicSyncAt = v; });
       }).catch(() => {});
     }, 3000);
   }
@@ -1431,7 +1440,10 @@
           }
         }
       }
-      else if (msg.type === 'atomic-layout') { lastAtomicSyncAt = msg.at || Date.now(); refetchAtomicLayout(); }
+      else if (msg.type === 'atomic-layout') {
+        const v = msg.at || Date.now();
+        refetchAtomicLayout().then((ok) => { if (ok) lastAtomicSyncAt = v; });
+      }
       else if (msg.type === 'error') toast(msg.msg);
       else if (msg.type === 'localAction' && msg.action === 'obd_page_next') {
         document.querySelectorAll('.k-rtext.modern-utility').forEach((n) => cycleModernObd(n));
@@ -1540,7 +1552,10 @@
         if (atomicChanged) renderAll();
         save(); // first run: seed the PC with this device's panels
       }
-      lastAtomicSyncAt = Date.now();
+      // 0, not Date.now(): the poll only ever compares against the server's own /api/version
+      // timestamp, never the tablet's clock, so a baseline of 0 just means the first tick
+      // after connect does one harmless extra refetch instead of risking clock-skew drift.
+      lastAtomicSyncAt = 0;
       stage = 'events';
       openEvents();
       startVersionPolling();

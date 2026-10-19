@@ -599,14 +599,18 @@
   }
 
   function normalizeButton(item) {
-    const resolved = getAssetDef(item.asset);
-    const asset = resolved ? item.asset : 'btn-square.png';
+    // The lever widget was removed in 8a6706d; any board saved before that still references
+    // these two assets and must land on the standard toggle (same functionId), not btn-square.
+    const rawAsset = /^sov_toggle_parking_brake_(up|down)\.png$/.test(item.asset)
+      ? 'sov_tog_up.png' : item.asset;
+    const resolved = getAssetDef(rawAsset);
+    const asset = resolved ? rawAsset : 'btn-square.png';
     const def = resolved || ASSETS_MODERN['btn-square.png'];
     const out = {
       id: String(item.id || uid('button')),
       asset,
       label: String(item.label || def.label),
-      functionId: String(item.functionId || ''),
+      functionId: String(item.functionId || (rawAsset !== item.asset ? 'parking_brake' : '')),
       pictogram: normalizePictogram(item.pictogram),
       pictogramHidden: Boolean(item.pictogramHidden),
       x: clamp(numOr(item.x, 10), 0, 99),
