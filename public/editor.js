@@ -360,15 +360,18 @@
         sov_frame: freshBoard(),
         // White enamel niches differ from Siga/Viva — isolated empty board for remapping.
         sov_white: freshBoard(),
-        // Military 1 + 2 share one skeleton (same pattern as Siga/Viva → sov_frame).
-        sov_military: freshBoard()
+        // Military 1 and Military 2 are independent boards (decoupled 2026-10-19 —
+        // editing one must never touch the other's layout).
+        sov_military_1: freshBoard(),
+        sov_military_2: freshBoard()
       }
     };
   }
   function sovBoardKey(sovBg) {
     const v = normalizeSovBg(sovBg);
     if (v === 'white') return 'sov_white';
-    if (v === 'military1' || v === 'military2') return 'sov_military';
+    if (v === 'military1') return 'sov_military_1';
+    if (v === 'military2') return 'sov_military_2';
     // sigabem | vivamexico | 380 | 378 → shared Siga Bem / Viva México skeleton
     return 'sov_frame';
   }
@@ -408,13 +411,17 @@
   // SSOT: a board KEY present in a payload is authoritative for that board, even when
   // its buttons array is empty (an intentionally cleared panel). Only a key that is
   // completely ABSENT from the payload is considered unmapped there.
-  const BOARD_KEYS = ['eu_frame', 'sov_frame', 'sov_white', 'sov_military'];
+  const BOARD_KEYS = ['eu_frame', 'sov_frame', 'sov_white', 'sov_military_1', 'sov_military_2'];
 
   function boardForKey(payload, key) {
     if (!payload) return null;
     if (!payload.boards) return key === 'eu_frame' && payload.orientations ? payload : null;
     let board = payload.boards[key];
-    if (!board && key === 'sov_military') board = payload.boards.sov_military1 || payload.boards.sov_military2;
+    // Migration: Military 1 and 2 used to share one board (boards.sov_military); before that,
+    // two ultra-legacy standalone keys (sov_military1/2, no underscore). Military 1 inherits the
+    // shared board's data once; Military 2 never does — it was never that board's real content.
+    if (!board && key === 'sov_military_1') board = payload.boards.sov_military || payload.boards.sov_military1;
+    if (!board && key === 'sov_military_2') board = payload.boards.sov_military2;
     return board || null;
   }
 
@@ -471,12 +478,9 @@
     // no `boards`) is migrated here by reading it as the eu_frame board only -- it predates the
     // Soviet skin, so nothing of substance can be sitting in a sov_frame board that old shape
     // never had.
-    ['eu_frame', 'sov_frame', 'sov_white', 'sov_military'].forEach((skinKey) => {
-      // Legacy dual military boards collapse into shared sov_military.
-      let savedBoard = saved.boards && saved.boards[skinKey];
-      if (!savedBoard && skinKey === 'sov_military' && saved.boards) {
-        savedBoard = saved.boards.sov_military1 || saved.boards.sov_military2 || null;
-      }
+    BOARD_KEYS.forEach((skinKey) => {
+      // Military 1 inherits the old shared sov_military board once; Military 2 starts clean.
+      let savedBoard = saved.boards && boardForKey(saved, skinKey);
       if (!savedBoard && skinKey === 'eu_frame' && !saved.boards) savedBoard = saved;
       if (!savedBoard || !savedBoard.orientations) return;
       if (!fresh.boards[skinKey]) fresh.boards[skinKey] = freshBoard();
@@ -1811,7 +1815,7 @@
   }
 
   function resolveImportBoardKey(report) {
-    if (!report || !['eu_frame', 'sov_frame', 'sov_white', 'sov_military'].includes(report.boardKey)) {
+    if (!report || !BOARD_KEYS.includes(report.boardKey)) {
       throw new Error('Missing or invalid boardKey. Import cancelled.');
     }
     return report.boardKey;
@@ -1908,7 +1912,9 @@
       state.skin = key === 'eu_frame' ? 'eu_frame' : 'sov_frame';
       const bg = normalizeSovBg(report.sovBg);
       state.sovBg = sovBoardKey(bg) === key ? bg
-        : key === 'sov_white' ? 'white' : key === 'sov_military' ? 'military1' : 'sigabem';
+        : key === 'sov_white' ? 'white'
+        : key === 'sov_military_1' ? 'military1'
+        : key === 'sov_military_2' ? 'military2' : 'sigabem';
       // Geometry is flat on disk; the editor retains its DOM sizing field names.
       const orientations = {};
       for (const mode of ['landscape', 'portrait']) {

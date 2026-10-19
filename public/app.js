@@ -315,7 +315,7 @@
   // only, since Soviet boards didn't exist in that shape.
   // Soviet empty-plate boards (3 keys for 5 visual backgrounds):
   //   white              → boards.sov_white     (isolated)
-  //   military1|military2 → boards.sov_military (shared skeleton)
+  //   military1 → boards.sov_military_1 (independent); military2 → boards.sov_military_2 (independent)
   //   sigabem|vivamexico → boards.sov_frame     (shared skeleton)
   // Canonical variants + aliases (380.jpg = Siga Bem, 378.jpg = Viva México).
   const SOV_BG_VARIANTS = ['white', 'military1', 'military2', 'sigabem', 'vivamexico'];
@@ -348,7 +348,8 @@
   function sovBoardKey(sovBg) {
     const v = normalizeSovBg(sovBg);
     if (v === 'white') return 'sov_white';
-    if (v === 'military1' || v === 'military2') return 'sov_military';
+    if (v === 'military1') return 'sov_military_1';
+    if (v === 'military2') return 'sov_military_2';
     // sigabem | vivamexico | aliases 380/378 → shared Siga/Viva skeleton
     return 'sov_frame';
   }

@@ -38,21 +38,29 @@ const ATOMIC_LAYOUT_SCHEMA = 'desktruck.atomic-layout/v1';
 // the old flat shape.
 function migrateAtomicLayout(data) {
   if (!data || typeof data !== 'object') return data;
-  if (data.boards && typeof data.boards === 'object') return data;
-  if (!data.orientations) return data;
-  const { orientations, skin, ...rest } = data;
-  return {
-    ...rest,
-    boards: {
-      eu_frame: { orientations },
-      sov_frame: { orientations: { landscape: { buttons: [], zones: [] }, portrait: { buttons: [], zones: [] } } }
-    }
-  };
+  if (!data.boards || typeof data.boards !== 'object') {
+    if (!data.orientations) return data;
+    const { orientations, skin, ...rest } = data;
+    data = {
+      ...rest,
+      boards: {
+        eu_frame: { orientations },
+        sov_frame: { orientations: { landscape: { buttons: [], zones: [] }, portrait: { buttons: [], zones: [] } } }
+      }
+    };
+  }
+  // Military 1 and 2 decoupled 2026-10-19 (were one shared boards.sov_military skeleton).
+  // Military 1 already had real work mapped into that shared key, so it inherits it once;
+  // Military 2 never actually owned that data and starts from an empty board instead.
+  if (data.boards.sov_military && !data.boards.sov_military_1) {
+    data = { ...data, boards: { ...data.boards, sov_military_1: data.boards.sov_military } };
+  }
+  return data;
 }
 // Board-scoped saves preserve every other mapping from the latest disk state.
 function mergeAtomicBoard(previous, report) {
   const key = report.boardKey;
-  if (!['eu_frame', 'sov_frame', 'sov_white', 'sov_military'].includes(key)) throw new Error('bad boardKey');
+  if (!['eu_frame', 'sov_frame', 'sov_white', 'sov_military_1', 'sov_military_2'].includes(key)) throw new Error('bad boardKey');
   const board = report.boards && report.boards[key];
   if (!board || !board.orientations) throw new Error('missing board');
   for (const mode of ['landscape', 'portrait']) {
@@ -651,8 +659,10 @@ const server = http.createServer(async (req, res) => {
           return boardButtonCount(o.boards.eu_frame)
             + boardButtonCount(o.boards.sov_frame)
             + boardButtonCount(o.boards.sov_white)
+            + boardButtonCount(o.boards.sov_military_1)
+            + boardButtonCount(o.boards.sov_military_2)
+            // Legacy boards (pre decouple / pre shared-military) still count if present on disk.
             + boardButtonCount(o.boards.sov_military)
-            // Legacy dual military boards (pre shared sov_military) still count if present.
             + boardButtonCount(o.boards.sov_military1)
             + boardButtonCount(o.boards.sov_military2);
         };
