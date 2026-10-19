@@ -5,31 +5,78 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Truck Deck - Truck Sim Button Box</title>
 <style>
-  /* Mad Frog opening: a small logo clip plays once (muted, ~3s) centered on the brand
-     background, then MainActivity moves on. The clip's own background (~rgb(211,211,211))
-     is matched here so the edges blend and it reads as the logo "appearing", not a video
-     rectangle. The poster is the clip's own last frame, so a slow decode never shows black. */
-  html, body { height: 100%; margin: 0; background: rgb(211, 211, 211); overflow: hidden; }
-  body { display: flex; align-items: center; justify-content: center; }
-  #intro {
-    width: min(58vw, 380px);
-    height: auto;
-    aspect-ratio: 1280 / 720;
-    object-fit: contain;
-    background: rgb(211, 211, 211);
+  /* Native CSS splash: no video file. Logo scales+fades in from the back of the
+     screen toward the viewer, then a pure-CSS loader ticks below it with a fixed
+     gap so the two never overlap, even on short viewports. */
+  html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #000 url("black-background.png") center / cover no-repeat;
   }
+
+  .splash-art {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(16px, 4vh, 32px);
+  }
+
+  .splash-wordmark {
+    width: min(50vw, 320px);
+    height: auto;
+    opacity: 0;
+    transform: scale(0.4);
+    animation: splash-enter 1.2s cubic-bezier(.17,.89,.32,1.28) 0.1s forwards;
+  }
+
+  .splash-character {
+    width: min(42vw, 260px);
+    height: auto;
+    opacity: 0;
+    transform: scale(0.4);
+    animation: splash-enter 1.2s cubic-bezier(.17,.89,.32,1.28) 0.3s forwards;
+  }
+
+  @keyframes splash-enter {
+    0%   { opacity: 0; transform: scale(0.4); }
+    60%  { opacity: 1; }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Fixed gap below the art, never absolutely positioned over it. */
+  .splash-loader {
+    margin-top: clamp(28px, 6vh, 56px);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    opacity: 0;
+    animation: splash-spin 0.9s linear infinite, splash-loader-in 0.4s ease-out 1.3s forwards;
+  }
+
+  @keyframes splash-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes splash-loader-in {
+    to { opacity: 1; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    #intro { display: none; }
-    body { background: rgb(211, 211, 211) url("poster.jpg") center / min(58vw, 380px) no-repeat; }
+    .splash-wordmark, .splash-character { animation: none; opacity: 1; transform: scale(1); }
+    .splash-loader { animation: none; opacity: 1; }
   }
 </style>
 </head>
 <body>
-<video id="intro" src="intro.mp4" poster="poster.jpg" muted autoplay playsinline preload="auto" disablepictureinpicture></video>
-<script>
-  // Nudge autoplay on the odd WebView build that still ignores the attribute.
-  var v = document.getElementById('intro');
-  if (v) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
-</script>
+  <div class="splash-art">
+    <img class="splash-wordmark" src="mad-frog.png" alt="">
+    <img class="splash-character" src="cartoon-frog.png" alt="">
+  </div>
+  <div class="splash-loader"></div>
 </body>
 </html>

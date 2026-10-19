@@ -46,7 +46,7 @@ public class MainActivity extends Activity {
 
     private static final String CONNECT_PAGE = "file:///android_asset/connect.html";
     private static final String SPLASH_PAGE = "file:///android_asset/splash.html";
-    private static final long SPLASH_MS = 3100;   // Mad Frog intro runs ~3.0s
+    private static final long SPLASH_MS = 4500;   // CSS logo-enter + loader settle, ~4.5s
     private static final int BRIDGE_PORT = 8765;
     // What the bridge answers on /api/info; used to tell it apart from any other web server.
     private static final String BRIDGE_MARK = "truckdeck";
