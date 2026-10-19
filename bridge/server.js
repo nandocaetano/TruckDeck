@@ -263,6 +263,30 @@ function broadcast(obj) {
   for (const res of sseClients) res.write(line);
 }
 
+// ---- Atomic layout file watcher ------------------------------------------------------------
+// The file can also change outside the PUT handler above (a script writing data/atomic-layout.json
+// directly, or editing it by hand on the PC). fs.watch picks that up and broadcasts the same
+// 'atomic-layout' SSE event so the tablet/painel and every open Editor tab refetch without a
+// reload. The PUT handler's own write already broadcasts synchronously; lastSelfWriteAt skips the
+// watcher's redundant echo of that same write.
+let lastSelfWriteAt = 0;
+let atomicWatchTimer = null;
+try {
+  // Watches the directory, not the file directly: every save here (ours and the Editor's)
+  // goes through a write-to-.tmp + rename, which on some platforms swaps the watched file's
+  // underlying inode out from under a file-level fs.watch and silently stops it from firing
+  // again. Watching DATA_DIR and filtering by filename survives that swap.
+  const atomicFileName = path.basename(ATOMIC_LAYOUT_FILE);
+  fs.watch(DATA_DIR, (eventType, filename) => {
+    if (filename && filename !== atomicFileName) return;
+    clearTimeout(atomicWatchTimer);
+    atomicWatchTimer = setTimeout(() => {
+      if (Date.now() - lastSelfWriteAt < 500) return; // our own PUT write already broadcast this
+      broadcast({ type: 'atomic-layout', at: Date.now() });
+    }, 150);
+  });
+} catch (e) { console.log('[atomic-layout] Could not watch ' + DATA_DIR + ': ' + e.message); }
+
 // ---- Radio FM ----------------------------------------------------------------------------
 // Playback now lives inside the game itself: the tablet taps the same media_play/media_next/
 // media_prev/vol_up/vol_down virtual keys as every other dash button (see KEYS above), sent
@@ -634,6 +658,7 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      lastSelfWriteAt = Date.now();
       fs.writeFileSync(ATOMIC_LAYOUT_FILE + '.tmp', JSON.stringify(incoming));
       fs.renameSync(ATOMIC_LAYOUT_FILE + '.tmp', ATOMIC_LAYOUT_FILE);
       // Tell every connected tablet/painel to refetch: without this they only pick up an

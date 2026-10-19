@@ -1921,11 +1921,55 @@
 
   function announce(message) { $('#statusMessage').textContent = message; }
 
+  // ---- Live sync (bridge SSE) ----------------------------------------------------------------
+  // Mirrors app.js's refetchAtomicLayout(): the bridge broadcasts 'atomic-layout' whenever
+  // data/atomic-layout.json changes on disk (another tab's Salvar, or a direct file edit by a
+  // script), and every open Editor tab refetches instead of going stale until its next reload.
+  // Safety lock: never clobber this tab's in-progress work. A drag/resize in flight (dragState)
+  // or focus sitting in a text input/select (a label or numeric field being typed into) means
+  // this tab's local state wins for now; the event is dropped rather than queued, since the
+  // next save/broadcast will carry the same change again once the user is done.
+  function editingLocally() {
+    if (dragState) return true;
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+  }
+
+  async function refetchFromServer() {
+    if (editingLocally()) return;
+    const serverPayload = await loadServerPayload();
+    if (!serverPayload) return;
+    const { payload: merged } = mergeBoardsPerKey(serverPayload, loadLocalPayload());
+    state = applyPayload(merged);
+    activePackageId = packageIdForSkin(state.skin);
+    selection = [];
+    persist();
+    renderCustomAssetTools();
+    renderShippedAssetTools();
+    render();
+    announce('Layout atualizado (alteração detectada no disco/bridge).');
+  }
+
+  let events = null;
+  function openEvents() {
+    if (events) events.close();
+    events = new EventSource('api/events?pin=' + encodeURIComponent(resolvePin()));
+    events.onmessage = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (msg.type === 'atomic-layout') refetchFromServer();
+    };
+    events.onerror = () => { /* EventSource retries on its own */ };
+  }
+
   async function bootstrap() {
     state = await loadState();
     activePackageId = packageIdForSkin(state.skin);
     init();
     if (needsSeedPush) { needsSeedPush = false; schedulePush(); }
+    openEvents();
   }
 
   bootstrap();
