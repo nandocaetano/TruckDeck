@@ -1095,9 +1095,9 @@
           pin.className = 'rotary-pin';
           pin.alt = '';
           pin.src = assetImageSrc(pinKey);
-          pin.style.setProperty('--pin-size', pinLen + '%');
           pin.style.setProperty('--pin-turn', (deg - bake) + 'deg');
           node.appendChild(pin);
+          node.style.setProperty('--pin-size', pinLen + '%');
         }
         if (item.color) {
           node.classList.add('has-tint');

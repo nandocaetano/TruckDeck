@@ -4521,7 +4521,7 @@ video::-webkit-media-controls-start-playback-button {
    source order decides). */
 #panel.skin .w.k-kbd.has-asset.k-rotary .hit {
   inset: calc((100% - var(--pin-size, 58%)) / 2);
-  border-radius: 50%;
+  border-radius: 50% !important;
 }
 #app #panel .w.key-turn .cap {
   translate: none !important;
