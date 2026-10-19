@@ -682,6 +682,11 @@
       const isModLights = /mod_rotary_lights\.png$/i.test(assetKey);
       const isModWipers = /mod_rotary_wipers\.png$/i.test(assetKey);
       const isRotary = /sov_rotary_(?:dial|base)/i.test(assetKey) || isModLights || isModWipers;
+      // Static-frame contract (Fernando, 2026-10-19): housing/casing never scales or tilts —
+      // only an inner well sinks on press. Covers square bosses/grids/waffles, rocker casings,
+      // the single-layer engine/hazard/parking photos and the modern light selector housing
+      // (mod_rotary_lights is already frozen via .k-rotary above; kept here too for clarity).
+      const isFrameStatic = /^(?:sov_sq_boss|sov_sq_grid|sov_sq_waffle|btn-rocker-[a-z]+|engine_cir|engine_cr_vt|engine_cromo|engine_old|engine_red|hazard_black|hazard_sq_blk|parking|mod_rotary_lights)\.png$/i.test(assetKey);
       // Hazard rule (definitive):
       //   sov_push_hazard.png          → plain physical push (sink on press, no lamp swap)
       //   sov_push_hazard_{off,on}.png → static body; only internal light OFF↔ON synced to tel
@@ -720,6 +725,7 @@
       if (isParkTog) out.parkTog = true;
       if (isHazLit) out.hazardFail = true; // class name kept; means "lit indicator, static body"
       if (isRocker) out.rocker = true;
+      if (isFrameStatic) out.frameStatic = true;
       // Yellow parking push: the black bezel is bolted to the panel and must NOT move, so the
       // photo ships as two layers — _frame (static housing + dark recess) and _core (the yellow
       // cap alone). Only the core gets the :active sink. JSON keeps the original asset name.
@@ -2143,6 +2149,7 @@
       if (w.eng) node.classList.add('engl');
       if (w.tog) node.classList.add('asset-tog');
       if (w.hazardFail) node.classList.add('hazard-fail');
+      if (w.frameStatic) node.classList.add('frame-static');
       if (w.rocker) node.classList.add('asset-rocker');
       if (w.pbCore) node.classList.add('pb-split');
       if (w.rockerDn) node.classList.add('is-dn');

@@ -281,7 +281,7 @@
   inset: 0;
   border: 0;
   border-radius: 8%;
-  background-image: url("skins/modern/btn-3x1-metal.png");
+  background-image: url("skins/modern/btn-square.png");
   background-position: center;
   background-size: contain;
   background-repeat: no-repeat;
@@ -1389,8 +1389,8 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
    One single rule set — the authoritative one lives in the sov_frame block near the end of
    this file; nothing else may touch .hazard-fail. */
 /* Plain push shells (incl. sov_push_hazard.png): physical press sink. Lit hazard excluded above. */
-.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.k-rotary):not(.key-turn).in .cap,
-.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.k-rotary):not(.key-turn).down .cap {
+.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.k-rotary):not(.key-turn):not(.frame-static).in .cap,
+.k-kbd.has-asset:not(.asset-rocker):not(.asset-tog):not(.atomic-lamp):not(.hazard-fail):not(.pb-split):not(.k-rotary):not(.key-turn):not(.frame-static).down .cap {
   transform: scale(0.94) translateY(2%);
   filter: brightness(0.86);
 }
@@ -4458,6 +4458,29 @@ video::-webkit-media-controls-start-playback-button {
   background: var(--asset) center / 100% 100% no-repeat;
 }
 #app[data-style="sov_frame"] .k-ign.has-asset svg { display: none !important; }
+/* Static-frame housings (Fernando, 2026-10-19): square bosses/grids/waffles, rocker casings,
+   single-layer engine/hazard/parking photos. The casing/cap NEVER scales, tilts or dims —
+   only an inset "well" shadow simulates the inner key sinking. Placed after every skin-scoped
+   cap kill-switch above so the tie-break on equal #app-rooted specificity lands here, the same
+   convention as the .k-rotary / .hazard-fail freeze blocks that follow. */
+#app .k-kbd.has-asset.frame-static .cap,
+#app .k-kbd.has-asset.frame-static.on .cap,
+#app .k-kbd.has-asset.frame-static.in .cap,
+#app .k-kbd.has-asset.frame-static.down .cap,
+#app .w.down.k-kbd.has-asset.frame-static .cap {
+  transform: none !important;
+  scale: none !important;
+  filter: none !important;
+  transition: box-shadow 80ms ease !important;
+}
+#app .k-kbd.has-asset.frame-static.on .cap,
+#app .k-kbd.has-asset.frame-static.in .cap,
+#app .k-kbd.has-asset.frame-static.down .cap,
+#app .w.down.k-kbd.has-asset.frame-static .cap {
+  box-shadow:
+    inset 0 .14em .32em rgba(0, 0, 0, .82),
+    inset 0 0 .45em rgba(0, 0, 0, .5) !important;
+}
 /* Key barrels and rotary housings never inherit the generic push physics. */
 #app #panel .w.key-turn,
 #app #panel .w.k-rotary,

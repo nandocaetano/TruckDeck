@@ -54,7 +54,6 @@
     'btn-rocker-v.png': { label: 'Rocker V', defaultSize: [5.5, 13] },
     'btn-rocker-h.png': { label: 'Rocker H', defaultSize: [13, 5.5] },
     'btn-square.png': { label: 'Square', defaultSize: [8, 8] },
-    'btn-3x1-metal.png': { label: 'Metal 3 × 1', defaultSize: [22, 8] },
     'engine_cir.png': { label: 'Motor circular', defaultSize: [8, 8] },
     'engine_cr_vt.png': { label: 'Motor cromado VT', defaultSize: [8, 8] },
     'engine_cromo.png': { label: 'Motor cromado', defaultSize: [8, 8] },
@@ -321,11 +320,6 @@
     return s.toLowerCase();
   }
 
-  function hasSlots(asset) { return asset === 'btn-3x1-metal.png'; }
-  function normalizeSlots(slots) {
-    const arr = Array.isArray(slots) ? slots : [];
-    return [0, 1, 2].map((i) => String(arr[i] || ''));
-  }
   function getAssetDef(key) {
     if (ASSETS_MODERN[key]) return ASSETS_MODERN[key];
     if (ASSETS_SOV[key]) return ASSETS_SOV[key];
@@ -414,20 +408,41 @@
     try { return localStorage.getItem('truckdeck.pin') || ''; } catch (error) { return ''; }
   }
 
-  // Boards-aware: v2 payloads nest buttons under boards.eu_frame / boards.sov_frame
-  // (+ sov_white / sov_military). Legacy flat payloads still count.
-  function hasAnyButtons(payload) {
-    if (!payload) return false;
-    const boards = payload.boards
-      ? [payload.boards.eu_frame, payload.boards.sov_frame, payload.boards.sov_white, payload.boards.sov_military]
-      : [payload];
-    return boards.some((board) => {
-      if (!board || !board.orientations) return false;
-      return ['landscape', 'portrait'].some((mode) => {
-        const o = board.orientations[mode];
-        return o && Array.isArray(o.buttons) && o.buttons.length > 0;
-      });
+  // SSOT: a board KEY present in a payload is authoritative for that board, even when
+  // its buttons array is empty (an intentionally cleared panel). Only a key that is
+  // completely ABSENT from the payload is considered unmapped there.
+  const BOARD_KEYS = ['eu_frame', 'sov_frame', 'sov_white', 'sov_military'];
+
+  function boardForKey(payload, key) {
+    if (!payload) return null;
+    if (!payload.boards) return key === 'eu_frame' && payload.orientations ? payload : null;
+    let board = payload.boards[key];
+    if (!board && key === 'sov_military') board = payload.boards.sov_military1 || payload.boards.sov_military2;
+    return board || null;
+  }
+
+  function boardPresent(payload, key) {
+    const board = boardForKey(payload, key);
+    return !!(board && board.orientations);
+  }
+
+  // Server is authoritative per board key. A key missing entirely from the server
+  // (never mapped there) seeds from this browser's local cache; a key present on the
+  // server -- even with buttons:[] -- never gets overwritten by a stale local copy.
+  function mergeBoardsPerKey(serverPayload, localPayload) {
+    const base = serverPayload || localPayload || null;
+    if (!base) return { payload: null, seeded: false };
+    const merged = JSON.parse(JSON.stringify(base));
+    if (!merged.boards) merged.boards = {};
+    let seeded = false;
+    BOARD_KEYS.forEach((key) => {
+      if (boardPresent(serverPayload, key)) return;
+      if (boardPresent(localPayload, key)) {
+        merged.boards[key] = boardForKey(localPayload, key);
+        seeded = true;
+      }
     });
+    return { payload: merged, seeded };
   }
 
   function loadLocalPayload() {
@@ -488,9 +503,9 @@
   async function loadState() {
     const serverPayload = await loadServerPayload();
     const localPayload = loadLocalPayload();
-    const seedFromLocal = !hasAnyButtons(serverPayload) && hasAnyButtons(localPayload);
-    if (seedFromLocal) needsSeedPush = true;
-    return applyPayload(seedFromLocal ? localPayload : (serverPayload || localPayload));
+    const { payload: merged, seeded } = mergeBoardsPerKey(serverPayload, localPayload);
+    if (seeded) needsSeedPush = true;
+    return applyPayload(merged);
   }
 
   let pushTimer = null;
@@ -585,7 +600,6 @@
       functionId: String(item.functionId || ''),
       pictogram: normalizePictogram(item.pictogram),
       pictogramHidden: Boolean(item.pictogramHidden),
-      slots: hasSlots(asset) ? normalizeSlots(item.slots) : undefined,
       x: clamp(numOr(item.x, 10), 0, 99),
       y: clamp(numOr(item.y, 10), 0, 99),
       width: clamp(Number(item.w ?? item.width) || def.defaultSize[0], .2, 100),
@@ -765,7 +779,7 @@
     $('#undoButton').addEventListener('click', undo);
     $('#redoButton').addEventListener('click', redo);
     $('#selectedFunctionId').innerHTML = buildFunctionOptionsHtml();
-    ['selectedId', 'selectedLabel', 'selectedSlot1', 'selectedSlot2', 'selectedSlot3'].forEach((id) => {
+    ['selectedId', 'selectedLabel'].forEach((id) => {
       const field = $('#' + id);
       field.addEventListener('input', updateSelectedMetadata);
       field.addEventListener('blur', () => { metadataHistorySettled = true; });
