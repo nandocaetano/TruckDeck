@@ -944,7 +944,10 @@
   // buttons:[] — so factory spr/sgauge never inherit onto a clean enamel plate.
   function atomicApplies(pg) {
     if (pg.skin !== 'eu_frame' && pg.skin !== 'sov_frame') return false;
-    if (pg.skin === 'eu_frame') return boardHasButtons(boardFor(pg.skin)); // unchanged: pending decision on eu_frame SSOT scope
+    if (pg.skin === 'eu_frame') {
+      const board = boardFor(pg.skin);
+      return !!(board && board.orientations);
+    }
     const bg = sovBgOf(layout());
     if (isEmptyPlateSovBg(bg)) return true;
     return boardExists(pg.skin, bg);
@@ -961,18 +964,17 @@
     const key = pg.id + cut + (sovBg || '') + JSON.stringify(pg.over || {}) + JSON.stringify(zones) + buttonsSig;
     if (skinMemo.key !== key) {
       // Zones from the editor replace the preset's fixed w_drive/w_media slots wholesale; a
-      // saved set of buttons replaces the preset's whole fixed key grid (the upper/brakes/
-      // utility/system groups built by modernSet/modernSystem in frames.js) the same way --
-      // all or nothing, so a board with no buttons leaves the factory grid byte-for-byte stock.
+      // An explicitly present atomic board is authoritative even when buttons is empty: an
+      // empty array is an intentional blank state, not a request for the factory fallback.
       // Soviet factory parts (spr/sgauge/VFD) have no `g` group tag — filtering only `!w.g`
       // left them stacked under the atomic board (double gauges + double switches). When the
-      // sov_frame board has buttons — OR when white/military empty-plate is active — drop
-      // those factory widgets so only empty plate + JSON remain (zero DOM keys if array []).
+      // sov_frame board is authoritative, drop those factory widgets so only the plate + JSON
+      // remain (zero DOM keys if array []).
       let base = zones.length ? skin.w.filter((w) => w.id !== 'w_drive' && w.id !== 'w_media') : skin.w;
       if (pg.skin === 'sov_frame' && useAtomic) {
         base = base.filter((w) => w.t !== 'spr' && w.t !== 'sgauge' && w.t !== 'kbd' && w.t !== 'tell' && w.id !== 'w_info');
-      } else if (buttons.length) {
-        base = base.filter((w) => !w.g);
+      } else if (useAtomic) {
+        base = base.filter((w) => !w.g && w.id !== 'w_drive' && w.id !== 'w_media');
       }
       const list = base.concat(zones.map((z) => dashWidgetFromZone(z, pg.skin))).concat(buttons);
       skinMemo = { key, list: list.map((w) => Object.assign({ sk: true }, w, (pg.over || {})[cut + ':' + w.id])) };
