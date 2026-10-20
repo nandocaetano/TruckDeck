@@ -6,7 +6,7 @@
   <title>Desktruck · Layout Editor atómico</title>
   <link rel="stylesheet" href="editor.css">
 </head>
-<body>
+<body data-editor-mode="full">
   <div id="publishToast" class="publish-toast" hidden role="alert" aria-live="assertive"></div>
   <header class="topbar">
     <div class="brand">
@@ -35,11 +35,12 @@
 
   <main class="editor-layout">
     <aside class="toolbox panel">
-      <div class="panel-heading">
+      <div class="panel-heading toolbox-heading">
         <div>
           <span class="eyebrow">01 / RECURSOS</span>
           <h2>Paleta</h2>
         </div>
+        <button class="drawer-toggle" type="button" aria-controls="assetList" aria-expanded="false">Adicionar tecla</button>
         <span class="pill">drag &amp; drop</span>
       </div>
 
@@ -63,7 +64,7 @@
             <option value="vivamexico">Viva México</option>
           </select>
         </label>
-        <label class="file-button">
+        <label class="file-button background-upload-button">
           <span>Carregar imagem local</span>
           <input id="backgroundInput" type="file" accept="image/png,image/jpeg,image/webp">
         </label>
@@ -139,11 +140,12 @@
     </section>
 
     <aside class="inspector panel">
-      <div class="panel-heading">
+      <div class="panel-heading inspector-heading">
         <div>
           <span class="eyebrow">03 / CAMADAS</span>
           <h2>Layers</h2>
         </div>
+        <button class="drawer-toggle" type="button" aria-controls="layersList" aria-expanded="false">Camadas &amp; Inspector</button>
         <span class="pill" id="layersCount">0</span>
       </div>
       <div class="layers-list" id="layersList"></div>

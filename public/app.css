@@ -3383,12 +3383,25 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   filter: drop-shadow(0 0 18px rgba(24, 215, 239, .35));
 }
 #panel.skin.eu-modern .ign-boot-mark img,
-#panel.skin.eu-modern .ign-boot-mark svg,
-#panel.skin.eu-modern .ign-boot-mark video {
+#panel.skin.eu-modern .ign-boot-mark svg {
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
+}
+/* Static logo, no video clip: scales+fades in over the "logo" phase (MODERN_BOOT.LOGO_MS). */
+#panel.skin.eu-modern .ign-boot-mark img {
+  opacity: 0;
+  transform: scale(0.6);
+  animation: ign-boot-logo-in 600ms cubic-bezier(.17,.89,.32,1.28) forwards;
+}
+@keyframes ign-boot-logo-in {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #panel.skin.eu-modern .ign-boot-mark img { animation: none; opacity: 1; transform: scale(1); }
 }
 
 /* ==== Ignition shutdown sequence (Modern / eu_frame) ===================================== */
@@ -3440,8 +3453,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   pointer-events: auto;
   transition: opacity 400ms ease;
 }
-/* Native video chrome (play button, scrubber) must never show over the boot/shutdown clips. */
-#panel.skin.eu-modern .ign-boot-mark video::-webkit-media-controls,
+/* Native video chrome (play button, scrubber) must never show over the shutdown clip. */
 #panel.skin.eu-modern .obd-screens > .ign-shutdown::-webkit-media-controls {
   display: none !important;
 }

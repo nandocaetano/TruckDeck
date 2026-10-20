@@ -102,12 +102,10 @@
     el.className = 'ign-boot';
     el.setAttribute('aria-hidden', 'true');
     // PNG from AntiGravity when ready; inline griffin shield is the interim mark (no "Scania" word).
+    // Static image, no video clip: boot_v8.mp4 was cancelled in favour of a CSS-animated still (Fernando, RC1).
     el.innerHTML =
       '<div class="ign-boot-mark">' +
-        '<video class="ign-boot-vid" src="skins/modern/dash/boot_v8.mp4" muted playsinline autoplay disablepictureinpicture ' +
-          'style="pointer-events:none;object-fit:contain" ' +
-          'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'\'"></video>' +
-        '<img class="ign-boot-img" src="skins/modern/dash/boot_logo.png" alt="" style="display:none" onerror="this.style.display=\'none\';this.nextElementSibling.hidden=false">' +
+        '<img class="ign-boot-img" src="skins/modern/dash/boot_logo.png" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.hidden=false">' +
         '<svg class="ign-boot-svg" viewBox="0 0 120 140" hidden aria-hidden="true">' +
           '<defs><linearGradient id="ignBootG" x1="0" y1="0" x2="0" y2="1">' +
             '<stop offset="0" stop-color="#f4f7fb"/><stop offset="1" stop-color="#8aa0b0"/></linearGradient></defs>' +
@@ -126,19 +124,6 @@
     ensureIgnBootOverlay();
     panel.classList.add('ign-booting');
     panel.dataset.boot = 'logo';
-    const vid = panel.querySelector('.ign-boot-vid');
-    if (vid) {
-      // The UI reveal is driven by the video's own 'ended' event, not a fixed timer, so the
-      // OBD content never appears while boot_v8.mp4 is still on screen. TOTAL_MS in
-      // tickModernBoot() stays only as a fallback if the video errors or never fires 'ended'.
-      // A short black pause after the clip ends (systems "waking up") feels more OEM than an
-      // instant cut straight from the last video frame into a fully lit panel.
-      vid.addEventListener('ended', function () {
-        vid.style.visibility = 'hidden';
-        setTimeout(function () { stopModernBoot('running'); }, 1500);
-      }, { once: true });
-      try { vid.currentTime = 0; vid.play().catch(function () {}); } catch (e) {}
-    }
   }
   function stopModernBoot(to) {
     modernBoot = { phase: to || 'off', at: Date.now() };
@@ -180,9 +165,9 @@
     if (!modernBooting()) return;
     const phase = modernBootPhaseName();
     panel.dataset.boot = phase;
-    // Fallback only: the normal path is the video's 'ended' listener in startModernBoot().
-    // This fires solely if boot_v8.mp4 fails to load/play, so the UI is never stuck hidden.
-    if (modernBootElapsed() >= MODERN_BOOT.TOTAL_MS + 4000) stopModernBoot('running');
+    // No video to wait on anymore: the timed phase sequence (logo/bulbs/sweep/reveal) is the
+    // sole driver, so the panel reveals right as TOTAL_MS elapses.
+    if (modernBootElapsed() >= MODERN_BOOT.TOTAL_MS) stopModernBoot('running');
   }
 
   // Static city -> country lookup (ETS2 base map + main DLC map city names as reported by the

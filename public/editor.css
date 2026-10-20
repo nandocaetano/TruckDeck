@@ -269,3 +269,45 @@ legend { padding: 0 6px 0 0; color: var(--accent); font-size: 9px; font-weight: 
 .app-footer { display: flex; justify-content: space-between; padding: 8px 18px 11px; color: var(--muted); font-size: 9px; }
 code { color: var(--accent-2); }
 @media (max-width: 1250px) { body { min-width: 960px; } .editor-layout { grid-template-columns: 242px minmax(450px, 1fr) 258px; } .topbar-actions .button-ghost { display: none; } }
+/* Below this, the desktop 3-column grid no longer fits any phone/tablet viewport (even
+   landscape), so the 960px floor above would just force horizontal scroll and hide the
+   palette/inspector off-screen. Drop the floor and turn both side panels into bottom
+   drawers instead. */
+@media (max-width: 1120px) {
+  body { min-width: 0 !important; }
+
+  .editor-layout { grid-template-columns: 1fr !important; }
+
+  .toolbox, .inspector {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: #111;
+    transform: translateY(calc(100% - 52px));
+    transition: transform 180ms ease;
+  }
+
+  /* Stack the two collapsed drawer handles instead of letting them overlap at bottom:0. */
+  .inspector { bottom: 52px; }
+
+  .toolbox.is-open, .inspector.is-open {
+    transform: translateY(0);
+  }
+
+  .inspector.is-open { bottom: 0; }
+
+  .toolbox-heading, .inspector-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+  }
+
+  .drawer-toggle {
+    min-height: 40px;
+  }
+}

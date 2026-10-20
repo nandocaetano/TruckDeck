@@ -729,6 +729,26 @@
   function isSelected(kind, id) { return selection.some((entry) => entry.kind === kind && entry.id === id); }
 
   function init() {
+    // Below 1120px (editor.css) both side panels become bottom drawers; each toggle button
+    // opens the drawer it lives inside (toolbox's "Adicionar tecla", inspector's "Camadas &
+    // Inspector"). No-op above that width, where both panels are already fully visible.
+    for (const toggle of $$('.drawer-toggle')) {
+      const drawer = toggle.closest('.toolbox, .inspector');
+      if (!drawer) continue;
+      const openLabel = toggle.textContent;
+      toggle.addEventListener('click', () => {
+        const isOpen = drawer.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', String(isOpen));
+        toggle.textContent = isOpen ? 'Fechar' : openLabel;
+      });
+    }
+    const packaged = document.body.dataset.editorMode === 'packaged';
+    if (packaged) {
+      const backgroundUploadButton = $('#backgroundInput').closest('.file-button');
+      if (backgroundUploadButton) backgroundUploadButton.hidden = true;
+      const customAssetButton = $('.custom-asset-button');
+      if (customAssetButton) customAssetButton.hidden = true;
+    }
     bindControls();
     renderShippedAssetTools();
     renderCustomAssetTools();
