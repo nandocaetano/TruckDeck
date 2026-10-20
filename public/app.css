@@ -2771,7 +2771,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 
 /* ---- Full screen: no top bar, panel edge to edge, one small dim button to leave ------------------------ */
 #app.fs #bar { display: none; }
-#app.fs #stage { padding: 0; }
+#app.fs #stage { padding: 0; margin: 0; }
 #fsExit { position: fixed; bottom: max(6px, env(safe-area-inset-bottom, 0px)); right: max(6px, env(safe-area-inset-right, 0px)); z-index: 30;
   display: flex; align-items: center; gap: 5px;
   height: 26px; padding: 4px 6px; border: 0; border-radius: 7px; background: rgba(0, 0, 0, 0.35); color: #cfd6dc; opacity: 0.45; cursor: pointer; }

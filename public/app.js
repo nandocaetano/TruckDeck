@@ -5606,16 +5606,12 @@
 
   // Full screen: a quiet key beside the connection pill. Hidden where the browser has no
   // fullscreen API at all (iPhone Safari), instead of offering a button that does nothing.
+  // The Android shell is already immersive, and its WebView has no WebChromeClient, so
+  // requestFullscreen() fails there. In that host the key toggles .fs directly.
   const btnFull = $('#btnFull');
   const canFullscreen = !!document.documentElement.requestFullscreen;
-  // inside the Android app the window is already immersive, so the key would do nothing useful
-  btnFull.hidden = !canFullscreen || !!window.HuntersApp;
-  function toggleFullscreen() {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else if (canFullscreen) document.documentElement.requestFullscreen().catch(() => toast('This browser does not allow full screen here.'));
-    else toast('This browser does not allow full screen here.');
-  }
-  btnFull.addEventListener('click', toggleFullscreen);
+  const inApp = !!window.HuntersApp;
+  btnFull.hidden = !canFullscreen && !inApp;
   // In full screen the top bar goes away and the panel takes the whole screen; a small, dim button in the
   // top right corner (over the frame's margin, clear of every key) leaves full screen.
   const fsExit = document.createElement('button');
@@ -5623,26 +5619,37 @@
   fsExit.hidden = true;
   fsExit.setAttribute('aria-label', 'Exit full screen');
   fsExit.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg><i class="fs-led"></i>';
-  fsExit.addEventListener('click', toggleFullscreen);
   $('#app').appendChild(fsExit);
   // floating fullscreen button (bottom-right corner, always visible outside fullscreen)
   const btnCornerFs = document.createElement('button');
   btnCornerFs.id = 'btnCornerFs';
   btnCornerFs.setAttribute('aria-label', 'Full screen');
   btnCornerFs.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
-  btnCornerFs.hidden = !canFullscreen || !!window.HuntersApp;
-  btnCornerFs.addEventListener('click', toggleFullscreen);
+  btnCornerFs.hidden = !canFullscreen && !inApp;
   $('#app').appendChild(btnCornerFs);
-  document.addEventListener('fullscreenchange', () => {
-    const fs = !!document.fullscreenElement;
+  function syncFullscreen(fs) {
     btnFull.classList.toggle('on', fs);
     $('#app').classList.toggle('fs', fs);
     fsExit.hidden = !fs;
-    btnCornerFs.hidden = fs || !canFullscreen || !!window.HuntersApp;
-    // sync the bridge LED inside fsExit
+    btnCornerFs.hidden = fs || (!canFullscreen && !inApp);
     const led = fsExit.querySelector('.fs-led');
     if (led) led.dataset.state = S.bridge || 'demo';
     renderPanel();
+  }
+  function toggleFullscreen() {
+    if (inApp) {
+      syncFullscreen(!$('#app').classList.contains('fs'));
+      return;
+    }
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (canFullscreen) document.documentElement.requestFullscreen().catch(() => toast('This browser does not allow full screen here.'));
+    else toast('This browser does not allow full screen here.');
+  }
+  btnFull.addEventListener('click', toggleFullscreen);
+  fsExit.addEventListener('click', toggleFullscreen);
+  btnCornerFs.addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', () => {
+    syncFullscreen(!!document.fullscreenElement);
   });
   $('#btnPage').addEventListener('click', openPage);
   $('#btnEdit').addEventListener('click', () => {

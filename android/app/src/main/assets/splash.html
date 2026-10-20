@@ -21,23 +21,17 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: clamp(16px, 4vh, 32px);
   }
 
-  .splash-wordmark {
-    width: min(50vw, 24vh, 320px);
+  /* One composed logo. Height leaves the loader (44px) plus its gap on screen,
+     so overflow:hidden cannot pull the spinner up over the frog. */
+  .splash-logo {
+    width: min(92vw, calc((100vh - 120px) * 1365 / 768));
+    max-height: calc(100vh - 120px);
     height: auto;
     opacity: 0;
     transform: scale(0.4);
     animation: splash-enter 1.2s cubic-bezier(.17,.89,.32,1.28) 0.1s forwards;
-  }
-
-  .splash-character {
-    width: min(42vw, 20vh, 260px);
-    height: auto;
-    opacity: 0;
-    transform: scale(0.4);
-    animation: splash-enter 1.2s cubic-bezier(.17,.89,.32,1.28) 0.3s forwards;
   }
 
   @keyframes splash-enter {
@@ -67,15 +61,14 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .splash-wordmark, .splash-character { animation: none; opacity: 1; transform: scale(1); }
+    .splash-logo { animation: none; opacity: 1; transform: scale(1); }
     .splash-loader { animation: none; opacity: 1; }
   }
 </style>
 </head>
 <body>
   <div class="splash-art">
-    <img class="splash-wordmark" src="mad-frog.png" alt="" width="597" height="376">
-    <img class="splash-character" src="cartoon-frog.png" alt="" width="734" height="441">
+    <img class="splash-logo" src="frog-logo.png" alt="" width="1365" height="768">
   </div>
   <div class="splash-loader"></div>
 </body>
