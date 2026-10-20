@@ -1,6 +1,10 @@
 # generated build output — regenerate with: node tools/build.js
 dist/
 
+# bridge build tooling (pkg) — regenerate with: npm install && npm run build:exe
+bridge/node_modules/
+bridge/package-lock.json
+
 # runtime data: PIN secret, logs, user-saved layouts (created on first run, not source)
 data/
 

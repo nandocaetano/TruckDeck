@@ -1034,8 +1034,12 @@
     for (const pg of l.pages) if (pg.skin) pg.over = {};
   }
 
-  // The four built-in panels every installation starts with.
-  const SHIPPED_PRESETS = ['eu_frame', 'sov_frame', 'scania_frame', 'scania25_frame'];
+  // Phone/tablet clients (served non-loopback by the bridge) only get the two frame panels;
+  // legacy drawn panels and the two retired frame panels stay PC-only. See serveStatic() in bridge/server.js.
+  const PACKAGED = document.body.dataset.appMode === 'packaged';
+
+  // The four built-in panels every installation starts with (two on a packaged client).
+  const SHIPPED_PRESETS = PACKAGED ? ['eu_frame', 'sov_frame'] : ['eu_frame', 'sov_frame', 'scania_frame', 'scania25_frame'];
   function defaultDashboards(setup) {
     return SHIPPED_PRESETS.map((id) => createLayoutFromPreset(id, autoSize(), setup));
   }
@@ -1061,6 +1065,23 @@
     const digitalPanel = S.store.layouts.find((l) => l.preset === 'scania25_frame');
     if (digitalPanel && /scania/i.test(digitalPanel.name || '')) { digitalPanel.name = 'Digital 2025'; renamed = 1; }
     return added + renamed;
+  }
+
+  // Packaged (phone/tablet) clients only ship eu_frame/sov_frame; a store saved before that
+  // gate existed, or synced from a PC that still has the retired panels, can carry
+  // scania_frame/scania25_frame (and any other preset outside SHIPPED_PRESETS) into
+  // localStorage. Strip those out here so they never reach ADD A PANEL or the page list.
+  function pruneUnshippedPresets() {
+    if (!PACKAGED) return 0;
+    const before = S.store.layouts.length;
+    const kept = S.store.layouts.filter((l) => !l.preset || SHIPPED_PRESETS.includes(l.preset));
+    if (kept.length === S.store.layouts.length) return 0;
+    S.store.layouts = kept.length ? kept : defaultDashboards(loadSetup());
+    if (!S.store.layouts.find((l) => l.id === S.store.activeId)) {
+      S.store.activeId = firstPanel(S.store.layouts).id;
+      S.page = 0;
+    }
+    return before - S.store.layouts.length;
   }
   // first run: the Brazilian panel on a Portuguese-language device, the European one elsewhere
   const firstPanel = (list) => list.find((l) => l.preset === (/^pt/i.test(navigator.language || '') ? 'modern_br' : 'modern_eu')) || list[0];
@@ -5123,9 +5144,10 @@
           ], pr.obdTheme || 'v8-blue') + '</select></label>'
         : '') +
       check('autoRotate', 'Switch between vertical and horizontal when the screen turns', pr.autoRotate !== false) +
-      '<div class="row"><button class="btn grow" data-act="keys">Key setup</button><button class="btn grow" data-act="transfer">Export / import</button></div>' +
+      (PACKAGED ? '' : '<div class="row"><button class="btn grow" data-act="keys">Key setup</button><button class="btn grow" data-act="transfer">Export / import</button></div>') +
       '<p class="note">These stay the same on every panel, including the ones you add later.</p></div>' +
 
+      (PACKAGED ? '' :
       '<div class="group menu-panel-detail"><h4>Painel ativo</h4>' +
       (l.locked ? '<p class="note"><b>' + esc(l.name) + '</b> is a built-in panel: its keys cannot be changed. Use it as a model to get a copy you can edit freely.</p>' +
       '<button class="btn primary" data-act="duplicate">Use as a model (editable copy)</button>'
@@ -5144,7 +5166,7 @@
       (hasStickers ? check('stickers', 'Show the stickers that come with this panel', l.stickers !== false) : '') +
       (hasSkin && !l.locked ? '<button class="btn" data-act="rebuild">Put every key back as in the art</button>' : '') +
       (l.game && !l.locked ? '<button class="btn" data-act="fill">Add all other functions as extra pages</button>' : '') +
-      (l.locked ? '' : '<div class="row"><button class="btn grow" data-act="duplicate">Duplicate</button><button class="btn grow danger" data-act="delete">Delete panel</button></div>') + '</div>' +
+      (l.locked ? '' : '<div class="row"><button class="btn grow" data-act="duplicate">Duplicate</button><button class="btn grow danger" data-act="delete">Delete panel</button></div>') + '</div>') +
 
       '<div class="group menu-general"><h3>Settings do App</h3><p class="note">' + esc(stateText) + '</p>' +
       '<div class="row"><input class="grow" type="text" id="pinInput" inputmode="numeric" maxlength="4" placeholder="PIN" value="' + esc(S.pin) + '" aria-label="PIN">' +
@@ -5551,9 +5573,10 @@
   const thumb = (skinId) => (skinId && SKINS[skinId] ? '<img class="thumb" src="' + previewOf(skinId, 'T').src + '" alt="" loading="lazy">' : '');
 
   function openPresets() {
+    const choices = PACKAGED ? PRESETS.filter((p) => SHIPPED_PRESETS.includes(p.id)) : PRESETS;
     openSheet('Add a panel',
       '<p class="note">Each panel turns with the screen and every key painted on it works. What a key does can be changed in Edit.</p>' +
-      '<div class="list">' + PRESETS.map((p) =>
+      '<div class="list">' + choices.map((p) =>
         '<button class="item" data-act="preset" data-id="' + p.id + '">' + thumb(p.id) + '<span class="name">' + esc(p.name) + '<small>' + esc(p.note) + '</small></span></button>').join('') + '</div>',
       (act, target) => {
         if (act !== 'preset') return;
@@ -5715,6 +5738,7 @@
     }
     upgradeStore();
     ensureShippedPanels();
+    pruneUnshippedPresets();
     ensurePrefs();
     // The standalone development preview is for the cluster currently being tuned.
     // Keep the installed app's saved panel selection untouched.
