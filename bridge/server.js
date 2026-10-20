@@ -19,7 +19,7 @@ const PORT = Number(process.env.TRUCKDECK_PORT) || 8765;
 // binary, so public/, data/ and the PowerShell helper must be found next to the executable
 // instead. Plain `node bridge/server.js` keeps the old repo-relative layout unchanged.
 let PACKAGED = !!process.pkg;                       // pkg sets process.pkg
-if (!PACKAGED) { try { PACKAGED = require('node:sea').isSea(); } catch (e) { /* older node: not packaged */ } }
+if (!PACKAGED) { try { PACKAGED = eval('require')('node:sea').isSea(); } catch (e) { /* older node: not packaged */ } }
 const ROOT = PACKAGED ? path.dirname(process.execPath) : path.join(__dirname, '..');
 const HELPER_DIR = PACKAGED ? path.dirname(process.execPath) : __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -783,4 +783,5 @@ process.on('SIGINT', () => {
   for (const held of Array.from(heldCombos.values())) handleKey('up', held.keys);
   setTimeout(() => process.exit(0), 100);
 });
+
 

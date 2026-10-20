@@ -1,0 +1,19 @@
+{
+  "name": "truckdeck-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TruckDeck PC bridge server",
+  "bin": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build:exe": "pkg . --targets node18-win-x64 --output ../dist/TruckDeckBridge.exe"
+  },
+  "pkg": {
+    "targets": [
+      "node18-win-x64"
+    ]
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  }
+}
