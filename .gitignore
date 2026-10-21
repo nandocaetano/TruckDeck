@@ -44,3 +44,9 @@ __pycache__/
 android/.gradle/
 android/app/build/
 android/local.properties
+
+# generated layout CSS (runtime artifact, not source)
+public/layout.generated.css
+
+# boot logo segments (generated assets, not source)
+public/skins/modern/dash/boot_logo_segments/
