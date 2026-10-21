@@ -7,6 +7,15 @@
 // every browser, so there is nothing to install and nothing to compile on the PC.
 'use strict';
 
+// Prevent any unhandled async throw from killing the bridge process silently.
+// Log the error and keep running — a crashed bridge leaves keys stuck in the game.
+process.on('uncaughtException', (err) => {
+  console.error('[bridge] Uncaught exception (bridge kept alive):', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[bridge] Unhandled rejection (bridge kept alive):', reason);
+});
+
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
@@ -489,8 +498,15 @@ function serveStatic(urlPath, res, isLoopback, isAppClient) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, 'http://x');
-  const route = url.pathname;
+  // Wrap URL parse: a malformed request line would otherwise throw synchronously
+  // inside an async handler, bypassing the try/catch below and crashing the bridge.
+  let url, route;
+  try {
+    url = new URL(req.url, 'http://x');
+    route = url.pathname;
+  } catch (e) {
+    res.writeHead(400); res.end(); return;
+  }
 
   if (!route.startsWith('/api/')) {
     if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }
@@ -506,8 +522,15 @@ const server = http.createServer(async (req, res) => {
   if (route === '/api/info') {
     const peer = req.socket.remoteAddress || '';
     const isLoopback = peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1';
+    // Validate Host header: only bare IP or localhost are trusted.
+    // DNS-rebinding attacks substitute an attacker's hostname — reject anything that
+    // isn't a raw IP address or localhost so the PIN is never exposed through that vector.
+    const host = (req.headers['host'] || '').split(':')[0].toLowerCase();
+    const isTrustedHost = host === 'localhost'
+      || /^(127\.|::1$|::ffff:127\.)/.test(host)
+      || /^\d+\.\d+\.\d+\.\d+$/.test(host);
     const body = { app: 'truckdeck', version: 1 };
-    if (isLoopback) body.pin = config.pin;
+    if (isLoopback && isTrustedHost) body.pin = config.pin;
     json(res, 200, body);
     return;
   }
