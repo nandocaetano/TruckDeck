@@ -5116,7 +5116,27 @@
       '<div class="group menu-panel"><h3>Menu do Painel</h3>' +
       '<button class="item current" data-act="gallery">' + thumb(skinId) + '<span class="name">' + esc(l.name) +
       '<small>' + S.store.layouts.length + ' panels. Tap to choose another.</small></span></button>' +
-      '<button class="btn primary" data-act="gallery">Choose a panel</button></div>' +
+      '<button class="btn primary" data-act="gallery">Choose a panel</button>' +
+      // Soviet background picker — shown on tablet whenever Soviet panel is active
+      (skinId === 'sov_frame' && inApp
+        ? (function() {
+            var sovBgs = [
+              { id: 'white',      label: 'Esmaltada'  },
+              { id: 'sigabem',    label: 'Siga Bem'   },
+              { id: 'military1',  label: 'Military 1' },
+              { id: 'military2',  label: 'Military 2' },
+            ];
+            var cur = sovBgOf(l);
+            return '<div class="sov-bg-picker"><span class="sov-bg-picker-title">Fundo do painel</span>' +
+              sovBgs.map(function(bg) {
+                var sel = bg.id === cur ? ' sov-bg-sel' : '';
+                return '<button class="sov-bg-thumb' + sel + '" data-act="sovBg" data-sovbg="' + bg.id + '">' +
+                  '<img src="skins/sov/bg/bg-' + bg.id + '-landscape.jpg" alt="' + bg.label + '" loading="lazy">' +
+                  '<span>' + bg.label + '</span></button>';
+              }).join('') + '</div>';
+          }())
+        : '')
+      + '</div>' +
 
       '<div class="group menu-app-settings"><h3>Menu Geral</h3>' +
       '<div class="row"><label class="field grow"><span>Language</span><select data-field="lang">' + options([['en', 'English'], ['pt', 'Português'], ['de', 'Deutsch'], ['es', 'Español'], ['fr', 'Français']], pr.lang) + '</select></label>' +
@@ -5158,30 +5178,10 @@
         '<label class="field grow"><span>Panel</span><input type="color" data-field="sc25:bg" value="' + ((l.sc25 && l.sc25.bg) || '#0a0c10') + '"></label></div>' +
         '<button class="btn" data-act="sc25home">Cluster back to screen 1</button><button class="btn" data-act="sc25learn">' + (S.padLearn ? 'Press the controller button now...' : 'Learn a controller button') + '</button>' +
         '<p class="note">' + (S.dashAuto ? 'Sync: automatic. ' : '') + 'Learned controller button: ' + ((l.sc25 && l.sc25.padBtn !== undefined && l.sc25.padBtn !== '') ? l.sc25.padBtn : 'none') + '. Last button seen: ' + (S.lastPad === undefined ? 'none yet' : S.lastPad) + '.</p>' : '') +
-      (skinId === 'sov_frame' ? (inApp
-        // Tablet: visual thumbnail picker — tap to switch background
-        ? (function() {
-            var sovBgs = [
-              { id: 'white',      label: 'Esmaltada'  },
-              { id: 'sigabem',    label: 'Siga Bem'   },
-              { id: 'military1',  label: 'Military 1' },
-              { id: 'military2',  label: 'Military 2' },
-            ];
-            var cur = sovBgOf(l);
-            return '<div class="sov-bg-picker"><span class="sov-bg-picker-title">Fundo do painel</span>' +
-              sovBgs.map(function(bg) {
-                var sel = bg.id === cur ? ' sov-bg-sel' : '';
-                return '<button class="sov-bg-thumb' + sel + '" data-act="sovBg" data-sovbg="' + bg.id + '">' +
-                  '<img src="skins/sov/bg/bg-' + bg.id + '-landscape.jpg" alt="' + bg.label + '" loading="lazy">' +
-                  '<span>' + bg.label + '</span></button>';
-              }).join('') + '</div>';
-          }())
-        // PC: keep the dropdown
-        : '<label class="field"><span>Soviet background</span><select data-field="sovBg">' + options([
-            ['white', 'Branca / Esmaltada'], ['military1', 'Military 1'], ['military2', 'Military 2'], ['sigabem', 'Siga Bem'], ['vivamexico', 'Viva México'],
-          ], sovBgOf(l)) + '</select></label>' +
-          '<p class="note">Empty plate behind the Soviet keys. Default is the clean white enamel plate; photoreal variants stay available.</p>'
-      ) : '') +
+      (skinId === 'sov_frame' ? '<label class="field"><span>Soviet background</span><select data-field="sovBg">' + options([
+        ['white', 'Branca / Esmaltada'], ['military1', 'Military 1'], ['military2', 'Military 2'], ['sigabem', 'Siga Bem'], ['vivamexico', 'Viva México'],
+      ], sovBgOf(l)) + '</select></label>' +
+      '<p class="note">Empty plate behind the Soviet keys. Default is the clean white enamel plate; photoreal variants stay available.</p>' : '') +
       (hasSkin ? '<button class="btn" data-act="deco">Stickers: add, move, remove</button>' : '') +
       (hasStickers ? check('stickers', 'Show the stickers that come with this panel', l.stickers !== false) : '') +
       (hasSkin && !l.locked ? '<button class="btn" data-act="rebuild">Put every key back as in the art</button>' : '') +
