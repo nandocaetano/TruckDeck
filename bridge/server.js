@@ -461,18 +461,21 @@ function readBody(req, limit) {
   });
 }
 
-function serveStatic(urlPath, res, isLoopback) {
+function serveStatic(urlPath, res, isLoopback, isAppClient) {
   const rel = urlPath === '/' ? '/index.html' : urlPath;
   // normalize + prefix check: a request like /../data/config.json must not leak the PIN
   const file = path.normalize(path.join(PUBLIC_DIR, rel));
   if (!file.startsWith(PUBLIC_DIR + path.sep)) { res.writeHead(403); res.end(); return; }
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
-    // Remote (non-loopback) clients are the phone/tablet app: tag the page so its own JS can
-    // hide features that only make sense on the PC (custom uploads, legacy preset panels).
-    if (!isLoopback && path.basename(file) === 'index.html') {
+    // Packaged = the mobile app's own WebView. It self-identifies via ?client=app (set once in
+    // MainActivity's loadUrl) so detection never depends on TCP peer address -- the Android
+    // emulator's 10.0.2.2->127.0.0.1 remap otherwise makes a real app connection look loopback.
+    // Any other non-loopback peer (LAN phone/tablet browser) still falls back to packaged too.
+    const packaged = isAppClient || !isLoopback;
+    if (packaged && path.basename(file) === 'index.html') {
       data = Buffer.from(data.toString('utf8').replace('<body>', '<body data-app-mode="packaged">'));
-    } else if (!isLoopback && path.basename(file) === 'editor.html') {
+    } else if (packaged && path.basename(file) === 'editor.html') {
       data = Buffer.from(data.toString('utf8').replace('data-editor-mode="full"', 'data-editor-mode="packaged"'));
     }
     res.writeHead(200, {
@@ -493,7 +496,8 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }
     const staticPeer = req.socket.remoteAddress || '';
     const staticIsLoopback = staticPeer === '127.0.0.1' || staticPeer === '::1' || staticPeer === '::ffff:127.0.0.1';
-    serveStatic(decodeURIComponent(route), res, staticIsLoopback);
+    const staticIsAppClient = url.searchParams.get('client') === 'app';
+    serveStatic(decodeURIComponent(route), res, staticIsLoopback, staticIsAppClient);
     return;
   }
 

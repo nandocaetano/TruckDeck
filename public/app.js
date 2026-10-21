@@ -1548,6 +1548,10 @@
         const migrated = ensurePrefs();
         // PC store may point at a non-Modern panel; re-prefer atomic board after sync.
         preferAtomicModern();
+        // The PC's layouts.json still carries retired presets (scania_frame, scania25_frame);
+        // boot() already prunes them once, but connect() just overwrote S.store wholesale, so
+        // the packaged client must re-prune here or those panels leak back in on every sync.
+        pruneUnshippedPresets();
         lsSet('truckdeck.store', JSON.stringify(S.store));
         if (injected || migrated) save();
         S.sel = null;

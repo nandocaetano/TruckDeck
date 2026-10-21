@@ -126,7 +126,10 @@ public class MainActivity extends Activity {
         onConnectPage = false;
         bridgeAuthority = host.contains(":") ? host : host + ":" + BRIDGE_PORT;
         // The panel reads the PIN from the address once, stores it and cleans the address.
-        web.loadUrl("http://" + bridgeAuthority + "/?pin=" + pin);
+        // client=app self-identifies the WebView as the packaged mobile client: the TCP peer
+        // address alone is unreliable (e.g. the emulator's 10.0.2.2 alias resolves to 127.0.0.1
+        // on the host, which the bridge would otherwise read as "PC browser" = unrestricted mode).
+        web.loadUrl("http://" + bridgeAuthority + "/?pin=" + pin + "&client=app");
     }
 
     // ---- Immersive full screen ------------------------------------------------------------
