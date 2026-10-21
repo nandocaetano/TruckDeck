@@ -25,6 +25,7 @@
   <div id="scrim" hidden></div>
   <aside id="sheet" hidden aria-label="Settings"></aside>
   <div id="toast" role="status" hidden></div>
+  <a id="editorLink" href="/editor.html" target="_blank" style="display:none;position:fixed;bottom:10px;right:14px;z-index:9999;padding:5px 10px;background:rgba(11,14,18,.85);border:1px solid rgba(242,100,25,.4);border-radius:6px;color:#F26419;font-size:10px;font-family:monospace;text-decoration:none;letter-spacing:.06em;" title="Abrir Layout Editor">LAYOUT EDITOR ↗</a>
   <div id="boot" aria-hidden="true">
   <svg class="mark" viewBox="0 0 200 200" aria-hidden="true">
     <defs>
@@ -50,6 +51,7 @@
   <b>Truck Deck</b><span>by Mad Frog</span>
   </div>
 </div>
+<script>if(document.body.dataset.appMode!=="packaged"){var el=document.getElementById("editorLink");if(el)el.style.display="block";}</script>
 <script>window.TRUCKDECK_VERSION = "2026-10-21 15:54";</script>
 <script src="catalog.js?v=2026-10-21%2015%3A54"></script>
 <script src="skins.js?v=2026-10-21%2015%3A54"></script>
