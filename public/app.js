@@ -3848,12 +3848,13 @@
     const p = page();
     const skin = skinOf(p);
     stage.classList.toggle('skin', !!skin);
+    stage.classList.toggle('frame', !!(skin && skin.frame));
     if (skin) {
       // The picture decides the shape. It is fitted inside the stage keeping its own proportions;
       // only a small difference (up to 10%) is absorbed by stretching, so a screen whose shape is
       // close to the art still gets edge to edge, and any other shape (a tablet turned upright,
       // a long phone) gets the art centred and undistorted over a blurred copy of itself.
-      const edge = document.getElementById('app').classList.contains('fs') ? 0 : 8;   // full screen: right up to the glass
+      const edge = (document.getElementById('app').classList.contains('fs') || skin.frame) ? 0 : 8;   // frame skins and fullscreen: right up to the glass
       const availW = Math.max(40, stage.clientWidth - edge);
       const availH = Math.max(40, stage.clientHeight - edge);
       const ar = skin.ar || 1.5;
@@ -3869,16 +3870,10 @@
       // turned that wide cut into a taller frame, so horizontal showed the
       // portrait shape. Keep this cut's ratio and only scale it uniformly.
       if (p.skin === 'sov_frame' && ar >= 1) {
-        if (isFs) {
-          // Fullscreen: fill the entire stage — the metal frame is drawn by the app, nothing distorts.
-          w = Math.floor(availW);
-          h = Math.floor(availH);
-        } else {
-          const grow = Math.min(MAXS, availW / w, availH / h);
-          w = Math.floor(Math.min(availW, w * grow));
-          h = Math.floor(w / ar);
-          if (h > availH) { h = Math.floor(availH); w = Math.floor(h * ar); }
-        }
+        // Frame panels are drawn entirely by the app — nothing distorts when stretched.
+        // Always fill the full stage (both fullscreen and normal mode).
+        w = Math.floor(availW);
+        h = Math.floor(availH);
       } else {
         w = Math.floor(Math.min(availW, w * MAXS));         // then grow towards the screen, capped
         h = Math.floor(Math.min(availH, h * MAXS));
@@ -5163,10 +5158,30 @@
         '<label class="field grow"><span>Panel</span><input type="color" data-field="sc25:bg" value="' + ((l.sc25 && l.sc25.bg) || '#0a0c10') + '"></label></div>' +
         '<button class="btn" data-act="sc25home">Cluster back to screen 1</button><button class="btn" data-act="sc25learn">' + (S.padLearn ? 'Press the controller button now...' : 'Learn a controller button') + '</button>' +
         '<p class="note">' + (S.dashAuto ? 'Sync: automatic. ' : '') + 'Learned controller button: ' + ((l.sc25 && l.sc25.padBtn !== undefined && l.sc25.padBtn !== '') ? l.sc25.padBtn : 'none') + '. Last button seen: ' + (S.lastPad === undefined ? 'none yet' : S.lastPad) + '.</p>' : '') +
-      (skinId === 'sov_frame' ? '<label class="field"><span>Soviet background</span><select data-field="sovBg">' + options([
-        ['white', 'Branca / Esmaltada'], ['military1', 'Military 1'], ['military2', 'Military 2'], ['sigabem', 'Siga Bem'], ['vivamexico', 'Viva México'],
-      ], sovBgOf(l)) + '</select></label>' +
-      '<p class="note">Empty plate behind the Soviet keys. Default is the clean white enamel plate; photoreal variants stay available.</p>' : '') +
+      (skinId === 'sov_frame' ? (inApp
+        // Tablet: visual thumbnail picker — tap to switch background
+        ? (function() {
+            var sovBgs = [
+              { id: 'white',      label: 'Esmaltada'  },
+              { id: 'sigabem',    label: 'Siga Bem'   },
+              { id: 'military1',  label: 'Military 1' },
+              { id: 'military2',  label: 'Military 2' },
+            ];
+            var cur = sovBgOf(l);
+            return '<div class="sov-bg-picker"><span class="sov-bg-picker-title">Fundo do painel</span>' +
+              sovBgs.map(function(bg) {
+                var sel = bg.id === cur ? ' sov-bg-sel' : '';
+                return '<button class="sov-bg-thumb' + sel + '" data-act="sovBg" data-sovbg="' + bg.id + '">' +
+                  '<img src="skins/sov/bg/bg-' + bg.id + '-landscape.jpg" alt="' + bg.label + '" loading="lazy">' +
+                  '<span>' + bg.label + '</span></button>';
+              }).join('') + '</div>';
+          }())
+        // PC: keep the dropdown
+        : '<label class="field"><span>Soviet background</span><select data-field="sovBg">' + options([
+            ['white', 'Branca / Esmaltada'], ['military1', 'Military 1'], ['military2', 'Military 2'], ['sigabem', 'Siga Bem'], ['vivamexico', 'Viva México'],
+          ], sovBgOf(l)) + '</select></label>' +
+          '<p class="note">Empty plate behind the Soviet keys. Default is the clean white enamel plate; photoreal variants stay available.</p>'
+      ) : '') +
       (hasSkin ? '<button class="btn" data-act="deco">Stickers: add, move, remove</button>' : '') +
       (hasStickers ? check('stickers', 'Show the stickers that come with this panel', l.stickers !== false) : '') +
       (hasSkin && !l.locked ? '<button class="btn" data-act="rebuild">Put every key back as in the art</button>' : '') +
@@ -5201,6 +5216,12 @@
           l[target.dataset.field] = target.value || (target.dataset.field === 'name' ? 'Panel' : target.value);
           save();
           renderPanel();
+        } else if (act === 'sovBg') {
+          // Tablet background thumbnail tapped — update sovBg and re-render
+          const l2 = layout();
+          l2.sovBg = sovBgOf({ sovBg: target.dataset.sovbg });
+          skinMemo = { key: '', list: [] };
+          save(); renderPanel(); openMenu();
         } else if (act === 'sc25home') {
           document.querySelectorAll('.k-sc25').forEach((n) => n._sc25 && n._sc25.go(0)); toast('Cluster set to screen 1.');
         } else if (act === 'sc25learn') {
@@ -5682,7 +5703,7 @@
   // Android WebView is already immersive (system bars hidden by the Java shell) but the
   // app-level fullscreen class must also be set so the top bar disappears and the panel
   // expands edge-to-edge. Do it on the first render tick so the stage has its final size.
-  if (inApp) requestAnimationFrame(() => syncFullscreen(true));
+  // Android opens in normal mode by default; user triggers fullscreen manually.
   $('#btnPage').addEventListener('click', openPage);
   $('#btnEdit').addEventListener('click', () => {
     if (!S.edit && layout().locked) {

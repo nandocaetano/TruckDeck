@@ -2026,6 +2026,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
    holds at any size. Keys are invisible touch areas, readouts are written in the colours
    sampled from the art underneath them. */
 #stage.skin { padding: 4px; }
+#stage.frame { padding: 0; place-items: start center; }
 #panel.skin {
   background-color: #050505;
   background-size: 100% 100%;
@@ -2774,7 +2775,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 #app.fs #stage { padding: 0; margin: 0; }
 #fsExit { position: fixed; bottom: max(6px, env(safe-area-inset-bottom, 0px)); right: max(6px, env(safe-area-inset-right, 0px)); z-index: 30;
   display: flex; align-items: center; gap: 5px;
-  height: 26px; padding: 4px 6px; border: 0; border-radius: 7px; background: rgba(0, 0, 0, 0.35); color: #cfd6dc; opacity: 0.45; cursor: pointer; }
+  height: 44px; padding: 8px 14px; border: 0; border-radius: 10px; background: rgba(0, 0, 0, 0.45); color: #cfd6dc; opacity: 0.6; cursor: pointer; }
 #fsExit svg { display: block; width: 18px; height: 18px; flex-shrink: 0; }
 #fsExit:active { opacity: 0.9; }
 #fsExit .fs-led { width: 6px; height: 6px; border-radius: 50%; background: var(--ui-dim); flex-shrink: 0; }
@@ -4905,4 +4906,52 @@ video::-webkit-media-controls-start-playback-button {
 }
 @media (prefers-reduced-motion: reduce) {
   #panel > .rotary-backlights i { transition: none; }
+}
+
+/* ── Soviet background visual picker (tablet menu) ── */
+.sov-bg-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+.sov-bg-picker-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg2, #8a9ba8);
+}
+.sov-bg-picker .sov-bg-thumb {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  background: var(--sheet-item-bg, rgba(255,255,255,0.05));
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.sov-bg-picker .sov-bg-thumb img {
+  width: 88px;
+  height: 49px;          /* 16:9 thumbnail */
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: #222;
+}
+.sov-bg-picker .sov-bg-thumb span {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.sov-bg-picker .sov-bg-thumb.sov-bg-sel {
+  border-color: var(--accent, #4a9eff);
+  background: var(--sheet-item-sel-bg, rgba(74,158,255,0.12));
+}
+.sov-bg-picker .sov-bg-thumb:active {
+  opacity: 0.75;
 }
