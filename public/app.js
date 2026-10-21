@@ -1540,8 +1540,15 @@
       const atomicChanged = atomicRes && atomicRes.status === 200
         && applyAtomicLayoutPayload(atomicRes.body);
       if (validStore(res.body)) {
-        // The PC copy wins: it is what every device shares.
+        // The PC copy wins: it is what every device shares — but a panel switch made on this
+        // tablet while the bridge was lost is the user's most-recent intent, so preserve it
+        // if that panel ID exists in the incoming store.
+        const localActiveId = S.store && S.store.activeId;
         S.store = res.body;
+        if (localActiveId && localActiveId !== S.store.activeId) {
+          const panelExists = Array.isArray(S.store.layouts) && S.store.layouts.some(l => l.id === localActiveId);
+          if (panelExists) S.store.activeId = localActiveId;
+        }
         lockBuiltIns();
         const upgraded = upgradeStore();
         const injected = ensureShippedPanels();
@@ -3852,17 +3859,26 @@
       const ar = skin.ar || 1.5;
       // A frame panel is only an empty frame (the app draws keys and text itself, never stretched), so it may
       // be stretched much further: an upright tablet is far wider than the phone-shaped vertical art.
-      const MAXS = skin.frame ? 1.42 : 1.1;               // largest allowed stretch per axis
+      // In fullscreen, a frame panel (no background photo) can fill the whole screen: the app
+      // draws everything itself and there is nothing to distort. Photo skins still cap at 1.1.
+      const isFs = document.getElementById('app').classList.contains('fs');
+      const MAXS = (isFs && skin.frame) ? Infinity : (skin.frame ? 1.42 : 1.1);
       let w = Math.min(availW, availH * ar);              // "contain"
       let h = w / ar;
       // Soviet landscape plates are 2752×1536. Growing height on its own
       // turned that wide cut into a taller frame, so horizontal showed the
       // portrait shape. Keep this cut's ratio and only scale it uniformly.
       if (p.skin === 'sov_frame' && ar >= 1) {
-        const grow = Math.min(MAXS, availW / w, availH / h);
-        w = Math.floor(Math.min(availW, w * grow));
-        h = Math.floor(w / ar);
-        if (h > availH) { h = Math.floor(availH); w = Math.floor(h * ar); }
+        if (isFs) {
+          // Fullscreen: fill the entire stage — the metal frame is drawn by the app, nothing distorts.
+          w = Math.floor(availW);
+          h = Math.floor(availH);
+        } else {
+          const grow = Math.min(MAXS, availW / w, availH / h);
+          w = Math.floor(Math.min(availW, w * grow));
+          h = Math.floor(w / ar);
+          if (h > availH) { h = Math.floor(availH); w = Math.floor(h * ar); }
+        }
       } else {
         w = Math.floor(Math.min(availW, w * MAXS));         // then grow towards the screen, capped
         h = Math.floor(Math.min(availH, h * MAXS));
@@ -5663,6 +5679,10 @@
   document.addEventListener('fullscreenchange', () => {
     syncFullscreen(!!document.fullscreenElement);
   });
+  // Android WebView is already immersive (system bars hidden by the Java shell) but the
+  // app-level fullscreen class must also be set so the top bar disappears and the panel
+  // expands edge-to-edge. Do it on the first render tick so the stage has its final size.
+  if (inApp) requestAnimationFrame(() => syncFullscreen(true));
   $('#btnPage').addEventListener('click', openPage);
   $('#btnEdit').addEventListener('click', () => {
     if (!S.edit && layout().locked) {
