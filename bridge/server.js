@@ -513,7 +513,9 @@ const server = http.createServer(async (req, res) => {
     const staticPeer = req.socket.remoteAddress || '';
     const staticIsLoopback = staticPeer === '127.0.0.1' || staticPeer === '::1' || staticPeer === '::ffff:127.0.0.1';
     const staticIsAppClient = url.searchParams.get('client') === 'app';
-    serveStatic(decodeURIComponent(route), res, staticIsLoopback, staticIsAppClient);
+    let decodedRoute;
+    try { decodedRoute = decodeURIComponent(route); } catch (e) { res.writeHead(400); res.end(); return; }
+    serveStatic(decodedRoute, res, staticIsLoopback, staticIsAppClient);
     return;
   }
 
