@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="editor.css">
+  <link rel="stylesheet" href="editor.css?v=2026-10-23-0105">
 </head>
 <body data-editor-mode="full">
   <div id="publishToast" class="publish-toast" hidden role="alert" aria-live="assertive"></div>
@@ -45,8 +45,15 @@
     </div>
 
     <div class="topbar-actions">
+      <button type="button" class="button button-accent" id="rescueButton" hidden title="Havia trabalho não publicado neste navegador que o servidor ia sobrescrever. Clique para trazê-lo de volta (Ctrl+Z desfaz).">Recuperar trabalho local</button>
+      <button type="button" class="button button-ghost" id="rescueDiscardButton" hidden title="Apaga a cópia local antiga deste navegador (pede confirmação)">Descartar</button>
+      <button type="button" class="button button-ghost" id="draftLoadButton" title="Carrega um rascunho .json com TODOS os painéis, sem enviar ao tablet">Retomar rascunho</button>
+      <button type="button" class="button button-ghost" id="draftSaveButton" title="Salva TODOS os painéis num arquivo .json na pasta Downloads, sem enviar ao tablet">Salvar rascunho</button>
+      <input id="draftInput" type="file" accept="application/json,.json" hidden>
       <button type="button" class="button button-ghost" id="importButton">Importar</button>
-      <button type="button" class="button button-ghost" id="exportButton" title="Baixa o JSON + CSS só para este navegador — não afeta o servidor nem o tablet">Backup</button>
+      <button type="button" class="button button-ghost" id="exportButton" title="Baixa o mapeamento atual (JSON + CSS) como arquivo. Não salva nada e não afeta o servidor nem o tablet.">Baixar mapeamento</button>
+      <button type="button" class="button button-ghost" id="checkButton" title="Confere teclas e luzes sem função em todos os painéis e pisca em vermelho as que estão nesta tela">Verificar</button>
+      <button type="button" class="button button-ghost" id="saveLocalButton" title="Salva o estado atual só neste navegador (sem precisar do tablet)">Salvar local</button>
       <button type="button" class="button button-primary button-publish" id="saveButton" title="Publicar no tablet via bridge (Ctrl/⌘+S)">Publicar no tablet</button>
       <input id="importInput" type="file" accept="application/json,.json" hidden>
     </div>
@@ -92,14 +99,20 @@
 
       <section class="tool-section">
         <div class="section-title"><span id="buttonsPackageTitle">Pacote Moderno</span><span class="section-kicker" id="buttonsPackageKicker">PACOTE</span></div>
-        <label class="field" id="packageSelectRow">
-          <span>Pacote activo na paleta</span>
-          <select id="packageSelect">
-            <option value="modern">Pacote Moderno</option>
-            <option value="soviet">Pacote Soviético</option>
-          </select>
-        </label>
-        <p class="helper-text">Selecione um pacote para ver só os seus botões. Mude o seletor para misturar peças de outro pacote.</p>
+        <div id="categoryFilter" class="category-filter" role="group" aria-label="Filtrar por categoria">
+          <button type="button" class="cat-btn active" data-cat="all">Todos</button>
+          <button type="button" class="cat-btn" data-cat="rocker">Rocker</button>
+          <button type="button" class="cat-btn" data-cat="round">Round</button>
+          <button type="button" class="cat-btn" data-cat="push">Push / Square</button>
+          <button type="button" class="cat-btn" data-cat="ignition">Ignição</button>
+          <button type="button" class="cat-btn" data-cat="engine">Motor</button>
+          <button type="button" class="cat-btn" data-cat="rotary">Rotativo</button>
+          <button type="button" class="cat-btn" data-cat="toggle">Toggle</button>
+          <button type="button" class="cat-btn" data-cat="hazard">Hazard</button>
+          <button type="button" class="cat-btn" data-cat="brake">Freio</button>
+          <button type="button" class="cat-btn" data-cat="lamp">Lâmpadas</button>
+          <button type="button" class="cat-btn" data-cat="gauge">Gauges</button>
+        </div>
         <div class="asset-list" id="assetList">
           <!-- Exclusive package tools injected by editor.js from PACKAGES -->
         </div>
@@ -259,6 +272,7 @@
   </footer>
 
   <script src="catalog.js"></script>
-  <script src="editor.js"></script>
+  <script src="keyboxes.js?v=2026-10-23-0050"></script>
+  <script src="editor.js?v=2026-10-23-0340"></script>
 </body>
 </html>

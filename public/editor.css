@@ -393,6 +393,26 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .asset-preview img { max-width: 28px; max-height: 28px; object-fit: contain; }
 .asset-preview-wide { width: 49px; }
 .asset-preview-wide img { max-width: 45px; }
+/* Palette thumbnail for round/rocker pieces: housing + separate key layer stacked, using the same
+   insets as app.css (.rocker-key 8%, .round-key 12%) so the thumbnail matches the real button. */
+.asset-preview .asset-stack { position: relative; display: inline-grid; line-height: 0; }
+.asset-preview .asset-stack .asset-key {
+  position: absolute;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  pointer-events: none;
+}
+.asset-preview .asset-stack .asset-key-rocker { inset: 8%; width: 84%; height: 84%; }
+.asset-preview .asset-stack .asset-key-round { inset: 12%; width: 76%; height: 76%; }
+.layout-element.button-element img.canvas-key {
+  position: absolute;
+  object-fit: fill; /* stretch with the housing; box is set inline from KEY_BOXES */
+  pointer-events: none;
+  z-index: 1;
+}
+.layout-element.button-element img.canvas-key-rocker { inset: 8%; width: 84%; height: 84%; }
+.layout-element.button-element img.canvas-key-round { inset: 12%; width: 76%; height: 76%; }
 .asset-tool.is-custom { position: relative; }
 .asset-remove {
   position: absolute;
@@ -610,10 +630,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 /* Pictogram */
-.pictogram-overlay { position: absolute; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.pictogram-overlay { position: absolute; display: flex; align-items: center; justify-content: center; pointer-events: none; color: #fff; z-index: 2; }
 .pictogram-overlay.is-editable { pointer-events: auto; cursor: move; z-index: 3; outline: 1px dashed rgba(242,100,25,.55); }
 .pictogram-overlay .pictogram-resize { right: -2px; bottom: -2px; }
-.pictogram-overlay svg { width: 100%; height: 100%; color: #fff; filter: drop-shadow(0 1px 1px rgba(0,0,0,.9)); pointer-events: none; }
+.pictogram-overlay svg { width: 100%; height: 100%; color: inherit; filter: drop-shadow(0 1px 1px rgba(0,0,0,.9)); pointer-events: none; }
 
 /* Key lock */
 .layout-element.button-element.is-key-locked { cursor: default; }
@@ -959,4 +979,72 @@ code { color: var(--teal); font-family: 'Geist Mono', monospace; }
   .toolbox-heading, .inspector-heading { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
   .drawer-toggle { min-height: 40px; }
   .topbar-center { display: none; }
+}
+
+/* ---- Label fonts (bundled, SIL OFL 1.1: fonts/<family>-LICENSE.txt). Latin subset only, so the Android WebView never depends on installed fonts. */
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Oswald"; src: url("fonts/oswald-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Oswald"; src: url("fonts/oswald-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Roboto Condensed"; src: url("fonts/roboto-condensed-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Roboto Condensed"; src: url("fonts/roboto-condensed-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Share Tech Mono"; src: url("fonts/share-tech-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Stardos Stencil"; src: url("fonts/stardos-stencil-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Stardos Stencil"; src: url("fonts/stardos-stencil-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Saira Stencil One"; src: url("fonts/saira-stencil-one-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
+/* Per-button label style (labelStyle): size multiplier, out-of-box positions, grab handle. */
+.key-label.ls { font-size: calc(9px * var(--ls-size, 1)); }
+.key-label.ls-above, .key-label.ls-below, .key-label.ls-free { max-height: none; overflow: visible; }
+.key-label.ls-above { top: auto; bottom: 100%; left: -12%; right: -12%; margin-bottom: 2%; }
+.key-label.ls-below { bottom: auto; top: 100%; left: -12%; right: -12%; margin-top: 2%; }
+.key-label.ls-free { right: auto; bottom: auto; width: max-content; white-space: pre; }
+.key-label.is-editable { pointer-events: auto; cursor: move; z-index: 4; outline: 1px dashed rgba(78,201,176,.7); }
+.label-style-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.label-style-fields[hidden] { display: none; }
+.label-style-fields .field-note { grid-column: 1 / -1; margin: 0; }
+
+/* Draft / rescue buttons: the [hidden] attribute must beat the .button display rule. */
+.topbar-actions .button[hidden] { display: none; }
+
+/* Pre-send check: red silhouette on keys/lights with no function (the art's alpha shape as a mask). */
+.button-element .problem-silhouette {
+  position: absolute; inset: 0; z-index: 6; pointer-events: none;
+  background: #ff1f1f;
+  -webkit-mask-image: var(--art-url); -webkit-mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center;
+  mask-image: var(--art-url); mask-size: 100% 100%; mask-repeat: no-repeat; mask-position: center;
+  filter: drop-shadow(0 0 5px rgba(255, 31, 31, .95));
+  animation: problemPulse .8s ease-in-out infinite;
+}
+@keyframes problemPulse { 0%, 100% { opacity: .35; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .button-element .problem-silhouette { animation: none; opacity: .7; } }
+.publish-toast.is-warn { background: #b45309; color: #fff; white-space: pre-wrap; max-width: min(560px, 92vw); }
+#statusMessage.is-warn { color: #f59e0b; font-weight: 700; }
+.field-inline { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.field-inline input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent, #f26419); cursor: pointer; flex-shrink: 0; }
+.field-inline span { font-size: .82rem; color: var(--text-muted, #94a3b8); user-select: none; }
+
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border, #333);
+}
+.cat-btn {
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #444);
+  background: transparent;
+  color: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.cat-btn:hover { background: var(--hover-bg, rgba(255,255,255,0.08)); }
+.cat-btn.active {
+  background: var(--accent, #e8a020);
+  color: #000;
+  border-color: transparent;
 }

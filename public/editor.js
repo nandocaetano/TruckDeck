@@ -50,65 +50,108 @@
     }
     return OFFICIAL_MODERN[mode];
   }
-  const ASSETS_MODERN = {
-    'btn-rocker-v.png': { label: 'Rocker V', defaultSize: [5.5, 13] },
-    'btn-rocker-h.png': { label: 'Rocker H', defaultSize: [13, 5.5] },
-    'btn-square.png': { label: 'Square', defaultSize: [8, 8] },
-    'engine_cir.png': { label: 'Motor circular', defaultSize: [8, 8] },
-    'engine_cr_vt.png': { label: 'Motor cromado VT', defaultSize: [8, 8] },
-    'engine_cromo.png': { label: 'Motor cromado', defaultSize: [8, 8] },
-    'engine_old.png': { label: 'Motor clássico', defaultSize: [8, 8] },
-    'engine_red.png': { label: 'Motor vermelho', defaultSize: [8, 8] },
-    'hazard_black.png': { label: 'Alerta preto', defaultSize: [8, 8] },
-    'hazard_sq_blk.png': { label: 'Alerta quadrado', defaultSize: [8, 8] },
-    'parking.png': { label: 'Estacionamento', defaultSize: [8, 8] },
-    // Modern-only rotaries. The app owns the detent table (stages + measured legend angles);
-    // the palette entry is the static housing. The knob PNG is not a separate tool.
-    'mod_rotary_lights.png': { label: 'Seletor de luzes', defaultSize: [12, 12] },
-    'mod_rotary_wipers.png': { label: 'Seletor do limpa-para-brisas', defaultSize: [12, 12] }
-  };
-  const ASSETS_SOV = {
-    'btn-rocker-v.png': { label: 'Rocker V', defaultSize: [5.5, 13] },
-    'sov_key.png': { label: 'Key', defaultSize: [8, 10] },
-    'sov_key_slot.png': { label: 'Key slot', defaultSize: [8, 10] },
-    'sov_sq.png': { label: 'Square', defaultSize: [8, 8] },
-    'sov_sq_boss.png': { label: 'Square boss', defaultSize: [8, 8] },
-    'sov_sq_flat.png': { label: 'Square flat', defaultSize: [8, 8] },
-    'sov_sq_waffle.png': { label: 'Square waffle', defaultSize: [8, 8] },
-    'sov_sq_grid.png': { label: 'Square grid', defaultSize: [8, 8] },
-    'sov_push.png': { label: 'Push', defaultSize: [8, 8] },
-    'sov_push_dish.png': { label: 'Push dish', defaultSize: [7, 7] },
-    'sov_push_worn.png': { label: 'Push worn', defaultSize: [7, 7] },
-    // Passive glass overlay, not a push. Single entry; the legacy sov_push_lens.png name is
-    // still resolved by app.js for layouts saved before the rename, but is not offered here.
-    'sov_lens.png': { label: 'Gauge lens', defaultSize: [12, 12] },
-    'sov_push_scratched.png': { label: 'Push scratched', defaultSize: [7, 7] },
-    'sov_push_parking_brake.png': { label: 'Parking Brake Push', defaultSize: [7, 7] },
-    'sov_push_hazard.png': { label: 'Hazard Push', defaultSize: [7, 7] },
-    'sov_push_hazard_off.png': { label: 'Hazard off', defaultSize: [7, 7] },
-    'sov_push_hazard_on.png': { label: 'Hazard on', defaultSize: [7, 7] },
-    'sov_rotary_dial.png': { label: 'Seletor rotativo (luzes)', defaultSize: [10, 10] },
-    'sov_tog_up.png': { label: 'Toggle up', defaultSize: [6, 12] },
-    'sov_tog_mid.png': { label: 'Toggle mid', defaultSize: [6, 12] },
-    'sov_tog_down.png': { label: 'Toggle down', defaultSize: [6, 12] },
-    'sov_lamp_red_off.png': { label: 'Lamp red off', defaultSize: [7, 7] },
-    'sov_lamp_red_on.png': { label: 'Lamp red on', defaultSize: [7, 7] },
-    'sov_lamp_green_off.png': { label: 'Lamp green off', defaultSize: [7, 7] },
-    'sov_lamp_green_on.png': { label: 'Lamp green on', defaultSize: [7, 7] },
-    'sov_lamp_blue_off.png': { label: 'Lamp blue off', defaultSize: [7, 7] },
-    'sov_lamp_blue_on.png': { label: 'Lamp blue on', defaultSize: [7, 7] },
-    'sov_lamp_amber_off.png': { label: 'Lamp amber off', defaultSize: [7, 7] },
-    'sov_lamp_amber_on.png': { label: 'Lamp amber on', defaultSize: [7, 7] },
-    'sov_dial_speed.png': { label: 'Dial speed', defaultSize: [18, 18] },
-    'sov_dial_rpm.png': { label: 'Dial rpm', defaultSize: [18, 18] },
-    'sov_dial_fuel.png': { label: 'Dial fuel', defaultSize: [12, 12] },
-    'sov_dial_air.png': { label: 'Dial air', defaultSize: [12, 12] }
-  };
-  // Visual packages for the toolbox. The palette shows ONE package at a time (cascade /
-  // exclusive select). Switch the package dropdown to pull pieces from another pack.
+  // ─── ASSET CATALOG ────────────────────────────────────────────────────────
+  // Fonte única de todos os assets do editor atômico.
+  // category: 'rocker' | 'round' | 'push' | 'ignition' | 'engine' |
+  //           'rotary' | 'toggle' | 'hazard' | 'brake' | 'lamp' | 'gauge'
+  // resolver: 'modern' usa skins/modern/ | 'sov' usa skins/sov/btn/ | omitido = modern
+  const ASSET_CATALOG = [
+    // ── Rocker ───────────────────────────────────────────────────────────────
+    { file: 'btn-rocker-v.png',              label: 'Rocker vertical',          defaultSize: [5.5, 13], category: 'rocker', resolver: 'modern' },
+    { file: 'mod_rocker_metal.png',          label: 'Rocker metal',             defaultSize: [10, 6],   category: 'rocker', resolver: 'modern' },
+    { file: 'mod_rocker_beige.png',          label: 'Rocker bege',              defaultSize: [10, 6],   category: 'rocker', resolver: 'modern' },
+    { file: 'sov_rocker_blue.png',           label: 'Rocker azul',              defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'sov_rocker_blue_rusted.png',    label: 'Rocker azul enferrujado',  defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'sov_rocker_diamond_gunmetal.png', label: 'Rocker diamond gunmetal',defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'sov_rocker_diamond_silver.png', label: 'Rocker diamond prata',     defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'sov_rocker_glossy.png',         label: 'Rocker glossy',            defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'sov_rocker_matte.png',          label: 'Rocker matte',             defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'sov_rocker_olive.png',          label: 'Rocker oliva',             defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'sov_rocker_red_glossy.png',     label: 'Rocker vermelho glossy',   defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'sov_rocker_red_leather.png',    label: 'Rocker couro vermelho',    defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'sov_rocker_yellow.png',         label: 'Rocker amarelo',           defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    // ── Round ────────────────────────────────────────────────────────────────
+    { file: 'mod_round_glossy_black.png',    label: 'Round preto glossy',       defaultSize: [7, 7],    category: 'round',  resolver: 'modern' },
+    { file: 'mod_round_matte_black.png',     label: 'Round preto matte',        defaultSize: [7, 7],    category: 'round',  resolver: 'modern' },
+    { file: 'mod_round_brushed_metal.png',   label: 'Round metal escovado',     defaultSize: [7, 7],    category: 'round',  resolver: 'modern' },
+    { file: 'mod_round_beige.png',           label: 'Round bege',               defaultSize: [7, 7],    category: 'round',  resolver: 'modern' },
+    { file: 'sov_round_rust_green.png',      label: 'Round ferrugem verde',     defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    { file: 'sov_round_rust_blue.png',       label: 'Round ferrugem azul',      defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    { file: 'sov_round_diamond_steel.png',   label: 'Round diamond aço',        defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    { file: 'sov_round_worn_red.png',        label: 'Round desgastado vermelho',defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    { file: 'sov_round_worn_orange.png',     label: 'Round desgastado laranja', defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    { file: 'sov_round_shiny_steel.png',     label: 'Round aço brilhante',      defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    { file: 'sov_round_shiny_red.png',       label: 'Round vermelho brilhante', defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    { file: 'sov_round_electric_off.png',    label: 'Round elétrico',           defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    // sov_round_red_metal.png intentionally NOT listed: the file is a cropped sprite-sheet fragment (873x256, two buttons on white), not a housing. PNG kept on disk.
+    { file: 'sov_round_rusted_blue.png',     label: 'Round enferrujado azul',   defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    { file: 'sov_round_rusted_olive.png',    label: 'Round enferrujado oliva',  defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
+    { file: 'sov_round_rusted_red.png',      label: 'Round enferrujado vermelho',defaultSize: [7, 7],   category: 'round',  resolver: 'sov' },
+    // ── Push / Square ────────────────────────────────────────────────────────
+    { file: 'btn-square.png',                label: 'Square moderno',           defaultSize: [8, 8],    category: 'push',   resolver: 'modern' },
+    { file: 'sov_sq_boss.png',               label: 'Square boss',              defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
+    { file: 'sov_sq_flat.png',               label: 'Square flat',              defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
+    { file: 'sov_sq_waffle.png',             label: 'Square waffle',            defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
+    { file: 'sov_sq_grid.png',               label: 'Square grid',              defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
+    { file: 'sov_push.png',                  label: 'Push',                     defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
+    { file: 'sov_push_dish.png',             label: 'Push côncavo',             defaultSize: [7, 7],    category: 'push',   resolver: 'sov' },
+    { file: 'sov_push_worn.png',             label: 'Push desgastado',          defaultSize: [7, 7],    category: 'push',   resolver: 'sov' },
+    { file: 'sov_push_scratched.png',        label: 'Push arranhado',           defaultSize: [7, 7],    category: 'push',   resolver: 'sov' },
+    // ── Ignição ──────────────────────────────────────────────────────────────
+    { file: 'sov_key_slot.png',              label: 'Slot chave',               defaultSize: [8, 10],   category: 'ignition', resolver: 'sov' },
+    { file: 'sov_key_kamaz.png',             label: 'Chave Kamaz',              defaultSize: [8, 10],   category: 'ignition', resolver: 'sov' },
+    // ── Motor / Elétrica ─────────────────────────────────────────────────────
+    { file: 'engine_cir.png',                label: 'Motor circular',           defaultSize: [8, 8],    category: 'engine', resolver: 'modern' },
+    { file: 'engine_cr_vt.png',              label: 'Motor cromado VT',         defaultSize: [8, 8],    category: 'engine', resolver: 'modern' },
+    { file: 'engine_cromo.png',              label: 'Motor cromado',            defaultSize: [8, 8],    category: 'engine', resolver: 'modern' },
+    { file: 'engine_old.png',               label: 'Motor clássico',           defaultSize: [8, 8],    category: 'engine', resolver: 'modern' },
+    { file: 'engine_red.png',               label: 'Motor vermelho',           defaultSize: [8, 8],    category: 'engine', resolver: 'modern' },
+    // ── Rotativo ─────────────────────────────────────────────────────────────
+    { file: 'mod_rotary_lights.png',         label: 'Luzes (modern)',           defaultSize: [12, 12],  category: 'rotary', resolver: 'modern' },
+    { file: 'mod_rotary_wipers.png',         label: 'Limpadores (modern)',      defaultSize: [12, 12],  category: 'rotary', resolver: 'modern' },
+    { file: 'sov_rotary_lights.png',         label: 'Luzes (soviético)',        defaultSize: [12, 12],  category: 'rotary', resolver: 'sov' },
+    { file: 'sov_rotary_wipers.png',         label: 'Limpadores (soviético)',   defaultSize: [12, 12],  category: 'rotary', resolver: 'sov' },
+    // ── Toggle ───────────────────────────────────────────────────────────────
+    { file: 'sov_tog_up.png',                label: 'Toggle cima',              defaultSize: [6, 12],   category: 'toggle', resolver: 'sov' },
+    { file: 'sov_tog_mid.png',               label: 'Toggle meio',              defaultSize: [6, 12],   category: 'toggle', resolver: 'sov' },
+    { file: 'sov_tog_down.png',              label: 'Toggle baixo',             defaultSize: [6, 12],   category: 'toggle', resolver: 'sov' },
+    // ── Hazard ───────────────────────────────────────────────────────────────
+    { file: 'hazard_black.png',              label: 'Hazard preto',             defaultSize: [8, 8],    category: 'hazard', resolver: 'modern' },
+    { file: 'hazard_sq_blk.png',             label: 'Hazard quadrado',          defaultSize: [8, 8],    category: 'hazard', resolver: 'modern' },
+    { file: 'sov_push_hazard.png',           label: 'Hazard push',              defaultSize: [7, 7],    category: 'hazard', resolver: 'sov' },
+    { file: 'sov_push_hazard_off.png',       label: 'Hazard off',               defaultSize: [7, 7],    category: 'hazard', resolver: 'sov' },
+    { file: 'sov_push_hazard_on.png',        label: 'Hazard on',                defaultSize: [7, 7],    category: 'hazard', resolver: 'sov' },
+    // ── Freio ────────────────────────────────────────────────────────────────
+    { file: 'sov_push_parking_brake.png',    label: 'Parking brake push',       defaultSize: [7, 7],    category: 'brake',  resolver: 'sov' },
+    // ── Lâmpadas ─────────────────────────────────────────────────────────────
+    { file: 'sov_lamp_red_off.png',          label: 'Lâmpada vermelha off',     defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
+    { file: 'sov_lamp_red_on.png',           label: 'Lâmpada vermelha on',      defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
+    { file: 'sov_lamp_green_off.png',        label: 'Lâmpada verde off',        defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
+    { file: 'sov_lamp_green_on.png',         label: 'Lâmpada verde on',         defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
+    { file: 'sov_lamp_blue_off.png',         label: 'Lâmpada azul off',         defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
+    { file: 'sov_lamp_blue_on.png',          label: 'Lâmpada azul on',          defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
+    { file: 'sov_lamp_amber_off.png',        label: 'Lâmpada âmbar off',        defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
+    { file: 'sov_lamp_amber_on.png',         label: 'Lâmpada âmbar on',         defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
+    // ── Gauges / Dials ───────────────────────────────────────────────────────
+    { file: 'sov_dial_speed.png',            label: 'Velocímetro',              defaultSize: [18, 18],  category: 'gauge',  resolver: 'sov' },
+    { file: 'sov_dial_rpm.png',              label: 'RPM',                      defaultSize: [18, 18],  category: 'gauge',  resolver: 'sov' },
+    { file: 'sov_dial_fuel.png',             label: 'Combustível',              defaultSize: [12, 12],  category: 'gauge',  resolver: 'sov' },
+    { file: 'sov_dial_air.png',              label: 'Pressão de ar',            defaultSize: [12, 12],  category: 'gauge',  resolver: 'sov' },
+    { file: 'sov_lens.png',                  label: 'Gauge lens',               defaultSize: [12, 12],  category: 'gauge',  resolver: 'sov' },
+  ];
+
+  // Compatibilidade retroativa — qualquer código que ainda leia ASSETS_MODERN ou ASSETS_SOV
+  // continua funcionando enquanto migramos a UI (remover após Fase 2).
+  const ASSETS_MODERN = Object.fromEntries(
+    ASSET_CATALOG.filter(a => a.resolver !== 'sov').map(a => [a.file, { label: a.label, defaultSize: a.defaultSize }])
+  );
+  const ASSETS_SOV = Object.fromEntries(
+    ASSET_CATALOG.filter(a => a.resolver === 'sov').map(a => [a.file, { label: a.label, defaultSize: a.defaultSize }])
+  );
+  // PACKAGES mantido temporariamente para não quebrar UI atual (removido na Fase 2)
   const PACKAGES = [
-    { id: 'modern', label: 'Pacote Moderno', skin: 'eu_frame', assets: ASSETS_MODERN },
-    { id: 'soviet', label: 'Pacote Soviético', skin: 'sov_frame', assets: ASSETS_SOV }
+    { id: 'modern', label: 'Pacote Moderno',   skin: 'eu_frame',  assets: ASSETS_MODERN },
+    { id: 'soviet', label: 'Pacote Soviético', skin: 'sov_frame', assets: ASSETS_SOV   },
   ];
   // Lamps are passive telemetry telltales — never vehicle command keys. Catalog filtered by
   // lamp colour (red/green/blue/amber) from the asset filename.
@@ -136,7 +179,8 @@
       { id: 'right_turn_signal', name: 'Seta Direita', tel: 'blinkR', behavior: 'blink' },
       { id: 'low_beam', name: 'Luz de Presença / Farol Baixo', tel: 'lightsOn', behavior: 'steady' },
       { id: 'parking_lights', name: 'Luzes de Presença (só parking)', tel: 'parking', behavior: 'steady' },
-      { id: 'engine_running', name: 'Status do Motor Ligado', tel: 'engine', behavior: 'steady' }
+      { id: 'engine_running', name: 'Status do Motor Ligado', tel: 'engine', behavior: 'steady' },
+      { id: 'cruise_active', name: 'Piloto Automático (Cruise) Ligado', tel: 'cruiseOn', behavior: 'steady' }
     ],
     blue: [
       { id: 'high_beam', name: 'Farol Alto', tel: 'high', behavior: 'steady' }
@@ -154,6 +198,8 @@
     position_lights: 'parking_lights',
     presence: 'parking_lights',
     engine: 'engine_running',
+    cruise_on: 'cruise_active',
+    cruise_control: 'cruise_active',
     retarder_auto: 'retarder_active'
   };
   const DASHBOARDS = {
@@ -201,6 +247,7 @@
   let buttonsLocked = false;
   // Exclusive palette package (cascade). Defaults to the package that matches state.skin.
   let activePackageId = 'modern';
+  let activeCategory = 'all';
 
   function isLampAsset(asset) {
     return /(?:^|[_-])lamp[_-]|sov_lamp_/i.test(String(asset || ''));
@@ -215,7 +262,7 @@
   // Rotary selector: static housing photo (sov_rotary_dial) + rotating knob crop
   // (sov_rotary_knob). The CSS icon crown is only drawn for housings with no printed legend.
   function isRotaryAsset(asset) {
-    return /sov_rotary_(?:dial|base)/i.test(String(asset || ''))
+    return /sov_rotary_(?:dial|base|lights|wipers)/i.test(String(asset || ''))
       || /mod_rotary_(?:lights|wipers)\.png$/i.test(String(asset || ''));
   }
   // Measured off the printed legends (0deg = 12 o'clock, clockwise positive).
@@ -234,6 +281,34 @@
           { id: 'auto', deg: 0 },
           { id: 'lamp', deg: -68.2 },
           { id: 'beam', deg: 179 }
+        ]
+      };
+    }
+    // Soviet housings: same logic as the Modern ones, different art. Knob crops are 54.2% of the dial
+    // square and were photographed turned 28.6deg (measured on the files).
+    if (/sov_rotary_lights\.png$/i.test(key)) {
+      return {
+        functionId: 'lights',
+        pinAsset: 'sov_rotary_lights_knob.png',
+        pinLen: 54.2,
+        pinBake: 28.6,
+        states: [
+          { id: 'off', deg: -85 },
+          { id: 'parking', deg: 0 },
+          { id: 'low', deg: 93 }
+        ]
+      };
+    }
+    if (/sov_rotary_wipers\.png$/i.test(key)) {
+      return {
+        functionId: 'wipers',
+        pinAsset: 'sov_rotary_wipers_knob.png',
+        pinLen: 54.2,
+        pinBake: 28.6,
+        states: [
+          { id: 'off', deg: -88 },
+          { id: 'norm', deg: 0 },
+          { id: 'fast', deg: 92 }
         ]
       };
     }
@@ -299,7 +374,12 @@
     return id;
   }
   // Stock asset names are identity only; custom tags (PARKING, HAZARD…) paint as overlay.
+  // Text-label overlay is DEACTIVATED (Nando, 2026-10-22: feature dropped; removal tracked as a task).
+  // Reversible switch: flip to false to bring the overlay back. The stored item.label stays
+  // untouched because it is also the layer name shown in the Layers panel.
+  const LABEL_OVERLAY_DISABLED = true;
   function buttonOverlayLabel(item) {
+    if (LABEL_OVERLAY_DISABLED) return '';
     const label = String(item && item.label || '').trim();
     if (!label) return '';
     const def = getAssetDef(item.asset);
@@ -322,11 +402,29 @@
     if (ASSETS_SOV[key]) return ASSETS_SOV[key];
     return customAssets.find((asset) => asset.id === key) || null;
   }
+  function editorAssetSrc(entry) {
+    if (entry.resolver === 'sov') return 'skins/sov/btn/' + entry.file;
+    return 'skins/modern/' + entry.file;
+  }
+  // Round/rocker pieces are drawn as a static housing + a separate "<name>_key.png" disc/key
+  // (same split app.js uses at runtime). The palette thumbnail must stack both layers, otherwise
+  // the housing alone looks like an empty socket. Returns null for pieces with no key layer.
+  // The regex mirrors app.js isSegRound/isSegRocker so editor and app agree on what has a key.
+  function editorKeyLayer(entry) {
+    const file = String(entry && entry.file || '');
+    const kind = /(?:mod_rocker_|sov_rocker_)[^/]*(?<!_key)\.png$/i.test(file)
+      ? 'rocker'
+      : (/(?:mod_round_|sov_round_)[^/]*(?<!_key)\.png$/i.test(file) ? 'round' : null);
+    if (!kind) return null;
+    const keyFile = file.replace(/\.png$/i, '_key.png');
+    return { kind, file: keyFile, src: editorAssetSrc({ resolver: /^sov_/i.test(file) ? 'sov' : 'modern', file: keyFile }) };
+  }
+
   function assetImageSrc(key) {
     // Modern rotary housings and their knob crops always live under skins/modern,
     // even if the piece is dropped onto another board.
     if (/^mod_rotary_/i.test(String(key || ''))) return 'skins/modern/' + key;
-    if (/^sov_rotary_knob\.png$/i.test(String(key || ''))) return 'skins/sov/btn/' + key;
+    if (/^sov_rotary_(?:knob|lights_knob|wipers_knob)\.png$/i.test(String(key || ''))) return 'skins/sov/btn/' + key;
     // Prefer the active skin's pack when a key exists in both (e.g. btn-rocker-v.png).
     if (state.skin === 'sov_frame' && ASSETS_SOV[key]) return 'skins/sov/btn/' + key;
     if (ASSETS_MODERN[key]) return 'skins/modern/' + key;
@@ -506,6 +604,7 @@
     const localPayload = loadLocalPayload();
     const { payload: merged, seeded } = mergeBoardsPerKey(serverPayload, localPayload);
     if (seeded) needsSeedPush = true;
+    rescuePayload = computeRescue(serverPayload, localPayload); // BEFORE applyPayload/persist overwrite localStorage
     return applyPayload(merged);
   }
 
@@ -552,7 +651,318 @@
       return { ok: false, message };
     }
   }
+  // ---- Drafts and rescue ------------------------------------------------------------------
+  // Why this exists: at load the SERVER wins per board (see mergeBoardsPerKey) and every board
+  // already exists there, so anything edited but not yet published used to be dropped on the next
+  // reload. Three safety nets, none of which touches the bridge or the tablet:
+  //  1. rescue   - at boot, unpublished work found in localStorage is copied to its own key and
+  //                offered back through the "Recuperar trabalho local" button.
+  //  2. drafts   - "Salvar rascunho" downloads ALL boards to a .json; "Retomar rascunho" loads it.
+  //  3. warning  - closing/reloading with changes since the last draft/publish asks first.
+  const RESCUE_KEY = 'truckdeck.atomic.rescue.v1';
+  let unsavedWork = false;
+  let rescuePayload = null; // { savedAt, boards: { key: board in server (w/h) format }, customAssets }
+
+  function toServerBoard(board) {
+    const out = { orientations: {} };
+    const conv = (item) => {
+      if (item && item.w === undefined && item.width !== undefined) { const { width, height, ...rest } = item; return { ...rest, w: width, h: height }; }
+      return item;
+    };
+    Object.entries((board && board.orientations) || {}).forEach(([mode, data]) => {
+      out.orientations[mode] = { buttons: ((data && data.buttons) || []).map(conv), zones: ((data && data.zones) || []).map(conv) };
+    });
+    return out;
+  }
+  // Order-independent fingerprint of everything a user can change on a board.
+  function boardSignature(board) {
+    const r2 = (n) => Math.round(Number(n) * 100) / 100;
+    const parts = [];
+    ['landscape', 'portrait'].forEach((mode) => {
+      const data = board && board.orientations && board.orientations[mode];
+      ['buttons', 'zones'].forEach((kind) => {
+        ((data && data[kind]) || []).forEach((i) => parts.push([mode, kind, i.id, i.asset, i.functionId, i.label,
+          r2(i.x), r2(i.y), r2(i.w), r2(i.h), JSON.stringify(i.pictogram || null), 
+          i.color || '', i.hidden ? 1 : 0].join('|')));
+      });
+    });
+    return parts.sort().join('\n');
+  }
+  function findUnpublishedBoards(serverPayload, localPayload) {
+    const found = {};
+    if (!serverPayload || !localPayload || localPayload.schema !== initialState().schema) return found;
+    BOARD_KEYS.forEach((key) => {
+      if (!boardPresent(localPayload, key) || !boardPresent(serverPayload, key)) return; // a board missing on the server is seeded by mergeBoardsPerKey
+      const local = toServerBoard(boardForKey(localPayload, key));
+      const hasContent = ['landscape', 'portrait'].some((m) => local.orientations[m] && local.orientations[m].buttons.length);
+      if (!hasContent) return; // an empty local board is nothing worth rescuing
+      if (boardSignature(toServerBoard(boardForKey(serverPayload, key))) === boardSignature(local)) return; // already published
+      found[key] = local;
+    });
+    return found;
+  }
+  // The layout in localStorage can be ~3 MB (custom assets are inlined), so a rescue copy of
+  // everything would blow the ~5 MB quota. Keep only the custom assets the rescued boards use.
+  function referencedCustomAssets(boards, list) {
+    const used = new Set();
+    Object.values(boards).forEach((board) => Object.values((board && board.orientations) || {}).forEach((data) => {
+      ((data && data.buttons) || []).forEach((item) => { if (item && item.asset) used.add(item.asset); });
+    }));
+    return (Array.isArray(list) ? list : []).filter((a) => a && used.has(a.id));
+  }
+  function computeRescue(serverPayload, localPayload) {
+    const fresh = findUnpublishedBoards(serverPayload, localPayload);
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem(RESCUE_KEY) || 'null'); } catch (error) { stored = null; }
+    const boards = {};
+    // Older rescue entries stay only while the server still differs from them (once published they are stale).
+    if (stored && stored.boards && serverPayload) {
+      Object.entries(stored.boards).forEach(([key, board]) => {
+        if (!BOARD_KEYS.includes(key) || !boardPresent(serverPayload, key)) return;
+        if (boardSignature(toServerBoard(boardForKey(serverPayload, key))) !== boardSignature(toServerBoard(board))) boards[key] = board;
+      });
+    }
+    Object.assign(boards, fresh);
+    if (!Object.keys(boards).length) { try { localStorage.removeItem(RESCUE_KEY); } catch (error) { /* ignore */ } return null; }
+    const gotFresh = Object.keys(fresh).length > 0;
+    const out = {
+      savedAt: gotFresh ? new Date().toISOString() : (stored && stored.savedAt) || new Date().toISOString(),
+      boards,
+      customAssets: referencedCustomAssets(boards, (gotFresh && localPayload && Array.isArray(localPayload.customAssets)) ? localPayload.customAssets : ((stored && stored.customAssets) || []))
+    };
+    try { localStorage.setItem(RESCUE_KEY, JSON.stringify(out)); } catch (error) { /* quota: the in-memory copy still serves this session */ }
+    return out;
+  }
+  // All boards in server (w/h) format, whichever one is on screen. Same shape schedulePush() sends.
+  function buildAllBoardsPayload() {
+    const boards = {};
+    Object.entries(state.boards).forEach(([key, board]) => {
+      const orientations = {};
+      Object.entries(board.orientations).forEach(([mode, data]) => {
+        orientations[mode] = { buttons: data.buttons.map(exportElement), zones: data.zones.map(exportElement) };
+      });
+      boards[key] = { orientations };
+    });
+    return { ...state, boards, customAssets };
+  }
+  // Replaces only the boards present in `source`, through the same validated path a server refetch uses.
+  function applyBoardsFromPayload(source) {
+    const base = buildAllBoardsPayload();
+    Object.keys(source.boards || {}).forEach((key) => {
+      if (BOARD_KEYS.includes(key) && boardPresent(source, key)) base.boards[key] = toServerBoard(boardForKey(source, key));
+    });
+    if (Array.isArray(source.customAssets)) {
+      const have = new Set(base.customAssets.map((a) => a && a.id));
+      source.customAssets.forEach((a) => { if (a && typeof a.id === 'string' && !have.has(a.id)) base.customAssets.push(a); });
+    }
+    state = applyPayload(base);
+    activePackageId = packageIdForSkin(state.skin);
+    selection = [];
+    persist(); renderCustomAssetTools(); renderShippedAssetTools(); render();
+  }
+  function refreshRescueButton() {
+    const btn = $('#rescueButton');
+    if (!btn) return;
+    const n = rescuePayload ? Object.keys(rescuePayload.boards).length : 0;
+    btn.hidden = !n;
+    const discard = $('#rescueDiscardButton');
+    if (discard) discard.hidden = !n;
+    if (n) btn.textContent = 'Recuperar trabalho local (' + n + (n === 1 ? ' painel)' : ' painéis)');
+  }
+  // Drops the stale local copy for good. writeLocal() is what makes it stick: without it the old
+  // localStorage layout would simply re-trigger the rescue offer on the next load.
+  function discardRescue() {
+    if (!rescuePayload) return;
+    const ok = window.confirm('Descartar o trabalho local não publicado?\n\nIsto apaga a cópia guardada neste navegador. Se quiser guardá-la antes, clique em "Recuperar", depois em "Salvar rascunho".');
+    if (!ok) return;
+    rescuePayload = null;
+    try { localStorage.removeItem(RESCUE_KEY); } catch (error) { /* ignore */ }
+    writeLocal();
+    refreshRescueButton();
+    toast('Cópia local descartada.', 'success');
+    announce('Cópia local descartada.', 'success');
+  }
+  function applyRescue() {
+    if (!rescuePayload) return;
+    const count = Object.keys(rescuePayload.boards).length;
+    pushHistory(); // so Ctrl+Z brings back what was on screen before
+    applyBoardsFromPayload(rescuePayload);
+    try { localStorage.removeItem(RESCUE_KEY); } catch (error) { /* ignore */ }
+    rescuePayload = null;
+    refreshRescueButton();
+    toast('Trabalho local recuperado (' + count + ' painel/painéis). Ctrl+Z desfaz. Ainda não foi publicado.', 'success');
+    announce('Trabalho local recuperado.', 'success');
+  }
+  function saveDraft() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    const stamp = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+    const payload = { ...buildAllBoardsPayload(), draft: { savedAt: d.toISOString() } };
+    download('truckdeck-rascunho-' + stamp + '.json', JSON.stringify(payload, null, 2), 'application/json');
+    unsavedWork = false;
+    const pending = auditBoards(BOARD_KEYS);
+    if (pending.length) {
+      showProblems(pending, 'Rascunho salvo em Downloads.');
+    } else {
+      toast('Rascunho salvo (todos os painéis) na pasta Downloads. Nada foi enviado ao tablet.', 'success');
+      announce('Rascunho salvo.', 'success');
+    }
+  }
+  function validateDraft(report) {
+    if (!report || report.schema !== state.schema) throw new Error('o arquivo não é um layout do TruckDeck.');
+    if (!report.boards || typeof report.boards !== 'object') throw new Error('o arquivo não tem painéis.');
+    const keys = Object.keys(report.boards).filter((k) => BOARD_KEYS.includes(k));
+    if (!keys.length) throw new Error('nenhum painel reconhecido.');
+    keys.forEach((key) => {
+      ['landscape', 'portrait'].forEach((mode) => {
+        const o = report.boards[key] && report.boards[key].orientations && report.boards[key].orientations[mode];
+        if (!o || !Array.isArray(o.buttons) || !Array.isArray(o.zones)) throw new Error('painel ' + key + ' incompleto (' + mode + ').');
+        const ids = new Set();
+        o.buttons.concat(o.zones).forEach((item) => {
+          if (!item || typeof item.id !== 'string' || !item.id || ids.has(item.id)
+              || ['x', 'y', 'w', 'h'].some((f) => !Number.isFinite(item[f]))
+              || item.x < 0 || item.y < 0 || item.x > 100 || item.y > 100 || item.w <= 0 || item.h <= 0 || item.w > 100 || item.h > 100) {
+            throw new Error('elemento inválido em ' + key + '/' + mode + '.');
+          }
+          ids.add(item.id);
+        });
+      });
+    });
+    return keys;
+  }
+  async function loadDraft(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      const report = JSON.parse(await file.text());
+      const keys = validateDraft(report); // validate everything before touching state
+      pushHistory();
+      applyBoardsFromPayload(report);
+      unsavedWork = true;
+      toast('Rascunho carregado (' + keys.length + ' painel/painéis). Ainda não foi enviado ao tablet.', 'success');
+      announce('Rascunho carregado.', 'success');
+    } catch (error) {
+      const message = 'Rascunho inválido: ' + (error && error.message || error);
+      toast(message, 'error');
+      announce(message, 'error');
+    } finally {
+      input.value = '';
+    }
+  }
+  window.addEventListener('beforeunload', (event) => {
+    if (!unsavedWork) return;
+    event.preventDefault();
+    event.returnValue = ''; // the browser shows its own generic "leave site?" prompt
+  });
+
+  // ---- Pre-send check: keys / lights with no function ----------------------------------------
+  // Runs on "Publicar no tablet" (active board, asks before sending), on "Salvar rascunho" (all
+  // boards, warns only) and on the "Verificar" button. Flagged pieces get a red silhouette that
+  // pulses for PROBLEM_FLASH_MS. The rules mirror what app.js does at runtime, so this never
+  // cries wolf on pieces the app already handles:
+  //  - dials and the glass lens are passive by design;
+  //  - parking / hazard pushes and the lights / wipers rotaries get their function from the art
+  //    when functionId is empty (fnHint in app.js);
+  //  - a lamp with no functionId stays inert ("colour NEVER determines function").
+  const PROBLEM_FLASH_MS = 6000;
+  const BOARD_LABELS = { eu_frame: 'Modern', sov_frame: 'Siga Bem / Viva México', sov_white: 'Soviet · Branca', sov_military_1: 'Soviet · Military 1', sov_military_2: 'Soviet · Military 2' };
+  const PROBLEM_REASONS = { 'key-none': 'tecla sem função', 'key-invalid': 'função inexistente', 'lamp-none': 'luz sem função', 'lamp-invalid': 'indicador inexistente' };
+  const IMPLICIT_FUNCTION_ASSET = /sov_toggle_parking_brake|sov_push_parking_brake|sov_push_hazard(?:_off|_on)?(?:\.|$)|sov_rotary_(?:dial|base|lights|wipers)|mod_rotary_(?:lights|wipers)\.png$/i;
+  let problemFlash = null; // { until, keys: Set('board|orientation|id') }
+  let problemTimer = null;
+
+  function allLampIds() {
+    const ids = new Set();
+    Object.values(LAMP_TELEMETRY).forEach((list) => list.forEach((entry) => ids.add(entry.id)));
+    return ids;
+  }
+  // null when the button is fine, otherwise { kind: 'key'|'lamp', code }.
+  function buttonProblem(item, lampIds) {
+    if (!item || item.hidden) return null;
+    const asset = String(item.asset || '');
+    if (isCircularOverlayAsset(asset)) return null; // dials + lens: passive, no function by design
+    const fid = String(item.functionId || '');
+    if (isLampAsset(asset)) {
+      if (!fid) return { kind: 'lamp', code: 'lamp-none' };
+      return lampIds.has(resolveLampFunctionId(fid)) ? null : { kind: 'lamp', code: 'lamp-invalid' };
+    }
+    if (!fid) return IMPLICIT_FUNCTION_ASSET.test(asset) ? null : { kind: 'key', code: 'key-none' };
+    return fnOf(item) ? null : { kind: 'key', code: 'key-invalid' };
+  }
+  function auditBoards(keys) {
+    const lampIds = allLampIds();
+    const out = [];
+    keys.forEach((key) => {
+      const board = state.boards[key];
+      if (!board) return;
+      ['landscape', 'portrait'].forEach((mode) => {
+        const data = board.orientations && board.orientations[mode];
+        ((data && data.buttons) || []).forEach((item) => {
+          const problem = buttonProblem(item, lampIds);
+          if (problem) out.push({ key, mode, id: item.id, asset: item.asset, kind: problem.kind, code: problem.code });
+        });
+      });
+    });
+    return out;
+  }
+  function summarizeProblems(problems) {
+    const keys = problems.filter((p) => p.kind === 'key').length;
+    const lamps = problems.filter((p) => p.kind === 'lamp').length;
+    const parts = [];
+    if (keys) parts.push(keys + (keys === 1 ? ' tecla' : ' teclas') + ' sem função');
+    if (lamps) parts.push(lamps + (lamps === 1 ? ' luz' : ' luzes') + ' sem função');
+    return parts.join(' e ');
+  }
+  function describeProblems(problems, max = 8) {
+    const lines = problems.slice(0, max).map((p) => '• ' + (BOARD_LABELS[p.key] || p.key) + ' · ' + p.mode + ' · ' + p.id + ' — ' + PROBLEM_REASONS[p.code]);
+    if (problems.length > max) lines.push('• … e mais ' + (problems.length - max));
+    return lines.join('\n');
+  }
+  // True while a red silhouette should be drawn on this button (checked by renderStage).
+  function isFlaggedNow(item) {
+    return !!(problemFlash && Date.now() < problemFlash.until && problemFlash.keys.has(activeBoardKey() + '|' + orientation + '|' + item.id));
+  }
+  function showProblems(problems, prefix) {
+    clearTimeout(problemTimer);
+    problemFlash = { until: Date.now() + PROBLEM_FLASH_MS, keys: new Set(problems.map((p) => p.key + '|' + p.mode + '|' + p.id)) };
+    problemTimer = setTimeout(() => { problemFlash = null; renderStage(); }, PROBLEM_FLASH_MS);
+    renderStage();
+    const here = problems.filter((p) => p.key === activeBoardKey() && p.mode === orientation).length;
+    const elsewhere = problems.length - here;
+    let message = (prefix ? prefix + ' ' : '') + 'Atenção: ' + summarizeProblems(problems) + '.';
+    if (here) message += ' Em vermelho nesta tela: ' + here + '.';
+    if (elsewhere) message += ' Em outro painel ou orientação: ' + elsewhere + ' (troque de tela para vê-las piscar com "Verificar").';
+    toast(message, 'warn');
+    announce(message, 'warn');
+  }
+  function runCheck() {
+    const problems = auditBoards(BOARD_KEYS);
+    if (!problems.length) {
+      toast('Tudo certo: nenhuma tecla ou luz sem função.', 'success');
+      announce('Verificação concluída: nenhuma pendência.', 'success');
+      return;
+    }
+    showProblems(problems);
+  }
+  // Lets the red silhouette reach the screen before a blocking confirm() dialog opens.
+  function nextPaint() {
+    return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 60)));
+  }
+
   async function saveNow() {
+    // Pre-send check: only the board being sent (buildReport sends the active one).
+    const pending = auditBoards([activeBoardKey()]);
+    if (pending.length) {
+      showProblems(pending);
+      await nextPaint();
+      const proceed = window.confirm('Esta tela tem ' + summarizeProblems(pending) + ':\n\n' + describeProblems(pending) + '\n\nPublicar no tablet mesmo assim?');
+      if (!proceed) {
+        toast('Publicação cancelada. Corrija o que está em vermelho.', 'error');
+        announce('Publicação cancelada: há teclas ou luzes sem função.', 'error');
+        return;
+      }
+    }
     clearTimeout(pushTimer);
     writeLocal();
     const btn = $('#saveButton');
@@ -562,6 +972,7 @@
     const result = await pushToServer();
     if (btn) btn.disabled = false;
     if (result.ok) {
+      unsavedWork = false;
       announce('Painel Publicado!', 'success');
       toast('Painel Publicado!', 'success');
     } else {
@@ -677,6 +1088,7 @@
   // clears the redo stack, matching standard editor undo semantics.
   function snapshotForHistory() { return JSON.stringify({ state, customAssets }); }
   function pushHistory() {
+    unsavedWork = true;
     historyStack.push(snapshotForHistory());
     if (historyStack.length > HISTORY_LIMIT) historyStack.shift();
     redoStack = [];
@@ -765,16 +1177,15 @@
     $$('.skin-button').forEach((button) => button.addEventListener('click', () => setSkin(button.dataset.skin)));
     const sovSelect = $('#sovBgSelect');
     if (sovSelect) sovSelect.addEventListener('change', () => setSovBg(sovSelect.value));
-    const packageSelect = $('#packageSelect');
-    if (packageSelect) {
-      packageSelect.value = activePackageId;
-      packageSelect.addEventListener('change', () => {
-        activePackageId = packageSelect.value === 'soviet' ? 'soviet' : 'modern';
+    document.querySelectorAll('#categoryFilter .cat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#categoryFilter .cat-btn')
+          .forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeCategory = btn.dataset.cat;
         renderShippedAssetTools();
-        announce(activePackageId === 'soviet' ? 'Paleta: Pacote Soviético.' : 'Paleta: Pacote Moderno.');
       });
-    }
-    $$('.dashboard-tool').forEach(bindTool);
+    });    $$('.dashboard-tool').forEach(bindTool);
     $('#backgroundInput').addEventListener('change', handleBackgroundFile);
     $('#customAssetInput').addEventListener('change', handleCustomAssetFile);
     $('#resetBackgroundButton').addEventListener('click', () => { delete runtimeBackgrounds[orientation]; render(); announce('Fundo oficial restaurado.'); });
@@ -810,6 +1221,17 @@
     $('#copyGroupButton').addEventListener('click', copySelectionToClipboard);
     $('#pasteGroupButton').addEventListener('click', pasteClipboard);
     $('#exportButton').addEventListener('click', exportAll);
+    $('#draftSaveButton').addEventListener('click', saveDraft);
+    $('#draftLoadButton').addEventListener('click', () => $('#draftInput').click());
+    $('#draftInput').addEventListener('change', loadDraft);
+    $('#checkButton').addEventListener('click', runCheck);
+    $('#rescueButton').addEventListener('click', applyRescue);
+    $('#rescueDiscardButton').addEventListener('click', discardRescue);
+    $('#saveLocalButton').addEventListener('click', () => {
+      writeLocal();
+      announce('Estado salvo localmente.', 'success');
+      toast('Estado salvo localmente.', 'success');
+    });
     $('#importButton').addEventListener('click', () => $('#importInput').click());
     $('#saveButton').addEventListener('click', saveNow);
     $('#importInput').addEventListener('change', importReport);
@@ -943,10 +1365,6 @@
     if (state.skin === skin) return;
     state.skin = skin;
     state.sovBg = normalizeSovBg(state.sovBg);
-    // Cascade palette follows the skin tab by default (exclusive package view).
-    activePackageId = packageIdForSkin(skin);
-    const packageSelect = $('#packageSelect');
-    if (packageSelect) packageSelect.value = activePackageId;
     selection = [];
     renderShippedAssetTools();
     render();
@@ -975,34 +1393,36 @@
     const list = $('#assetList');
     if (!list) return;
     $$('.asset-tool:not(.is-custom), .package-group', list).forEach((node) => node.remove());
-    const pack = PACKAGES.find((entry) => entry.id === activePackageId) || PACKAGES[0];
+    // Filtro por categoria
+    const items = activeCategory === 'all'
+      ? ASSET_CATALOG
+      : ASSET_CATALOG.filter(a => a.category === activeCategory);
     const fragment = document.createDocumentFragment();
     const group = document.createElement('div');
     group.className = 'package-group';
-    group.dataset.package = pack.id;
+    group.dataset.category = activeCategory;
     const heading = document.createElement('div');
     heading.className = 'package-heading';
-    const matchesSkin = pack.skin === state.skin;
-    heading.innerHTML = '<span>' + escapeHtml(pack.label) + '</span><span class="package-kicker">' +
-      (matchesSkin ? 'PAINEL ATIVO' : 'MISTURAR') + '</span>';
+    const activeButton = document.querySelector('#categoryFilter .cat-btn.active');
+    const categoryLabel = activeButton ? activeButton.textContent : 'Todos';
+    heading.innerHTML = '<span>' + escapeHtml(categoryLabel) + '</span><span class="package-kicker">CATEGORIA</span>';
     group.appendChild(heading);
-    if (!matchesSkin) {
-      const hint = document.createElement('p');
-      hint.className = 'package-hint';
-      hint.textContent = 'Pacote de outro painel — arraste para misturar no canvas actual.';
-      group.appendChild(hint);
-    }
-    Object.keys(pack.assets).forEach((key) => {
-      const def = pack.assets[key];
+    items.forEach((entry) => {
+      const key = entry.file;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'asset-tool';
       button.draggable = true;
       button.dataset.asset = key;
-      button.dataset.label = def.label;
-      button.dataset.package = pack.id;
-      const wide = def.defaultSize[0] > def.defaultSize[1] * 1.6;
-      button.innerHTML = '<span class="asset-preview' + (wide ? ' asset-preview-wide' : '') + '"><img src="' + assetImageSrc(key) + '" alt=""></span><span><strong>' + escapeHtml(def.label) + '</strong><small>' + escapeHtml(key) + '</small></span>';
+      button.dataset.label = entry.label;
+      button.dataset.package = entry.resolver === 'sov' ? 'soviet' : 'modern';
+      const wide = entry.defaultSize[0] > entry.defaultSize[1] * 1.6;
+      const keyLayer = editorKeyLayer(entry);
+      // .asset-stack shrink-wraps the housing image so the key layer's % inset matches the app.
+      const thumb = keyLayer
+        ? '<span class="asset-stack"><img src="' + editorAssetSrc(entry) + '" alt=""><img class="asset-key asset-key-' + keyLayer.kind + '" src="' + keyLayer.src + '" alt=""></span>'
+        : '<img src="' + editorAssetSrc(entry) + '" alt="">';
+      button.innerHTML = '<span class="asset-preview' + (wide ? ' asset-preview-wide' : '') + '">' + thumb + '</span><span><strong>' + escapeHtml(entry.label) + '</strong><small>' + escapeHtml(key) + '</small></span>';
       bindTool(button);
       group.appendChild(button);
     });
@@ -1011,13 +1431,10 @@
     if (firstCustom) list.insertBefore(fragment, firstCustom);
     else list.appendChild(fragment);
     const buttonsTitle = $('#buttonsPackageTitle');
-    if (buttonsTitle) buttonsTitle.textContent = pack.label;
+    if (buttonsTitle) buttonsTitle.textContent = categoryLabel;
     const buttonsKicker = $('#buttonsPackageKicker');
-    if (buttonsKicker) buttonsKicker.textContent = 'PACOTE';
-    const packageSelect = $('#packageSelect');
-    if (packageSelect) packageSelect.value = pack.id;
+    if (buttonsKicker) buttonsKicker.textContent = 'CATEGORIA';
   }
-
   // Scale the stage box with object-fit:contain math so portrait (tall) plates
   // fit fully inside .canvas-scroll — no top/bottom crop from overflow:hidden + cover.
   function fitStage(bg) {
@@ -1103,6 +1520,20 @@
         img.src = assetImageSrc(item.asset);
         img.alt = item.label || item.asset;
         node.appendChild(img);
+        const catalogEntry = ASSET_CATALOG.find((entry) => entry.file === item.asset);
+        const keyLayer = editorKeyLayer(catalogEntry);
+        if (keyLayer && keyLayer.src) {
+          const keyImg = document.createElement('img');
+          keyImg.className = 'canvas-key canvas-key-' + keyLayer.kind;
+          keyImg.src = keyLayer.src;
+          keyImg.alt = '';
+          keyImg.setAttribute('aria-hidden', 'true');
+          // Box comes from keyboxes.js (fractions of the housing) so the key stretches WITH the housing.
+          const kb = window.KEY_BOXES && window.KEY_BOXES[item.asset];
+          if (kb) { keyImg.style.left = kb[0] + '%'; keyImg.style.top = kb[1] + '%'; keyImg.style.width = kb[2] + '%'; keyImg.style.height = kb[3] + '%'; keyImg.style.inset = 'auto'; keyImg.style.left = kb[0] + '%'; keyImg.style.top = kb[1] + '%'; }
+          keyImg.draggable = false;
+          node.appendChild(keyImg);
+        }
         if (rotary) {
           const preset = modernRotaryPreset(item.asset);
           const states = (item.states && item.states.length) ? item.states : (preset && preset.states);
@@ -1127,6 +1558,15 @@
           tint.className = 'tint-overlay';
           tint.style.background = item.color;
           node.appendChild(tint);
+        }
+        if (isFlaggedNow(item)) {
+          // Red silhouette = the art's own alpha shape used as a mask, so it follows the key outline.
+          node.classList.add('is-problem');
+          const silhouetteSrc = assetImageSrc(item.asset);
+          if (silhouetteSrc) node.style.setProperty('--art-url', 'url("' + silhouetteSrc.replace(/\\/g, '/').replace(/"/g, '\\"') + '")');
+          const silhouette = document.createElement('span');
+          silhouette.className = 'problem-silhouette';
+          node.appendChild(silhouette);
         }
         const hit = document.createElement('span');
         hit.className = 'hit';
@@ -1961,7 +2401,7 @@
   function announce(message, state) {
     const el = $('#statusMessage');
     el.textContent = message;
-    el.classList.remove('is-pending', 'is-success', 'is-error');
+    el.classList.remove('is-pending', 'is-success', 'is-error', 'is-warn');
     if (state) el.classList.add('is-' + state);
   }
   let toastTimer = null;
@@ -1970,11 +2410,11 @@
     if (!el) return;
     clearTimeout(toastTimer);
     el.textContent = message;
-    el.classList.remove('is-pending', 'is-success', 'is-error');
+    el.classList.remove('is-pending', 'is-success', 'is-error', 'is-warn');
     el.classList.add('is-' + state);
     el.hidden = false;
     if (state !== 'pending') {
-      toastTimer = setTimeout(() => { el.hidden = true; }, state === 'error' ? 6000 : 2600);
+      toastTimer = setTimeout(() => { el.hidden = true; }, state === 'error' ? 6000 : state === 'warn' ? 9000 : 2600);
     }
   }
 
@@ -2025,6 +2465,7 @@
     state = await loadState();
     activePackageId = packageIdForSkin(state.skin);
     init();
+    refreshRescueButton();
     if (needsSeedPush) { needsSeedPush = false; schedulePush(); }
     openEvents();
   }

@@ -463,6 +463,7 @@
     low_beam: { tel: 'low', behavior: 'steady' },
     parking_lights: { tel: 'parking', behavior: 'steady' },
     engine_running: { tel: 'engine', behavior: 'steady' },
+    cruise_active: { tel: 'cruiseOn', behavior: 'steady' },
     high_beam: { tel: 'high', behavior: 'steady' }
   };
   const LAMP_ID_ALIASES = {
@@ -477,6 +478,8 @@
     position_lights: 'parking_lights',
     presence: 'parking_lights',
     engine: 'engine_running',
+    cruise_on: 'cruise_active',
+    cruise_control: 'cruise_active',
     retarder_auto: 'retarder_active'
   };
   function resolveLampIndicatorId(functionId) {
@@ -545,6 +548,7 @@
     if (custom) return custom.src || null;
     if (typeof key === 'string' && /^mod_rotary_/i.test(key)) return SKIN_PATH + 'modern/' + key;
     if (typeof key === 'string' && key.indexOf('sov_') === 0) return SKIN_PATH + 'sov/btn/' + key;
+    if (typeof key === 'string' && /^mod_/i.test(key)) return SKIN_PATH + 'modern/' + key;
     if (skin === 'sov_frame') return SKIN_PATH + 'sov/btn/' + key;
     return SKIN_PATH + 'modern/' + key;
   }
@@ -664,8 +668,12 @@
       // Multi-stage lever family: editor places ONE state (mid/off/up); app swaps up/down art.
       const isTog = /^sov_tog_(?:up|mid|down)(?:\.|$)/i.test(assetKey) || /sov_toggle_/i.test(assetKey);
       const isRocker = /btn-rocker/i.test(assetKey);
-      const isModLights = /mod_rotary_lights\.png$/i.test(assetKey);
-      const isModWipers = /mod_rotary_wipers\.png$/i.test(assetKey);
+      const isSegRound = /(?:mod_round_|sov_round_)[^/]*(?<!_key)\.png$/i.test(assetKey);
+      const isSegRocker = /(?:mod_rocker_|sov_rocker_)[^/]*(?<!_key)\.png$/i.test(assetKey);
+      // Modern (mod_) and Soviet (sov_) selector housings share one logic; only the art differs.
+      const isModLights = /(?:mod|sov)_rotary_lights\.png$/i.test(assetKey);
+      const isModWipers = /(?:mod|sov)_rotary_wipers\.png$/i.test(assetKey);
+      const rotFam = /^sov_/i.test(assetKey) ? 'sov' : 'mod';
       const isRotary = /sov_rotary_(?:dial|base)/i.test(assetKey) || isModLights || isModWipers;
       // Static-frame contract (Fernando, 2026-10-19): housing/casing never scales or tilts —
       // only an inner well sinks on press. Covers square bosses/grids/waffles, rocker casings,
@@ -709,6 +717,8 @@
       if (isTog) out.tog = true;
       if (isHazLit) out.hazardFail = true; // class name kept; means "lit indicator, static body"
       if (isRocker) out.rocker = true;
+      if (isSegRound) { out.segRound = true; out.roundKeyAsset = String(out.asset || '').replace(/\.png$/i, '_key.png'); }
+      if (isSegRocker) { out.segRocker = true; out.rockerKeyAsset = String(out.asset || '').replace(/\.png$/i, '_key.png'); }
       if (isFrameStatic) out.frameStatic = true;
       // Yellow parking push: the black bezel is bolted to the panel and must NOT move, so the
       // photo ships as two layers — _frame (static housing + dark recess) and _core (the yellow
@@ -726,17 +736,17 @@
         if (isModLights) out.modRotary = 'lights';
         if (isModWipers) out.modRotary = 'wipers';
         out.states = normalizeRotaryStates(b.states, resolved, assetKey);
-        const pinName = b.pinAsset || (isModLights ? 'mod_rotary_lights_knob.png'
-          : isModWipers ? 'mod_rotary_wipers_knob.png' : 'sov_rotary_knob.png');
+        const pinName = b.pinAsset || (isModLights ? rotFam + '_rotary_lights_knob.png'
+          : isModWipers ? rotFam + '_rotary_wipers_knob.png' : 'sov_rotary_knob.png');
         out.pinAsset = resolveAtomicAsset(customAssets, resolvedSkin, pinName);
         out.crownR = clamp(Number(b.crownR) || 42, 0, 48);
         // Knob disc diameter as a % of the dial square. 58 = the Soviet well.
         // Modern crops are measured: lights 56.4, wipers 57.6.
-        const lenDefault = isModLights ? 56.4 : isModWipers ? 57.6 : 58;
+        const lenDefault = rotFam === 'sov' && (isModLights || isModWipers) ? 54.2 : isModLights ? 56.4 : isModWipers ? 57.6 : 58;
         out.pinLen = clamp(Number(b.pinLen) || lenDefault, 20, 100);
         // The knob art is photographed already turned; subtract its baked angle so a state's
         // `deg` is the real legend angle printed on the housing (0 = 12 o'clock, cw +).
-        const bakeDefault = isModLights ? 27.3 : isModWipers ? 26.5 : 24.1;
+        const bakeDefault = rotFam === 'sov' && (isModLights || isModWipers) ? 28.6 : isModLights ? 27.3 : isModWipers ? 26.5 : 24.1;
         out.pinBake = Number.isFinite(Number(b.pinBake)) ? Number(b.pinBake) : bakeDefault;
       }
       // "Down" half of a rocker tilts the other way while held.
@@ -804,7 +814,7 @@
   // the player's own, not a panel's: they live once in store.prefs and are copied onto every panel
   // (the rest of the app keeps reading them from the panel). Changing one on any panel changes it
   // on all of them, and a panel added later starts with the same settings.
-  const GLOBAL_KEYS = ['lang', 'units', 'temp', 'gearCrawlers', 'lights', 'cabin', 'brightness', 'names', 'keyLabels', 'pictograms', 'labelFont', 'autoRotate', 'obdTheme'];
+  const GLOBAL_KEYS = ['lang', 'units', 'temp', 'gearCrawlers', 'lights', 'cabin', 'brightness', 'names', 'keyLabels', 'pictograms', 'labelFont', 'autoRotate', 'obdTheme', 'pictoLight', 'pictoCustom', 'pictoOpacity', 'pictoGlow'];
   const LABEL_FONTS = [
     ['barlow', 'Barlow Condensed'],
     ['share', 'Share Tech Mono'],
@@ -812,6 +822,17 @@
     ['roboto', 'Roboto Condensed'],
     ['oswald', 'Oswald'],
   ];
+  const PICTO_LIGHT_COLORS = { white: '#f2f5f7', amber: '#be801e', green: '#267e47' };
+  function normalizePictoLight(value) {
+    return ['white', 'amber', 'green', 'custom'].includes(value) ? value : 'white';
+  }
+  function normalizePictoCustom(value) {
+    return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? String(value).toLowerCase() : PICTO_LIGHT_COLORS.white;
+  }
+  function normalizePictoNumber(value, fallback, min, max) {
+    const number = Number(value);
+    return clamp(Number.isFinite(number) ? number : fallback, min, max);
+  }
   function ensurePrefs() {
     const st = S.store;
     let migrated = false;
@@ -848,6 +869,10 @@
     if (!st.prefs.keyLabels) st.prefs.keyLabels = st.prefs.names || 'show';
     if (!st.prefs.pictograms) st.prefs.pictograms = 'show';
     if (!st.prefs.labelFont) st.prefs.labelFont = 'barlow';
+    st.prefs.pictoLight = normalizePictoLight(st.prefs.pictoLight);
+    st.prefs.pictoCustom = normalizePictoCustom(st.prefs.pictoCustom);
+    st.prefs.pictoOpacity = normalizePictoNumber(st.prefs.pictoOpacity, 0.57, 0.20, 1.00);
+    st.prefs.pictoGlow = normalizePictoNumber(st.prefs.pictoGlow, 0.81, 0, 1);
     // One-off, re-armed: rotReset 1 already ran, then auto-rotate was saved off.
     // A tall window kept Modern and both Scanias on the landscape cut. Soviet
     // already follows the screen. Turn the switch back on once; the player can
@@ -869,6 +894,18 @@
       l.binds = Object.assign({}, pr.binds);
     }
     app.dataset.obdTheme = pr.obdTheme || 'v8-blue';
+    const lightMode = normalizePictoLight(pr.pictoLight);
+    const lightColor = lightMode === 'custom' ? normalizePictoCustom(pr.pictoCustom) : PICTO_LIGHT_COLORS[lightMode];
+    const opacity = normalizePictoNumber(pr.pictoOpacity, 0.57, 0.20, 1.00);
+    const glow = normalizePictoNumber(pr.pictoGlow, 0.81, 0, 1);
+    const rgbValue = parseInt(lightColor.slice(1), 16);
+    const rgb = [(rgbValue >> 16) & 255, (rgbValue >> 8) & 255, rgbValue & 255].join(',');
+    const filter = glow === 0 ? 'none'
+      : 'drop-shadow(0 0 ' + (1 + glow * 2).toFixed(2) + 'px rgba(' + rgb + ',' + (0.45 + glow * 0.45).toFixed(3) + ')) '
+        + 'drop-shadow(0 0 ' + (3 + glow * 7).toFixed(2) + 'px rgba(' + rgb + ',' + (glow * 0.75).toFixed(3) + '))';
+    panel.style.setProperty('--picto-light', lightColor);
+    panel.style.setProperty('--picto-opacity', String(opacity));
+    panel.style.setProperty('--picto-filter', filter);
   }
   function setPref(key, value) { S.store.prefs[key] = value; save(); }
 
@@ -1162,6 +1199,8 @@
     if (key === 'engineStalled') return !!(t.electric && !t.engine && (Number(t.rpm) || 0) === 0);
     if (key === 'trailerBrake') return t.trailerBrake !== undefined ? !!t.trailerBrake : false; // stub: SDK gap
     if (key === 'engine') return t.engine !== undefined ? !!t.engine : (Number(t.rpm) || 0) > 0;
+    // Cruise control engaged = the SDK reports a set speed (same test the OBD / Scania screens use).
+    if (key === 'cruiseOn') return Number(t.cruise) > 0.5;
     // `diff` passes through t.diff when the helper sends it (frames_scania25 already maps diffLock).
     return t[key];
   }
@@ -1226,6 +1265,19 @@
       { id: 'norm', stage: 2, deg: 0.6 },
       { id: 'fast', stage: 3, deg: -84.8 },
       { id: 'off', stage: 0, deg: 180 }
+    ],
+    // Soviet housings (sov_rotary_lights / sov_rotary_wipers): angles measured on the printed legends.
+    // Lights: OFF/PARK at 9h, small head-lamp at 12h (parking), dipped beam at 3h. Click order = game cycle.
+    sov_lights: [
+      { id: 'off', stage: 0, deg: -85 },
+      { id: 'parking', stage: 2, deg: 0 },
+      { id: 'low', stage: 3, deg: 93 }
+    ],
+    // Wipers: OFF at 9h, wiper at 12h, wiper + wash at 3h. Same hold / one-tap-per-detent logic as the Modern one.
+    sov_wipers: [
+      { id: 'off', stage: 0, deg: -88 },
+      { id: 'norm', stage: 1, deg: 0 },
+      { id: 'fast', stage: 2, deg: 92 }
     ]
   };
   // Icons come from the shared catalog only (allowlist); an unknown name draws nothing instead
@@ -1238,6 +1290,8 @@
     const key = String(assetKey || '');
     if (/mod_rotary_lights/i.test(key)) return ROTARY_PRESETS.mod_lights;
     if (/mod_rotary_wipers/i.test(key)) return ROTARY_PRESETS.mod_wipers;
+    if (/sov_rotary_lights/i.test(key)) return ROTARY_PRESETS.sov_lights;
+    if (/sov_rotary_wipers/i.test(key)) return ROTARY_PRESETS.sov_wipers;
     return ROTARY_PRESETS[fnId];
   }
   function normalizeRotaryStates(raw, fnId, assetKey) {
@@ -2242,6 +2296,28 @@
         node.style.setProperty('--pb-core', cssUrl(w.pbCore));
         node.innerHTML += '<i class="pb-core" aria-hidden="true"></i>';
       }
+      // Round push buttons: static housing cap + separate key disc layer.
+      // applyKeyBox(): key box as % of the housing (keyboxes.js) so the key stretches with it.
+      function applyKeyBox(n, keyAsset) {
+        const house = String(keyAsset || '').split('/').pop().replace(/_key\.png$/i, '.png');
+        const kb = window.KEY_BOXES && window.KEY_BOXES[house];
+        if (!kb) return;
+        n.style.setProperty('--kb-l', kb[0] + '%'); n.style.setProperty('--kb-t', kb[1] + '%');
+        n.style.setProperty('--kb-w', kb[2] + '%'); n.style.setProperty('--kb-h', kb[3] + '%');
+      }
+      if (w.segRound && w.roundKeyAsset) {
+        node.classList.add('seg-round');
+        node.style.setProperty('--round-key', cssUrl(w.roundKeyAsset));
+        applyKeyBox(node, w.roundKeyAsset);
+        node.innerHTML += '<i class="round-key" aria-hidden="true"></i>';
+      }
+      // Rocker push buttons: static housing cap + separate key layer.
+      if (w.segRocker && w.rockerKeyAsset) {
+        node.classList.add('seg-rocker');
+        node.style.setProperty('--rocker-key', cssUrl(w.rockerKeyAsset));
+        applyKeyBox(node, w.rockerKeyAsset);
+        node.innerHTML += '<i class="rocker-key" aria-hidden="true"></i>';
+      }
       // Static-frame housings: single-layer photos, no separate sink layer (frame stays
       // fully static and unadorned until a second inner-key asset exists).
       // Rotary selector: static base (.cap) + static icon crown + the pin as the ONLY moving
@@ -2264,8 +2340,7 @@
       if (w.keyTurn) mountKeyCore(node, w);
       if (w.asset && w.picto) {
         node.innerHTML += '<span class="atomic-picto" style="left:' + w.picto.ox + '%;top:' + w.picto.oy
-          + '%;width:' + w.picto.w + '%;height:' + w.picto.h + '%;opacity:' + w.picto.op
-          + (w.picto.color ? ';color:' + w.picto.color : '') + '">' + iconSvg(w.picto.icon) + '</span>';
+          + '%;width:' + w.picto.w + '%;height:' + w.picto.h + '%">' + iconSvg(w.picto.icon) + '</span>';
       }
       if (w.label) {
         const lb = w.labelBox || {};
@@ -2522,6 +2597,13 @@
   // Like the truck: the first stage of the lights switches the dash lighting on, and it then
   // stays on when the lights are switched off again, until the electrics go off.
   let dashLit = false;
+  let pictoLightsOn = null;
+  function updatePictoLightsState() {
+    const next = telValue('lightsOn') === true;
+    if (next === pictoLightsOn) return;
+    pictoLightsOn = next;
+    panel.classList.toggle('lights-on', next);
+  }
   function backlit() {
     const mode = layout().lights || 'auto';
     if (mode === 'on') return true;
@@ -4136,6 +4218,7 @@
   function updateStates() {
     updateObc();
     updateExtras();
+    updatePictoLightsState();
     const _isScaniaSR = page().skin === 'scania_frame';
     const _isModern = page().skin === 'eu_frame';
     if (_isScaniaSR) {
@@ -4725,7 +4808,7 @@
     if (sheetHandler && ev.target.dataset.field && ev.target.tagName !== 'SELECT' && ev.target.type !== 'checkbox') sheetHandler('field', ev.target, ev);
   });
   sheet.addEventListener('change', (ev) => {
-    if (sheetHandler && ev.target.dataset.field && (ev.target.tagName === 'SELECT' || ev.target.type === 'checkbox')) sheetHandler('field', ev.target, ev);
+    if (sheetHandler && ev.target.dataset.field && (ev.target.tagName === 'SELECT' || ev.target.type === 'checkbox' || ev.target.dataset.commit)) sheetHandler('field', ev.target, ev);
   });
 
   // A destructive button asks for a second tap instead of a confirm() dialog
@@ -5149,6 +5232,12 @@
       '<label class="field grow"><span>Key names</span><select data-field="names">' + options([['show', 'Shown'], ['hide', 'Hidden']], pr.names || 'show') + '</select></label></div>' +
       '<div class="row"><label class="field grow"><span>Text labels</span><select data-field="keyLabels">' + options([['show', 'Shown'], ['hide', 'Hidden']], pr.keyLabels || 'show') + '</select></label>' +
       '<label class="field grow"><span>Pictograms</span><select data-field="pictograms">' + options([['show', 'Shown'], ['hide', 'Hidden']], pr.pictograms || 'show') + '</select></label></div>' +
+      '<div class="picto-light-settings"><h4>Pictogram backlight</h4><div class="picto-light-chips">' +
+      [['white', 'White'], ['amber', 'Amber'], ['green', 'Green'], ['custom', 'Custom']].map((item) =>
+        '<button type="button" class="picto-light-chip' + (normalizePictoLight(pr.pictoLight) === item[0] ? ' selected' : '') + '" data-act="pictoLight" data-picto-light="' + item[0] + '">' + item[1] + '</button>').join('') + '</div>' +
+      '<label class="field picto-custom-field"' + (normalizePictoLight(pr.pictoLight) === 'custom' ? '' : ' hidden') + '><span>Custom colour</span><input type="color" data-field="pictoCustom" data-commit="true" value="' + esc(normalizePictoCustom(pr.pictoCustom)) + '"></label>' +
+      '<label class="field"><span>Symbol opacity</span><input type="range" min="0.20" max="1.00" step="0.01" data-field="pictoOpacity" data-commit="true" value="' + normalizePictoNumber(pr.pictoOpacity, 0.57, 0.20, 1.00) + '"></label>' +
+      '<label class="field"><span>Halo brightness</span><input type="range" min="0" max="1" step="0.01" data-field="pictoGlow" data-commit="true" value="' + normalizePictoNumber(pr.pictoGlow, 0.81, 0, 1) + '"></label></div>' +
       '<label class="field"><span>Label font</span><select data-field="labelFont">' + options(LABEL_FONTS, pr.labelFont || 'barlow') + '</select></label>' +
       '<label class="field"><span>Dark cabin</span><select data-field="cabin">' + options([
         ['off', 'Off'], ['auto', 'Auto: follows the game clock'], ['dark', 'Always dark'],
@@ -5193,8 +5282,21 @@
       '<button class="btn" data-act="pin">Connect</button></div>' +
       (window.HuntersApp ? '<button class="btn" data-act="changepc">Connect to another PC</button>' : '<button class="btn" data-act="fullscreen">Full screen</button>') +
       '<p class="note">Version ' + esc(window.TRUCKDECK_VERSION || 'unknown') + '</p></div>',
-      (act, target) => {
+      (act, target, event) => {
         if (act === 'field') {
+          if (target.dataset.field === 'pictoCustom' || target.dataset.field === 'pictoOpacity' || target.dataset.field === 'pictoGlow') {
+            const f = target.dataset.field;
+            const value = f === 'pictoCustom' ? normalizePictoCustom(target.value)
+              : normalizePictoNumber(target.value, f === 'pictoOpacity' ? 0.57 : 0.81, f === 'pictoOpacity' ? 0.20 : 0, 1);
+            if (event && event.type === 'input') {
+              pr[f] = value;
+              applyPrefs();
+            } else {
+              setPref(f, value);
+              applyPrefs();
+            }
+            return;
+          }
           if (target.dataset.field.indexOf('sc25:') === 0) { l.sc25 = l.sc25 || {}; l.sc25[target.dataset.field.slice(5)] = target.value; save(); renderPanel(); return; }
           if (target.dataset.field === 'sovBg') {
             l.sovBg = sovBgOf({ sovBg: target.value });
@@ -5216,6 +5318,13 @@
           l[target.dataset.field] = target.value || (target.dataset.field === 'name' ? 'Panel' : target.value);
           save();
           renderPanel();
+        } else if (act === 'pictoLight') {
+          const value = normalizePictoLight(target.dataset.pictoLight);
+          setPref('pictoLight', value);
+          applyPrefs();
+          const settings = target.closest('.picto-light-settings');
+          settings.querySelectorAll('.picto-light-chip').forEach((chip) => chip.classList.toggle('selected', chip.dataset.pictoLight === value));
+          settings.querySelector('.picto-custom-field').hidden = value !== 'custom';
         } else if (act === 'sovBg') {
           // Tablet background thumbnail tapped — update sovBg and re-render
           const l2 = layout();

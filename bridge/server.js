@@ -513,9 +513,7 @@ const server = http.createServer(async (req, res) => {
     const staticPeer = req.socket.remoteAddress || '';
     const staticIsLoopback = staticPeer === '127.0.0.1' || staticPeer === '::1' || staticPeer === '::ffff:127.0.0.1';
     const staticIsAppClient = url.searchParams.get('client') === 'app';
-    let decodedRoute;
-    try { decodedRoute = decodeURIComponent(route); } catch (e) { res.writeHead(400); res.end(); return; }
-    serveStatic(decodedRoute, res, staticIsLoopback, staticIsAppClient);
+    serveStatic(decodeURIComponent(route), res, staticIsLoopback, staticIsAppClient);
     return;
   }
 
@@ -806,6 +804,9 @@ server.listen(PORT, '0.0.0.0', () => {
   if (ips.length) {
     console.log('  No app? Open this in the device browser instead:');
     for (const a of ips) console.log('    http://' + a.ip + ':' + PORT + '/?pin=' + config.pin);
+    console.log('');
+    console.log('  Layout Editor (este PC):');
+    console.log('    http://localhost:' + PORT + '/editor.html');
     console.log('');
     console.log('  The tablet must be on the same router as this PC. A guest Wi-Fi');
     console.log('  or a repeater with its own subnet will not reach this address.');
