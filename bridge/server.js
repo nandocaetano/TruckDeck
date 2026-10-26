@@ -7,16 +7,31 @@
 // every browser, so there is nothing to install and nothing to compile on the PC.
 'use strict';
 
-// Prevent any unhandled async throw from killing the bridge process silently.
-// Log the error and keep running — a crashed bridge leaves keys stuck in the game.
+// --- Crash-to-file logger: when double-clicked, there is no console. ---
+const _crashFs = require('fs');
+const _crashPath = require('path');
+const _crashLog = _crashPath.join(
+  _crashPath.dirname(process.execPath || process.argv[0]),
+  'bridge-crash.log'
+);
+function _writeCrash(label, err) {
+  try {
+    const line = new Date().toISOString() + ' [' + label + '] '
+      + (err && err.stack ? err.stack : String(err)) + '\n';
+    _crashFs.appendFileSync(_crashLog, line);
+  } catch (_) { /* nothing left to do */ }
+}
 process.on('uncaughtException', (err) => {
+  _writeCrash('uncaughtException', err);
   console.error('[bridge] Uncaught exception (bridge kept alive):', err.message);
 });
 process.on('unhandledRejection', (reason) => {
+  _writeCrash('unhandledRejection', reason);
   console.error('[bridge] Unhandled rejection (bridge kept alive):', reason);
 });
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -37,6 +52,154 @@ const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const LAYOUTS_FILE = path.join(DATA_DIR, 'layouts.json');
 const ATOMIC_LAYOUT_FILE = path.join(DATA_DIR, 'atomic-layout.json');
 const ATOMIC_LAYOUT_SCHEMA = 'desktruck.atomic-layout/v1';
+
+async function ensureScsPlugin() {
+  const zipPath = path.join(os.tmpdir(), 'truckdeck-scs-plugin.zip');
+  const extractDir = path.join(os.tmpdir(), 'truckdeck-scs-plugin');
+  const scriptPath = path.join(os.tmpdir(), 'td-plugin-install.ps1');
+
+  const run = (command, args) => new Promise((resolve, reject) => {
+    const child = spawn(command, args, { shell: false, windowsHide: true });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve({ stdout, stderr });
+      else reject(new Error(command + ' exited with code ' + code + (stderr ? ': ' + stderr.trim() : '')));
+    });
+  });
+
+  const download = (url, destination, redirects = 0) => new Promise((resolve, reject) => {
+    if (redirects > 5) { reject(new Error('too many download redirects')); return; }
+    const request = https.get(url, (response) => {
+      if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
+        response.resume();
+        const nextUrl = new URL(response.headers.location, url).toString();
+        download(nextUrl, destination, redirects + 1).then(resolve, reject);
+        return;
+      }
+      if (response.statusCode !== 200) {
+        response.resume();
+        reject(new Error('plugin download returned HTTP ' + response.statusCode));
+        return;
+      }
+      const output = fs.createWriteStream(destination);
+      response.pipe(output);
+      output.on('finish', () => output.close(resolve));
+      output.on('error', (error) => {
+        output.close(() => {});
+        try { fs.rmSync(destination, { force: true }); } catch (e) { /* ignore */ }
+        reject(error);
+      });
+    });
+    request.on('error', reject);
+  });
+
+  const findDll = (root) => {
+    const pending = [root];
+    while (pending.length) {
+      const current = pending.pop();
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        const full = path.join(current, entry.name);
+        if (entry.isDirectory()) pending.push(full);
+        else if (entry.isFile() && entry.name.toLowerCase() === 'scs-telemetry.dll') return full;
+      }
+    }
+    return null;
+  };
+
+  const psLiteral = (value) => "'" + String(value).replace(/'/g, "''") + "'";
+
+  try {
+    let steamPath = 'C:\\Program Files (x86)\\Steam';
+    try {
+      const result = await run('reg.exe', [
+        'query',
+        'HKLM\\SOFTWARE\\WOW6432Node\\Valve\\Steam',
+        '/v',
+        'InstallPath',
+      ]);
+      const match = result.stdout.match(/^\s*InstallPath\s+REG_\w+\s+(.+?)\s*$/mi);
+      if (match && match[1]) steamPath = match[1].trim();
+    } catch (e) {
+      // The standard Steam location remains the fallback when the registry is unavailable.
+    }
+
+    const pluginsFolder = path.join(steamPath, 'steamapps', 'common',
+      'Euro Truck Simulator 2', 'bin', 'win_x64', 'plugins');
+    const pluginsDllPath = path.join(pluginsFolder, 'scs-telemetry.dll');
+    if (fs.existsSync(pluginsDllPath)) {
+      console.log('[plugin] scs-telemetry.dll found. OK.');
+      return;
+    }
+
+    console.log('[plugin] scs-telemetry.dll not found. Downloading from GitHub...');
+    fs.rmSync(zipPath, { force: true });
+    fs.rmSync(extractDir, { recursive: true, force: true });
+    await download(
+      'https://github.com/RenCloud/scs-sdk-plugin/releases/download/V.1.12.1/release_v_1_12_1.zip',
+      zipPath);
+    await run('powershell.exe', [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      'Expand-Archive -Force -LiteralPath ' + psLiteral(zipPath)
+        + ' -DestinationPath ' + psLiteral(extractDir),
+    ]);
+
+    const downloadedDll = findDll(extractDir);
+    if (!downloadedDll) throw new Error('scs-telemetry.dll was not found in the downloaded archive');
+
+    try {
+      fs.mkdirSync(pluginsFolder, { recursive: true });
+      fs.copyFileSync(downloadedDll, pluginsDllPath);
+      console.log('[plugin] scs-telemetry.dll installed successfully.');
+      return;
+    } catch (copyError) {
+      if (copyError.code !== 'EPERM' && copyError.code !== 'EACCES') throw copyError;
+    }
+
+    const pendingDllPath = path.join(path.dirname(process.execPath), 'scs-telemetry-pending.dll');
+    fs.copyFileSync(downloadedDll, pendingDllPath);
+    const installer = [
+      "$ErrorActionPreference = 'Stop'",
+      'New-Item -ItemType Directory -Force -Path ' + psLiteral(pluginsFolder) + ' | Out-Null',
+      'Copy-Item -Force -LiteralPath ' + psLiteral(pendingDllPath)
+        + ' -Destination ' + psLiteral(pluginsDllPath),
+    ].join('\r\n');
+    fs.writeFileSync(scriptPath, installer, 'utf8');
+
+    const installerArgs = '-ExecutionPolicy Bypass -File "' + scriptPath.replace(/"/g, '`"') + '"';
+    const elevateCommand = 'Start-Process powershell -Verb RunAs -Wait -ArgumentList '
+      + psLiteral(installerArgs);
+    try {
+      await run('powershell.exe', [
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        elevateCommand,
+      ]);
+    } catch (e) {
+      // A cancelled UAC prompt is reported below by checking the target file.
+    }
+
+    if (fs.existsSync(pluginsDllPath)) {
+      console.log('[plugin] scs-telemetry.dll installed successfully.');
+    } else {
+      console.log('[plugin] ERROR: could not install scs-telemetry.dll. Please copy it manually to: '
+        + pluginsFolder);
+    }
+  } catch (error) {
+    console.log('[plugin] WARNING: plugin check failed: ' + error.message);
+  } finally {
+    try { fs.rmSync(zipPath, { force: true }); } catch (e) { /* ignore */ }
+    try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+    try { fs.rmSync(scriptPath, { force: true }); } catch (e) { /* ignore */ }
+  }
+}
 
 // A legacy save (pre 2026-10-16) kept one flat `orientations` object shared by both skins,
 // tagged only by a single top-level `skin` field -- that's exactly what let switching the
@@ -409,7 +572,9 @@ function startHelper() {
 
 function sendScan(direction, name) {
   const key = KEYS[name];
-  if (!key) return;
+  // TD_DEBUG=1 traces every scancode on Windows too, where the helper path is otherwise silent.
+  if (!key) { if (process.env.TD_DEBUG) console.log('[key] UNKNOWN KEY: ' + name); return; }
+  if (process.env.TD_DEBUG) console.log('[key] ' + (direction === 'd' ? 'down' : 'up  ') + ' ' + name + '  scan=' + key[0] + '/' + key[1] + '  helper=' + (helper && helperReady ? 'ready' : 'NOT READY'));
   if (helper && helperReady) helper.stdin.write(direction + ' ' + key[0] + ' ' + key[1] + '\n');
   else if (process.platform !== 'win32') console.log('[key] ' + (direction === 'd' ? 'down' : 'up  ') + ' ' + name);
 }
@@ -513,7 +678,10 @@ const server = http.createServer(async (req, res) => {
     const staticPeer = req.socket.remoteAddress || '';
     const staticIsLoopback = staticPeer === '127.0.0.1' || staticPeer === '::1' || staticPeer === '::ffff:127.0.0.1';
     const staticIsAppClient = url.searchParams.get('client') === 'app';
-    serveStatic(decodeURIComponent(route), res, staticIsLoopback, staticIsAppClient);
+    let decodedRoute;
+    try { decodedRoute = decodeURIComponent(route); }
+    catch (e) { res.writeHead(400); res.end(); return; }
+    serveStatic(decodedRoute, res, staticIsLoopback, staticIsAppClient);
     return;
   }
 
@@ -599,7 +767,11 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.parse(await readBody(req, 2048));
       const keys = Array.isArray(body.keys) ? body.keys.map(String) : [];
       const valid = keys.length >= 1 && keys.length <= 4 && keys.every((k) => Object.prototype.hasOwnProperty.call(KEYS, k));
-      if (!valid || !['tap', 'down', 'up'].includes(body.action)) { json(res, 400, { error: 'bad key' }); return; }
+      if (!valid || !['tap', 'down', 'up'].includes(body.action)) {
+        if (process.env.TD_DEBUG) console.log('[key] REJECTED action=' + body.action + ' keys=' + JSON.stringify(body.keys));
+        json(res, 400, { error: 'bad key' }); return;
+      }
+      if (process.env.TD_DEBUG) console.log('[key] POST /api/key action=' + body.action + ' keys=' + JSON.stringify(keys));
       handleKey(body.action, keys);
       json(res, 200, { ok: true });
       return;
@@ -780,7 +952,9 @@ server.on('error', (e) => {
   process.exit(1);
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+async function startServer() {
+  await ensureScsPlugin();
+  server.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('  Hunters Truck Sim Button Box - PC bridge is running.');
   console.log('');
@@ -815,6 +989,13 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('  Keep this window open while you play.');
   console.log('');
   startHelper();
+  });
+}
+
+startServer().catch((err) => {
+  _writeCrash('startServer', err);
+  console.error('[bridge] Fatal startup error:', err);
+  process.exit(1);
 });
 
 // Release anything still held when the window is closed, so no key stays stuck
