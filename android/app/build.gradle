@@ -20,8 +20,8 @@ android {
         // Google Play requires new apps to target a recent API level; raise when Play asks
         targetSdk 36
         // versionCode must go up by one for every upload to Google Play
-        versionCode 2
-        versionName '1.0.0-rc1'
+        versionCode 9
+        versionName "1.0.0-rc7"
     }
 
     signingConfigs {
