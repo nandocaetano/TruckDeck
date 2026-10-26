@@ -84,6 +84,18 @@ const ICONS = {
   cycle: '<path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>',
   unload: '<path d="M3 7h10v6H3z"/><path d="M13 9h5l2 4v4"/><path d="M17 20l3-3M14 21l1-2M21 19l-2 1"/>',
   door: '<path d="M6 21V3h9l3 2v16z"/><path d="M14 12v.5"/>',
+  busdoor: '<path d="M5 3h14v18H5zM12 3v18"/><path d="M8 12h1M15 12h1"/>',
+  doors: '<path d="M3 4h8v16H3zM13 4h8v16h-8z"/><path d="M7 12h1M16 12h1"/>',
+  doorlock: '<path d="M4 6h10v15H4z"/><path d="M14 10h6v8h-6zM15.5 10V8a2 2 0 0 1 4 0v2"/>',
+  kneel: '<path d="M3 16h18M5 12h14l-2-6H8z"/><circle cx="8" cy="17.5" r="1.5"/><circle cx="16" cy="17.5" r="1.5"/><path d="M12 3v6M9.5 6.5L12 9l2.5-2.5"/>',
+  stopbrake: '<circle cx="12" cy="12" r="7"/><path d="M8.5 8.5h7v7h-7zM3 12H1M23 12h-2"/>',
+  ramp: '<path d="M3 18h18M5 17l9-8h5"/><circle cx="9" cy="8" r="2"/><path d="M9 10v5M9 12h4"/>',
+  luggage: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5h8v2M3 12h18"/>',
+  passengerlight: '<path d="M5 8h14l-2 5H7zM12 3v3M4 5l2 2M20 5l-2 2"/><circle cx="12" cy="18" r="2.5"/>',
+  climate: '<circle cx="12" cy="12" r="2"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.6 5.6l4.2 4.2M14.2 14.2l4.2 4.2M18.4 5.6l-4.2 4.2M9.8 14.2l-4.2 4.2"/>',
+  announce: '<path d="M3 10v4h4l6 4V6l-6 4z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>',
+  destination: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6M17 13h.1"/>',
+  passengers: '<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 21a6 6 0 0 1 12 0M14 15a5 5 0 0 1 7 4.5"/>',
   tractor: '<circle cx="7" cy="16" r="4"/><circle cx="18" cy="17.5" r="2.5"/><path d="M11 16h4.5M5 12V6h7l2 6h5v3"/>',
   cab: '<path d="M2 16V7h8l4 5h6v4"/><path d="M10 7v5h4"/><circle cx="6.5" cy="17" r="2.2"/><circle cx="16.5" cy="17" r="2.2"/>',
   cargo: '<path d="M4 4h7v7H4zM13 4h7v7h-7zM8.5 13h7v7h-7z"/>',
@@ -100,12 +112,14 @@ function iconSvg(name) {
 
 // ---- Categories -------------------------------------------------------------------------
 const CATEGORIES = [
+  { id: 'ignition', name: 'Ignition & starting', game: 'truck' },
   { id: 'engine', name: 'Engine & brakes', game: 'truck' },
   { id: 'lights', name: 'Lights & signals', game: 'truck' },
   { id: 'cruise', name: 'Cruise control', game: 'truck' },
   { id: 'chassis', name: 'Axles & trailer', game: 'truck' },
   { id: 'gearbox', name: 'Gearbox', game: 'truck' },
   { id: 'cab', name: 'Cab', game: 'truck' },
+  { id: 'coach', name: 'Coach & passengers', game: 'truck' },
   { id: 'camera', name: 'Cameras', game: 'truck' },
   { id: 'hud', name: 'Route advisor & HUD', game: 'truck' },
   { id: 'game', name: 'Game', game: 'truck' },
@@ -128,11 +142,14 @@ function fn(id, cat, name, label, icon, keys, extra) {
 
 const FUNCTION_LIST = [
   // Engine & brakes
-  fn('engine', 'engine', 'Engine Only (Start/Stop)', 'START\nSTOP', 'power', ['e'], { latch: true, tel: 'engine' }),
-  fn('electrics', 'engine', 'Electrics Only', 'IGNITION', 'key', ['insert'], { bind: true, latch: true, tel: 'electric', led: 'amber' }),
-  // Combined key-slot: app owns the dual-stage state machine (electrics → timer → engine).
-  // keys:[] — never sent raw; pressIgn / tapIgnCombined emit electrics + engine in order.
-  fn('ign_combined', 'engine', 'Combined (Electrics + Engine)', 'IGN\nKEY', 'key', [], { latch: false, led: 'amber' }),
+  // Internal compatibility commands used by Truck power. Kept for old layouts and bindings,
+  // but no longer offered as separate button functions (all ignition buttons use ign_combined).
+  fn('engine', 'ignition', 'Engine only — Start/stop', 'START\nSTOP', 'power', ['e'], { assignable: false, latch: true, tel: 'engine' }),
+  fn('electrics', 'ignition', 'Electrics only — Ignition', 'IGNITION', 'key', ['insert'], { assignable: false, bind: true, latch: true, tel: 'electric', led: 'amber' }),
+  // Combined truck power: app owns the sequence. Classic key slots expose each detent;
+  // modern START/STOP buttons start in one tap and require a deliberate hold to shut down.
+  // keys:[] — never sent raw; app.js emits electrics + engine in the correct order.
+  fn('ign_combined', 'ignition', 'Truck power — Recommended', 'START\nSTOP', 'power', [], { latch: false, led: 'amber' }),
   fn('parking_brake', 'engine', 'Parking brake', 'PARK\nBRAKE', 'parking', ['space'], { latch: true, tel: 'park', led: 'red' }),
   fn('engine_brake', 'engine', 'Engine brake (hold)', 'ENG BRAKE', 'engbrake', ['b'], { mode: 'hold', tel: 'motorBrake', led: 'amber' }),
   fn('engine_brake_toggle', 'engine', 'Engine brake toggle', 'ENG BRAKE', 'engbrake', ['b'], { latch: true, tel: 'motorBrake', led: 'amber' }),
@@ -147,6 +164,7 @@ const FUNCTION_LIST = [
 
   // Lights & signals
   fn('lights', 'lights', 'Light modes', 'LIGHTS', 'lowbeam', ['l'], { latch: true, tel: 'lightsOn' }),
+  fn('lights_integrated', 'lights', 'Integrated light modes', 'LIGHTS\nINTEGRATED', 'lowbeam', [], { latch: true, tel: 'lightsOn' }),
   fn('high_beam', 'lights', 'High beam', 'HIGH BEAM', 'highbeam', ['k'], { latch: true, tel: 'high', led: 'blue' }),
   fn('light_horn', 'lights', 'Flash headlights (hold)', 'FLASH', 'flash', ['j'], { mode: 'hold', led: 'blue' }),
   fn('beacon', 'lights', 'Beacon', 'BEACON', 'beacon', ['o'], { latch: true, tel: 'beacon', led: 'amber' }),
@@ -156,6 +174,7 @@ const FUNCTION_LIST = [
   fn('horn', 'lights', 'Horn (hold)', 'HORN', 'horn', ['h'], { mode: 'hold', led: 'white' }),
   fn('air_horn', 'lights', 'Air horn (hold)', 'AIR HORN', 'airhorn', ['n'], { mode: 'hold', led: 'white' }),
   fn('wipers', 'lights', 'Wipers faster', 'WIPERS', 'wiper', ['p'], { latch: true, tel: 'wipers', led: 'amber' }),
+  fn('wipers_integrated', 'lights', 'Integrated wiper modes', 'WIPERS\nINTEGRATED', 'wiper', [], { latch: true, tel: 'wipers', led: 'amber' }),
   fn('wipers_back', 'lights', 'Wipers off', 'WIPERS OFF', 'wiper', ['p'], {}),   // runs the cycling key until the wipers stop (see wiperOff in app.js)
   fn('cabin_light', 'lights', 'Cabin interior light', 'CABIN\nLIGHT', 'cabin', ['num.'], { bind: true, latch: true }),
 
@@ -194,6 +213,21 @@ const FUNCTION_LIST = [
   fn('trip_reset', 'cab', 'Trip info reset', 'TRIP\nRESET', 'dash', ['ctrl', 'backspace'], { bind: true }),
   fn('hud', 'cab', 'Show / hide HUD', 'HUD', 'hud', ['num+'], { bind: true, latch: true, led: 'white' }),
   fn('truck_adjust', 'cab', 'Adjust seat & mirrors', 'ADJUST', 'mirror', ['f4']),
+
+  // Coach & passengers. The Coaches DLC key list is not final; every action stays unassigned
+  // until the player binds the same key in the game. No telemetry is inferred or fabricated.
+  fn('coach_door', 'coach', 'Passenger door', 'PASSENGER\nDOOR', 'busdoor', [], { bind: true, latch: true, led: 'amber' }),
+  fn('coach_doors_all', 'coach', 'All passenger doors', 'ALL\nDOORS', 'doors', [], { bind: true, latch: true, led: 'amber' }),
+  fn('coach_door_lock', 'coach', 'Door release / lock', 'DOOR\nLOCK', 'doorlock', [], { bind: true, latch: true, led: 'red' }),
+  fn('coach_kneel', 'coach', 'Kneeling system', 'KNEEL', 'kneel', [], { bind: true, latch: true, led: 'amber' }),
+  fn('coach_stop_brake', 'coach', 'Bus stop brake', 'STOP\nBRAKE', 'stopbrake', [], { bind: true, latch: true, led: 'red' }),
+  fn('coach_ramp', 'coach', 'Wheelchair ramp', 'RAMP', 'ramp', [], { bind: true, latch: true, led: 'amber' }),
+  fn('coach_luggage', 'coach', 'Luggage compartments', 'LUGGAGE', 'luggage', [], { bind: true, latch: true, led: 'amber' }),
+  fn('coach_passenger_light', 'coach', 'Passenger cabin lights', 'PASSENGER\nLIGHTS', 'passengerlight', [], { bind: true, latch: true, led: 'green' }),
+  fn('coach_climate', 'coach', 'Passenger climate control', 'PASSENGER\nCLIMATE', 'climate', [], { bind: true, latch: true, led: 'green' }),
+  fn('coach_announcement', 'coach', 'Passenger announcement', 'ANNOUNCE', 'announce', [], { bind: true }),
+  fn('coach_destination', 'coach', 'Destination display', 'DESTINATION', 'destination', [], { bind: true }),
+  fn('coach_service', 'coach', 'Confirm / start passenger service', 'START\nSERVICE', 'passengers', [], { bind: true }),
 
   // Cameras
   fn('cam_next', 'camera', 'Next camera', 'CYCLE\nCAMS', 'camera', ['9']),
@@ -301,7 +335,7 @@ for (const f of FUNCTION_LIST) FUNCTIONS[f.id] = f;
 // Printed on the keys of panels whose language is Portuguese (the Brazilian dashboards).
 // Written the way Brazilian drivers name the controls, not translated word for word.
 const LABELS_PT = {
-  engine: 'PARTIDA', electrics: 'IGNI\u00c7\u00c3O', ign_combined: 'CHAVE\nIGNI\u00c7\u00c3O', parking_brake: 'FREIO\nESTAC.', engine_brake: 'FREIO\nMOTOR',
+  engine: 'PARTIDA', electrics: 'IGNI\u00c7\u00c3O', ign_combined: 'LIGAR\nDESLIGAR', parking_brake: 'FREIO\nESTAC.', engine_brake: 'FREIO\nMOTOR',
   engine_brake_toggle: 'FREIO\nMOTOR', engine_brake_up: 'FREIO\nMOTOR\u00a0+', engine_brake_down: 'FREIO\nMOTOR\u00a0\u2212',
   retarder_auto: 'RETARDER\nAUTOM.', lane_assist: 'MANT.\nFAIXA', emergency_brake: 'FREIO\nEMERG.', hud: 'HUD',
   susp_front_up: 'FRENTE\nSOBE', susp_front_down: 'FRENTE\nDESCE', susp_rear_up: 'TRASEIRA\nSOBE', susp_rear_down: 'TRASEIRA\nDESCE', susp_reset: 'REDEF.\nSUSP.',
@@ -315,6 +349,9 @@ const LABELS_PT = {
   gear_up: 'MARCHA\u00a0+', gear_down: 'MARCHA\u00a0\u2212', neutral: 'NEUTRO', gearbox_mode: 'AUTO\nMANUAL', range: 'ALTA\nBAIXA', splitter: 'SPLIT',
   window_left_down: 'VIDRO E\nABRIR', window_left_up: 'VIDRO E\nFECHAR', window_right_down: 'VIDRO D\nABRIR', window_right_up: 'VIDRO D\nFECHAR',
   dash_display: 'PAINEL', dash_map: 'MAPA\nPAINEL', trip_reset: 'ZERAR\nVIAGEM', truck_adjust: 'AJUSTE',
+  coach_door: 'PORTA\nPASSAG.', coach_doors_all: 'TODAS AS\nPORTAS', coach_door_lock: 'TRAVA\nPORTAS', coach_kneel: 'AJOELHAR',
+  coach_stop_brake: 'FREIO DE\nPARADA', coach_ramp: 'RAMPA', coach_luggage: 'BAGAGEIRO', coach_passenger_light: 'LUZ\nPASSAG.',
+  coach_climate: 'CLIMA\nPASSAG.', coach_announcement: 'ANÚNCIO', coach_destination: 'DESTINO', coach_service: 'INICIAR\nSERVIÇO',
   cam_next: 'TROCAR\nC\u00c2MERA', cam_interior: 'CABINE', cam_chase: 'EXTERNA', cam_top: 'DE CIMA', cam_roof: 'TETO', cam_lean: 'JANELA',
   cam_bumper: 'PARA-\nCHOQUE', cam_wheel: 'RODA', cam_driveby: 'PASSAGEM', look_left: 'OLHAR E', look_right: 'OLHAR D', cam_zoom: 'ZOOM',
   ra_mouse: 'MOUSE\nGPS', mirrors: 'ESPELHOS', ra_modes: 'ASSISTENTE', ra_nav: 'NAVEGAR', ra_job: 'CARGA', ra_diag: 'DIAGN.',

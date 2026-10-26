@@ -1,3 +1,8 @@
+@font-face { font-family: "Oswald"; src: url("fonts/oswald-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Oswald"; src: url("fonts/oswald-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Roboto Condensed"; src: url("fonts/roboto-condensed-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Roboto Condensed"; src: url("fonts/roboto-condensed-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+
 /* Layout concept: one fixed screen. A slim instrument-cluster header, then a dashboard
    fascia that fills the rest; every control sits in its own recessed cutout like a real
    switch blank. Single dark look on purpose: it is a cab at night, on any host theme. */
@@ -1051,6 +1056,15 @@ button { cursor: pointer; }
   text-transform: uppercase;
 }
 .barbtn svg { width: 18px; height: 18px; display: block; }
+#brandLogo {
+  flex: none;
+  width: 52px;
+  height: 34px;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  opacity: .82;
+  pointer-events: none;
+}
 /* quiet header key: no frame until touched */
 .barbtn.ghost { border-color: transparent; background: none; color: var(--ui-dim); padding-inline: 6px; opacity: 0.7; }
 .barbtn.ghost.on { color: var(--ui-accent); opacity: 1; }
@@ -1064,6 +1078,7 @@ button { cursor: pointer; }
   scrollbar-width: none;
 }
 #tabs::-webkit-scrollbar { display: none; }
+@media (max-width: 520px) { #brandLogo { width: 42px; height: 30px; } }
 .tab {
   flex: none;
   height: 32px;
@@ -1174,6 +1189,7 @@ button { cursor: pointer; }
 .w[data-stage="1"] { --lamp: var(--lamp-blue); }
 .w[data-stage="2"] { --lamp: var(--lamp-amber); }
 .w[data-stage="3"] { --lamp: var(--lamp-green); }
+.w[data-stage="4"] { --lamp: var(--lamp-blue); }
 .w[data-led="white"] { --lamp: var(--lamp-white); }
 
 .cap {
@@ -1318,19 +1334,17 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
   box-shadow: none !important;
   background: transparent !important;
 }
+.k-kbd.has-asset[data-fn="hazard"] .atomic-picto { color: var(--picto-hazard, #ff3b30); }
 .k-kbd.has-asset .atomic-picto svg {
   width: 100%;
   height: 100%;
   color: inherit;
   filter: none;
 }
-#panel.lights-on .atomic-picto svg { filter: var(--picto-filter, none); }
-/* Editor text label overlay (item.label) — subtle footer caption, never a banner. */
+#panel.lights-on .atomic-picto svg { visibility: hidden; }
+/* Function label: defaults below the physical key; explicit editor placement still wins. */
 .k-kbd.has-asset .key-label {
   position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 6%;
   z-index: 3;
   display: flex;
   align-items: center;
@@ -1342,8 +1356,14 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
   text-align: center;
   text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
   white-space: pre-line;
-  overflow: hidden;
-  max-height: 18%;
+  overflow: visible;
+}
+.k-kbd.has-asset .key-label:not(.is-placed) {
+  left: -8%;
+  right: -8%;
+  top: calc(100% + 3px);
+  bottom: auto;
+  min-height: 1.1em;
 }
 #panel.hide-labels .key-label { display: none !important; }
 #panel.hide-pictograms .atomic-picto { display: none !important; }
@@ -1418,28 +1438,100 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
 .k-kbd.has-asset.pb-split.down .pb-core,
 .k-kbd.has-asset.pb-split.on .pb-core,
 .w.down.k-kbd.has-asset.pb-split .pb-core {
-  transform: scale(0.955);
-  filter: brightness(0.86);
+  transform: perspective(300px) translateY(2.4%) scale(0.985);
+  filter: brightness(0.82) saturate(0.94);
 }
 @media (prefers-reduced-motion: reduce) { .k-kbd.has-asset.pb-split .pb-core { transition: none; } }
+/* Single-photo segmented pushes: .cap is the fixed housing, the dark well hides the baked
+   key, and .photo-key repaints only the individually measured moving part. */
+.k-kbd.has-asset.photo-split .photo-key-well,
+.k-kbd.has-asset.photo-split .photo-key {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.k-kbd.has-asset.photo-split .photo-key-well {
+  z-index: 1;
+  clip-path: var(--photo-well-clip);
+  background: radial-gradient(ellipse at 50% 46%, #1b1e21 0%, #101214 70%, #08090a 100%);
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.62));
+}
+.k-kbd.has-asset.photo-split .photo-key {
+  z-index: 2;
+  clip-path: var(--photo-key-clip);
+  background: var(--asset) center / 100% 100% no-repeat;
+  transition: transform 90ms ease, filter 90ms ease;
+  transform-origin: center center;
+}
+.k-kbd.has-asset.photo-split-push.in .photo-key,
+.k-kbd.has-asset.photo-split-push.down .photo-key,
+.k-kbd.has-asset.photo-split-round.in .photo-key,
+.k-kbd.has-asset.photo-split-round.down .photo-key {
+  transform: perspective(360px) translateY(1.6%) scale(.975);
+  filter: brightness(.84) saturate(.96);
+}
+.k-kbd.has-asset.photo-split-rocker .photo-key {
+  background-size: 108% 108%;
+  transform-origin: center bottom;
+}
+.k-kbd.has-asset.photo-split-rocker.in .photo-key,
+.k-kbd.has-asset.photo-split-rocker.down .photo-key {
+  transform: perspective(360px) translateY(.7%) rotateX(4deg) scale(.995);
+  filter: brightness(.91);
+}
+.k-kbd.has-asset.photo-split-rocker.is-dn .photo-key { transform-origin: center top; }
+.k-kbd.has-asset.photo-split-rocker.is-dn.in .photo-key,
+.k-kbd.has-asset.photo-split-rocker.is-dn.down .photo-key {
+  transform: perspective(360px) translateY(-.45%) rotateX(-4deg) scale(.995);
+}
+.k-kbd.has-asset.photo-split .atomic-picto { z-index: 4; }
+@media (prefers-reduced-motion: reduce) { .k-kbd.has-asset.photo-split .photo-key { transition: none; } }
 /* Rocker push buttons (seg-rocker): static housing (.cap) + rotating key layer (.rocker-key). */
 .k-kbd.has-asset.seg-rocker .cap {
   transform: none !important;
   filter: none !important;
 }
+.k-kbd.has-asset.seg-rocker-filled-housing .rocker-well {
+  position: absolute;
+  left: var(--kb-l, 8%); top: var(--kb-t, 8%); width: var(--kb-w, 84%); height: var(--kb-h, 84%);
+  z-index: 1;
+  border-radius: 12%;
+  background: linear-gradient(180deg, #0b0d0f, #191c1f 45%, #0a0b0d);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.8), 0 0 1px rgba(0,0,0,.7);
+  transform: scale(1.015);
+  pointer-events: none;
+}
 .k-kbd.has-asset.seg-rocker .rocker-key {
   position: absolute;
   left: var(--kb-l, 8%); top: var(--kb-t, 8%); width: var(--kb-w, 84%); height: var(--kb-h, 84%);
+  z-index: 2;
   background: var(--rocker-key) center / 100% 100% no-repeat;
   pointer-events: none;
-  transition: transform 80ms ease;
+  transition: transform 90ms ease, filter 90ms ease;
   transform: translateY(0) rotateX(0deg);
   transform-origin: center bottom;
 }
 .k-kbd.has-asset.seg-rocker.down .rocker-key,
-.k-kbd.has-asset.seg-rocker.on .rocker-key,
 .k-kbd.has-asset.seg-rocker.in .rocker-key {
-  transform: translateY(1px) rotateX(6deg);
+  transform: perspective(360px) translateY(.7%) rotateX(4deg) scale(.995);
+  filter: brightness(.91);
+}
+.k-kbd.has-asset.seg-rocker.is-dn .rocker-key { transform-origin: center top; }
+.k-kbd.has-asset.seg-rocker.is-dn.down .rocker-key,
+.k-kbd.has-asset.seg-rocker.is-dn.in .rocker-key {
+  transform: perspective(360px) translateY(-.45%) rotateX(-4deg) scale(.995);
+}
+.k-kbd.has-asset.seg-rocker.is-horizontal-rocker .rocker-key {
+  transform-origin: right center;
+}
+.k-kbd.has-asset.seg-rocker.is-horizontal-rocker.down .rocker-key,
+.k-kbd.has-asset.seg-rocker.is-horizontal-rocker.in .rocker-key {
+  transform: perspective(360px) translateX(.7%) rotateY(4deg) scale(.995);
+}
+.k-kbd.has-asset.seg-rocker.is-horizontal-rocker.is-dn .rocker-key { transform-origin: left center; }
+.k-kbd.has-asset.seg-rocker.is-horizontal-rocker.is-dn.down .rocker-key,
+.k-kbd.has-asset.seg-rocker.is-horizontal-rocker.is-dn.in .rocker-key {
+  transform: perspective(360px) translateX(-.45%) rotateY(-4deg) scale(.995);
 }
 @media (prefers-reduced-motion: reduce) { .k-kbd.has-asset.seg-rocker .rocker-key { transition: none; } }
 /* Round push buttons (seg-round): static housing (.cap) + moving key disc (.round-key). */
@@ -1461,6 +1553,42 @@ body.debug-hitbox .k-kbd.has-asset .hit { outline: 1px dashed lime; }
   transform: translateY(2px) scale(0.97);
 }
 @media (prefers-reduced-motion: reduce) { .k-kbd.has-asset.seg-round .round-key { transition: none; } }
+/* Segmented push buttons: the photographed housing stays bolted down; only the inner key sinks. */
+.k-kbd.has-asset.seg-push .cap {
+  transform: none !important;
+  filter: none !important;
+}
+.k-kbd.has-asset.seg-push .push-well,
+.k-kbd.has-asset.seg-push .push-key {
+  position: absolute;
+  left: var(--kb-l, 12%); top: var(--kb-t, 12%); width: var(--kb-w, 76%); height: var(--kb-h, 76%);
+  pointer-events: none;
+}
+.k-kbd.has-asset.seg-push .push-well {
+  z-index: 1;
+  border-radius: 15%;
+  background: linear-gradient(180deg, #07090b, #15181b 48%, #060708);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.9);
+  transform: scale(1.02);
+}
+.k-kbd.has-asset.seg-push-triangle .push-well {
+  clip-path: polygon(50% 0, 100% 97%, 0 97%);
+  border-radius: 0;
+}
+.k-kbd.has-asset.seg-push .push-key {
+  z-index: 2;
+  background: var(--push-key) center / 100% 100% no-repeat;
+  transition: transform 80ms ease, filter 80ms ease;
+  transform: translateY(0) scale(1);
+  transform-origin: center center;
+}
+.k-kbd.has-asset.seg-push.down .push-key,
+.k-kbd.has-asset.seg-push.in .push-key {
+  transform: perspective(360px) translateY(1.6%) scale(.975);
+  filter: brightness(.84) saturate(.96);
+}
+.k-kbd.has-asset.seg-push .atomic-picto { z-index: 4; }
+@media (prefers-reduced-motion: reduce) { .k-kbd.has-asset.seg-push .push-key { transition: none; } }
 /* Regra 3: LED telltales — off art in editor; on art + coloured glow from telemetry. */
 #app[data-style="sov_frame"] .k-kbd.has-asset.atomic-lamp.on .cap {
   filter: drop-shadow(0 0 5px var(--lamp-glow, #3dff7a))
@@ -2026,47 +2154,6 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   /* phones: the drawer becomes a bottom sheet so the panel stays visible above it */
   #sheet.left { border-right: 0; }
   #sheet { top: auto; left: 0; width: 100%; max-height: 78%; border-left: 0; border-top: 1px solid var(--ui-line); border-radius: 12px 12px 0 0; padding-top: 0; }
-}
-
-/* ---- Opening animation ------------------------------------------------------------------ */
-/* Ignition sequence: the chrome ring machines itself in, the frog (the author's nickname is
-   "Sapinho") pops up behind the glass and blinks, then the LED comes on and the name appears. */
-#boot {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  background: radial-gradient(circle at 50% 42%, #1a1d21, #08090a 70%);
-  color: #e6e9ec;
-  transition: opacity 420ms ease;
-}
-#boot.done { opacity: 0; pointer-events: none; }
-#boot .mark { width: min(38vmin, 220px); height: auto; }
-#boot .m-ring { stroke-dasharray: 528; stroke-dashoffset: 528; animation: bootDraw 700ms cubic-bezier(0.5, 0, 0.2, 1) forwards; }
-#boot .m-disc { opacity: 0; animation: bootFade 400ms 250ms ease forwards; }
-#boot .m-frog { transform: translateY(120px); animation: bootHop 520ms 640ms cubic-bezier(0.3, 1.5, 0.5, 1) forwards; }
-#boot .m-lid { transform-box: fill-box; transform-origin: center top; transform: scaleY(0); animation: bootBlink 260ms 1340ms ease-in-out; }
-#boot .m-eye { animation: bootGlow 520ms 1500ms ease-out forwards; }
-#boot .m-led { fill: #101214; animation: bootLed 200ms 1560ms steps(1, end) forwards; }
-#boot b, #boot span { opacity: 0; animation: bootFade 380ms 1400ms ease forwards; font-family: var(--font-legend, "Arial Narrow", Arial, sans-serif); text-transform: uppercase; }
-#boot b { font-size: clamp(26px, 6vmin, 40px); font-weight: 700; letter-spacing: 0.22em; color: #f2a23a; margin-right: -0.22em; }
-#boot span { font-size: clamp(12px, 2.6vmin, 16px); letter-spacing: 0.32em; color: #98a1ab; margin-right: -0.32em; animation-delay: 1520ms; }
-@keyframes bootDraw { to { stroke-dashoffset: 0; } }
-@keyframes bootFade { to { opacity: 1; } }
-@keyframes bootHop { to { transform: translateY(0); } }
-@keyframes bootBlink { 0%, 100% { transform: scaleY(0); } 45%, 60% { transform: scaleY(1); } }
-@keyframes bootGlow { from { filter: drop-shadow(0 0 0 rgba(242, 162, 58, 0)); } 40% { filter: drop-shadow(0 0 12px rgba(242, 162, 58, 0.95)); } to { filter: drop-shadow(0 0 5px rgba(242, 162, 58, 0.5)); } }
-@keyframes bootLed { to { fill: #5fe36a; filter: drop-shadow(0 0 5px #5fe36a); } }
-@media (prefers-reduced-motion: reduce) {
-  #boot .m-ring { animation: none; stroke-dashoffset: 0; }
-  #boot .m-disc, #boot b, #boot span { animation: none; opacity: 1; }
-  #boot .m-frog { animation: none; transform: none; }
-  #boot .m-lid, #boot .m-eye { animation: none; }
-  #boot .m-led { animation: none; fill: #5fe36a; }
 }
 
 /* ---- Art panels ------------------------------------------------------------------------- */
@@ -2677,6 +2764,12 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   background: conic-gradient(#ff3b30 calc(var(--hold) * 360deg), transparent 0);
   -webkit-mask: radial-gradient(closest-side, transparent 86%, #000 88%); mask: radial-gradient(closest-side, transparent 86%, #000 88%);
   animation: holdfill 1s linear forwards;
+}
+.k-ign.ign-timer::after {
+  inset: 5%;
+  background: conic-gradient(rgba(205, 45, 39, .68) calc(var(--hold) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(closest-side, transparent 93%, #000 94%);
+  mask: radial-gradient(closest-side, transparent 93%, #000 94%);
 }
 @keyframes holdfill { to { --hold: 1; } }
 
@@ -3422,6 +3515,13 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   opacity: 0;
   transition: opacity 280ms ease;
 }
+#panel.skin.eu-modern .obd-screens > .ign-boot > .ign-boot-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  background: #000;
+}
 #panel.skin.eu-modern.ign-booting[data-boot="logo"] .obd-screens > .ign-boot,
 #panel.skin.eu-modern.ign-booting[data-boot="bulbs"] .obd-screens > .ign-boot,
 #panel.skin.eu-modern.ign-booting[data-boot="sweep"] .obd-screens > .ign-boot { opacity: 1; }
@@ -3504,6 +3604,9 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 }
 /* Native video chrome (play button, scrubber) must never show over the shutdown clip. */
 #panel.skin.eu-modern .obd-screens > .ign-shutdown::-webkit-media-controls {
+  display: none !important;
+}
+#panel.skin.eu-modern .obd-screens > .ign-boot .ign-boot-video::-webkit-media-controls {
   display: none !important;
 }
 video::-webkit-media-controls-start-playback-button {
@@ -4592,11 +4695,11 @@ video::-webkit-media-controls-start-playback-button {
 /* Soviet hazard lit (sov_push_hazard_off/on) — THE one rule set for this button.
    Plain backlit push: the body never moves and the bulb is a dry binary swap of --asset.
    The resting selector is listed first so the inherited 60ms transition cannot soften the cut. */
-#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail .cap,
-#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail.down .cap,
-#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail.on .cap,
-#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail.in .cap,
-#app[data-style="sov_frame"] .w.down.k-kbd.has-asset.hazard-fail .cap {
+#app .k-kbd.has-asset.hazard-fail .cap,
+#app .k-kbd.has-asset.hazard-fail.down .cap,
+#app .k-kbd.has-asset.hazard-fail.on .cap,
+#app .k-kbd.has-asset.hazard-fail.in .cap,
+#app .w.down.k-kbd.has-asset.hazard-fail .cap {
   transform: none !important;
   translate: none !important;
   scale: none !important;
@@ -4604,10 +4707,27 @@ video::-webkit-media-controls-start-playback-button {
   animation: none !important;
   opacity: 1 !important;
 }
-#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail .cap {
+#app .k-kbd.has-asset.hazard-fail .cap {
   filter: none !important;
 }
-#app[data-style="sov_frame"] .hazard-fail .hazard-light {
+#app .hazard-fail .hazard-glow {
+  position: absolute;
+  left: 30%;
+  top: 28%;
+  width: 40%;
+  height: 44%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 92, 68, .92) 0%, rgba(255, 42, 28, .58) 42%, rgba(255, 24, 16, 0) 76%);
+  box-shadow: none;
+  filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+  mix-blend-mode: screen;
+  transition: none;
+  animation: none;
+}
+#app .hazard-fail .hazard-light {
   position: absolute;
   inset: 0;
   background: var(--haz-light) center / 100% 100% no-repeat;
@@ -4617,10 +4737,24 @@ video::-webkit-media-controls-start-playback-button {
   transform: none !important;
   transition: none !important;
   animation: none !important;
+  z-index: 2;
 }
-#app[data-style="sov_frame"] .k-kbd.has-asset.hazard-fail.on .hazard-light {
-  filter: drop-shadow(0 0 4px var(--haz-glow, #ffb02e))
-          drop-shadow(0 0 11px color-mix(in srgb, var(--haz-glow, #ffb02e) 55%, transparent)) !important;
+#app .k-kbd.has-asset.hazard-fail.hazard-lit .hazard-glow {
+  opacity: 1;
+  box-shadow: 0 0 8px 2px rgba(255, 48, 34, .72),
+              0 0 16px 4px rgba(255, 34, 24, .34);
+}
+#app .k-kbd.has-asset.hazard-fail.hazard-lit .hazard-light {
+  filter: drop-shadow(0 0 4px var(--haz-glow, #ff3f36))
+          drop-shadow(0 0 11px color-mix(in srgb, var(--haz-glow, #ff3f36) 55%, transparent)) !important;
+}
+#app .k-kbd.has-asset.hazard-button.seg-push .push-key {
+  filter: brightness(.42) saturate(.72);
+}
+#app .k-kbd.has-asset.hazard-button.seg-push.hazard-lit .push-key {
+  filter: brightness(1.18) saturate(1.35)
+          drop-shadow(0 0 4px var(--lamp-red))
+          drop-shadow(0 0 9px color-mix(in srgb, var(--lamp-red) 48%, transparent));
 }
 #app[data-style="sov_frame"] .k-kbd.has-asset.asset-tog.down .cap,
 #app[data-style="sov_frame"] .k-kbd.has-asset.asset-tog.in .cap,
@@ -4942,6 +5076,63 @@ video::-webkit-media-controls-start-playback-button {
   mask-image: url("skins/modern/mod_rotary_wipers_mask.png");
   -webkit-mask-image: url("skins/modern/mod_rotary_wipers_mask.png");
 }
+
+/* Atomic pictograms sit above the cabin lightmap so their SVG contours, rather than their
+   rectangular layout boxes, receive the night halo. The original stays visible by day. */
+#panel > .picto-backlights {
+  position: absolute;
+  inset: 0;
+  z-index: 102;
+  display: none;
+  pointer-events: none;
+  overflow: hidden;
+}
+#panel.lights-on > .picto-backlights { display: block; }
+#panel.hide-pictograms > .picto-backlights { display: none; }
+#panel > .picto-backlights .picto-backlight {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--picto-light, #f2f5f7);
+  pointer-events: none;
+}
+#panel > .picto-backlights .picto-backlight .picto-engrave,
+#panel > .picto-backlights .picto-backlight .picto-halo,
+#panel > .picto-backlights .picto-backlight .picto-core {
+  width: 100%;
+  height: 100%;
+  color: inherit;
+}
+#panel > .picto-backlights .picto-backlight .picto-engrave {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  color: rgba(0, 0, 0, .92);
+  opacity: .72;
+  transform: translate(.6px, .9px);
+  filter: blur(.25px);
+  mix-blend-mode: multiply;
+}
+#panel > .picto-backlights .picto-backlight .picto-halo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: var(--picto-halo-opacity, .61);
+  filter: var(--picto-filter, none);
+  mix-blend-mode: screen;
+}
+#panel > .picto-backlights .picto-backlight .picto-core {
+  position: relative;
+  z-index: 2;
+  color: var(--picto-core, #f8fafb);
+  opacity: var(--picto-core-opacity, .88);
+  filter: brightness(1.06) contrast(1.12) drop-shadow(0 0 .65px currentColor);
+  mix-blend-mode: screen;
+}
+#panel > .picto-backlights .picto-backlight[data-fn="hazard"] { color: var(--picto-hazard, #ff3b30); }
+#panel > .picto-backlights .picto-backlight[data-fn="hazard"] .picto-core { color: var(--picto-hazard-core, #ff7670); }
+#panel > .picto-backlights .picto-backlight[data-fn="hazard"] .picto-halo { filter: var(--picto-hazard-filter, none); }
 @media (prefers-reduced-motion: reduce) {
   #panel > .rotary-backlights i { transition: none; }
 }

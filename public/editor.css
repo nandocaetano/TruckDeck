@@ -30,6 +30,7 @@
 html, body { min-height: 100%; margin: 0; background: var(--bg); color: var(--text); }
 body { min-width: 1120px; font-size: 13px; }
 button, input, select, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
 
 /* =========================================================
    TOP BAR
@@ -55,7 +56,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   gap: 10px;
   flex: 0 0 auto;
 }
-.brand-logo { flex: 0 0 auto; }
+.brand-logo { flex: 0 0 auto; border-radius: 9px; object-fit: cover; }
 .brand-eyebrow {
   display: block;
   font-family: 'Geist Mono', 'Menlo', monospace;
@@ -132,6 +133,26 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Right actions */
 .topbar-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.topbar-more { position: relative; }
+.topbar-more > summary { list-style: none; }
+.topbar-more > summary::-webkit-details-marker { display: none; }
+.topbar-more[open] > summary { border-color: var(--accent); background: var(--surface2); }
+.topbar-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 210px;
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.topbar-menu .button { width: 100%; text-align: left; }
+.editor-menu .topbar-menu { min-width: 230px; }
+.editor-menu .danger { color: var(--danger); }
 
 /* =========================================================
    BUTTONS
@@ -339,6 +360,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
    ASSET LIST
    ========================================================= */
 .asset-list, .dashboard-tools { display: grid; gap: 5px; }
+.asset-list {
+  max-height: min(54vh, 680px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
 .package-group {
   display: grid;
   gap: 5px;
@@ -393,8 +421,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .asset-preview img { max-width: 28px; max-height: 28px; object-fit: contain; }
 .asset-preview-wide { width: 49px; }
 .asset-preview-wide img { max-width: 45px; }
-/* Palette thumbnail for round/rocker pieces: housing + separate key layer stacked, using the same
-   insets as app.css (.rocker-key 8%, .round-key 12%) so the thumbnail matches the real button. */
+/* Palette thumbnail for round/rocker/push pieces: housing + separate key layer stacked, using the
+   same boxes as app.css so the thumbnail matches the real button. */
 .asset-preview .asset-stack { position: relative; display: inline-grid; line-height: 0; }
 .asset-preview .asset-stack .asset-key {
   position: absolute;
@@ -405,6 +433,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .asset-preview .asset-stack .asset-key-rocker { inset: 8%; width: 84%; height: 84%; }
 .asset-preview .asset-stack .asset-key-round { inset: 12%; width: 76%; height: 76%; }
+.asset-preview .asset-stack .asset-key-push { inset: 12%; width: 76%; height: 76%; }
 .layout-element.button-element img.canvas-key {
   position: absolute;
   object-fit: fill; /* stretch with the housing; box is set inline from KEY_BOXES */
@@ -413,6 +442,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .layout-element.button-element img.canvas-key-rocker { inset: 8%; width: 84%; height: 84%; }
 .layout-element.button-element img.canvas-key-round { inset: 12%; width: 76%; height: 76%; }
+.layout-element.button-element img.canvas-key-push { inset: 12%; width: 76%; height: 76%; }
 .asset-tool.is-custom { position: relative; }
 .asset-remove {
   position: absolute;

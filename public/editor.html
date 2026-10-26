@@ -7,18 +7,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="editor.css?v=2026-10-23-0105">
+  <link rel="stylesheet" href="editor.css?v=2026-10-25-0030">
 </head>
 <body data-editor-mode="full">
   <div id="publishToast" class="publish-toast" hidden role="alert" aria-live="assertive"></div>
   <header class="topbar">
     <div class="brand">
-      <svg class="brand-logo" width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-        <rect x="2" y="2" width="10" height="10" rx="2" fill="#F26419"/>
-        <rect x="16" y="2" width="10" height="10" rx="2" fill="#4ec9b0" opacity=".7"/>
-        <rect x="2" y="16" width="10" height="10" rx="2" fill="#4ec9b0" opacity=".7"/>
-        <rect x="16" y="16" width="10" height="10" rx="2" fill="#F26419" opacity=".5"/>
-      </svg>
+      <img class="brand-logo" width="36" height="36" src="brand/mad-frog-logo.png" alt="TruckDeck">
       <div>
         <span class="brand-eyebrow">DESKTRUCK / MODERN</span>
         <h1 class="brand-title">Layout Editor <span>atómico</span></h1>
@@ -47,14 +42,33 @@
     <div class="topbar-actions">
       <button type="button" class="button button-accent" id="rescueButton" hidden title="Havia trabalho não publicado neste navegador que o servidor ia sobrescrever. Clique para trazê-lo de volta (Ctrl+Z desfaz).">Recuperar trabalho local</button>
       <button type="button" class="button button-ghost" id="rescueDiscardButton" hidden title="Apaga a cópia local antiga deste navegador (pede confirmação)">Descartar</button>
-      <button type="button" class="button button-ghost" id="draftLoadButton" title="Carrega um rascunho .json com TODOS os painéis, sem enviar ao tablet">Retomar rascunho</button>
-      <button type="button" class="button button-ghost" id="draftSaveButton" title="Salva TODOS os painéis num arquivo .json na pasta Downloads, sem enviar ao tablet">Salvar rascunho</button>
+      <details class="topbar-more editor-menu">
+        <summary class="button button-ghost">Arquivo</summary>
+        <div class="topbar-menu">
+          <button type="button" class="button button-ghost" id="saveButton" title="Salvar no tablet via bridge (Ctrl/⌘+S)">Salvar</button>
+          <button type="button" class="button button-ghost" id="exportButton" title="Baixa o painel atual (JSON + CSS)">Baixar painel atual</button>
+          <button type="button" class="button button-ghost" id="draftSaveButton" title="Baixa TODOS os painéis em um arquivo JSON">Baixar todos os painéis</button>
+          <button type="button" class="button button-ghost" id="importButton">Importar</button>
+          <button type="button" class="button button-ghost" id="draftLoadButton">Retomar rascunho</button>
+        </div>
+      </details>
+      <details class="topbar-more editor-menu">
+        <summary class="button button-ghost">Editar</summary>
+        <div class="topbar-menu">
+          <button type="button" class="button button-ghost" id="copyAllButton">Copiar todas as teclas</button>
+          <button type="button" class="button button-ghost" id="pasteAllButton">Colar todas as teclas</button>
+          <button type="button" class="button button-ghost danger" id="clearOrientationButton">Excluir todas as teclas</button>
+          <button type="button" class="button button-ghost danger" id="clearAllButton">Limpar tudo até o background</button>
+        </div>
+      </details>
+      <details class="topbar-more editor-menu">
+        <summary class="button button-ghost">Ferramentas</summary>
+        <div class="topbar-menu">
+          <button type="button" class="button button-ghost" id="checkButton">Verificar painéis</button>
+        </div>
+      </details>
+      <button type="button" class="button button-primary button-publish" id="publishButton" title="Atalho para salvar no tablet">Publicar</button>
       <input id="draftInput" type="file" accept="application/json,.json" hidden>
-      <button type="button" class="button button-ghost" id="importButton">Importar</button>
-      <button type="button" class="button button-ghost" id="exportButton" title="Baixa o mapeamento atual (JSON + CSS) como arquivo. Não salva nada e não afeta o servidor nem o tablet.">Baixar mapeamento</button>
-      <button type="button" class="button button-ghost" id="checkButton" title="Confere teclas e luzes sem função em todos os painéis e pisca em vermelho as que estão nesta tela">Verificar</button>
-      <button type="button" class="button button-ghost" id="saveLocalButton" title="Salva o estado atual só neste navegador (sem precisar do tablet)">Salvar local</button>
-      <button type="button" class="button button-primary button-publish" id="saveButton" title="Publicar no tablet via bridge (Ctrl/⌘+S)">Publicar no tablet</button>
       <input id="importInput" type="file" accept="application/json,.json" hidden>
     </div>
   </header>
@@ -90,9 +104,9 @@
             <option value="vivamexico">Viva México</option>
           </select>
         </label>
-        <label class="file-button background-upload-button">
+        <label class="file-button background-upload-button" hidden>
           <span>Carregar imagem local</span>
-          <input id="backgroundInput" type="file" accept="image/png,image/jpeg,image/webp">
+          <input id="backgroundInput" type="file" accept="image/png,image/jpeg,image/webp" disabled>
         </label>
         <button type="button" class="text-button" id="resetBackgroundButton">Usar fundo oficial</button>
       </section>
@@ -116,11 +130,11 @@
         <div class="asset-list" id="assetList">
           <!-- Exclusive package tools injected by editor.js from PACKAGES -->
         </div>
-        <label class="file-button custom-asset-button">
+        <label class="file-button custom-asset-button" hidden>
           <span>Carregar botão personalizado</span>
-          <input id="customAssetInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+          <input id="customAssetInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled>
         </label>
-        <p class="helper-text">A imagem fica disponível na paleta (guardada no navegador) e pode ser arrastada como qualquer outro botão.</p>
+        <p class="helper-text">Novos assets são instalados pelo diretório do TruckDeck e aparecem aqui após o recarregamento.</p>
       </section>
 
       <section class="tool-section">
@@ -134,11 +148,6 @@
 
       <section class="tool-section toolbox-footer">
         <p class="helper-text">Clique num ativo para o adicionar ao centro. Arraste-o para posicionar. Ctrl/⌘ + clique seleciona vários botões (grupo) — arraste para mover o grupo todo. Ctrl/⌘+C copia o grupo selecionado, Ctrl/⌘+V cola-o deslocado para reposicionar.</p>
-        <div class="clear-menu" id="clearMenu">
-          <span class="field-label">Limpar</span>
-          <button type="button" class="text-button danger" id="clearOrientationButton">Limpar botões da orientação</button>
-          <button type="button" class="text-button danger" id="clearAllButton">Limpar tudo até o background</button>
-        </div>
       </section>
     </aside>
 
@@ -234,18 +243,13 @@
         </fieldset>
         <fieldset id="pictogramFields" hidden>
           <legend>Pictograma automático</legend>
-          <p class="field-note">Ancoragem rápida do ícone dentro do asset. Posição, tamanho e opacidade são independentes da imagem de fundo.</p>
+          <p class="field-note">Ancoragem rápida do ícone dentro do asset. Cor, opacidade e halo são configurações globais do aparelho.</p>
           <div class="preset-grid">
             <button type="button" class="button button-small preset-button" data-preset="center">Centro absoluto</button>
             <button type="button" class="button button-small preset-button" data-preset="top">Topo / visor</button>
             <button type="button" class="button button-small preset-button" data-preset="bottom">Base / rodapé</button>
             <button type="button" class="button button-small preset-button" data-preset="fill">Preencher</button>
           </div>
-          <div class="coordinate-grid pictogram-style">
-            <label class="field"><span>Opacidade</span><input id="selectedPictoOpacity" type="number" min="0" max="1" step="0.05"></label>
-            <label class="field"><span>Cor</span><input id="selectedPictoColor" type="color" value="#ffffff" title="Cor do pictograma (branco = padrão)"></label>
-          </div>
-          <button type="button" class="button button-small button-accent" id="applyPictoColorButton">Aplicar cor</button>
           <details class="fine-tune">
             <summary>Ajuste fino (avançado)</summary>
             <div class="coordinate-grid">
@@ -256,10 +260,14 @@
             </div>
             <button type="button" class="button button-small" id="resetPictogramButton">Centrar pictograma</button>
           </details>
+          <div class="size-actions">
+            <button type="button" class="button button-small" id="copyPictogramButton">Copiar pictograma</button>
+            <button type="button" class="button button-small button-accent" id="applyPictogramButton">Aplicar pictograma</button>
+          </div>
         </fieldset>
         <div class="size-actions">
-          <button type="button" class="button button-small" id="copySizeButton">Copiar tamanho</button>
-          <button type="button" class="button button-small button-accent" id="applySizeButton">Aplicar tamanho</button>
+          <button type="button" class="button button-small" id="copySizeButton">Copiar tecla</button>
+          <button type="button" class="button button-small button-accent" id="applySizeButton">Aplicar tecla</button>
         </div>
         <div class="inspector-actions"><button type="button" class="text-button danger" id="deleteButton">Remover selecionado</button><span class="field-note">Duplo clique copia as dimensões.</span></div>
       </form>
@@ -271,8 +279,8 @@
     <span class="footer-note">Zonas e botões aplicados em tempo real no tablet</span>
   </footer>
 
-  <script src="catalog.js"></script>
-  <script src="keyboxes.js?v=2026-10-23-0050"></script>
-  <script src="editor.js?v=2026-10-23-0340"></script>
+  <script src="catalog.js?v=2026-10-25-0030"></script>
+  <script src="keyboxes.js?v=2026-10-25-0030"></script>
+  <script src="editor.js?v=2026-10-25-0030"></script>
 </body>
 </html>

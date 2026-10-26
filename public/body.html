@@ -1,42 +1,66 @@
-<div id="loading-screen">
+<div id="loading-screen" style="position:fixed;inset:0;z-index:9999;background:#000;opacity:1">
   <style>
     #loading-screen {
       position: fixed;
       inset: 0;
       z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #0a0a0a;
-      animation: loading-screen-exit 5s linear forwards;
+      background: #000;
+      opacity: 1;
+      transition: opacity 300ms linear;
     }
-    #loading-screen img {
-      width: 180px;
-      max-width: 70vw;
-      height: auto;
+    #loading-screen.done {
       opacity: 0;
-      animation: loading-logo-sequence 5s linear forwards;
+      pointer-events: none;
     }
-    @keyframes loading-screen-exit {
-      0%, 70% { opacity: 1; }
-      100% { opacity: 0; }
+    #loading-screen video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      opacity: 0;
+      pointer-events: none;
     }
-    @keyframes loading-logo-sequence {
-      0% { opacity: 0; }
-      16% { opacity: 1; }
-      43% { opacity: 0.85; }
-      70% { opacity: 1; }
-      100% { opacity: 0; }
+    #loading-screen.playing video {
+      opacity: 1;
+    }
+    #loading-screen video::-webkit-media-controls,
+    #loading-screen video::-webkit-media-controls-overlay-play-button,
+    #loading-screen video::-webkit-media-controls-start-playback-button {
+      display: none !important;
+      -webkit-appearance: none;
     }
   </style>
-  <img src="../store/mad-frog-logo.png" alt="">
+  <video autoplay muted playsinline preload="auto" poster="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen" aria-hidden="true">
+    <source src="brand/mad-frog-loading.mp4" type="video/mp4">
+  </video>
   <script>
-    setTimeout(() => document.getElementById('loading-screen')?.remove(), 5000);
+    (() => {
+      const screen = document.currentScript.parentElement;
+      const video = screen.querySelector('video');
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        screen.remove();
+        return;
+      }
+      const finish = () => {
+        if (!screen.isConnected) return;
+        screen.classList.add('done');
+        setTimeout(() => screen.remove(), 300);
+      };
+      const reveal = () => screen.classList.add('playing');
+      video.muted = true;
+      video.addEventListener('playing', reveal, { once: true });
+      video.addEventListener('ended', finish, { once: true });
+      video.addEventListener('error', finish, { once: true });
+      video.play().then(reveal).catch(finish);
+      setTimeout(() => screen.classList.add('done'), 4700);
+      setTimeout(() => screen.remove(), 5000);
+    })();
   </script>
 </div>
 <div id="app" data-style="eu">
   <header id="bar">
     <button id="btnMenu" class="barbtn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <img id="brandLogo" src="brand/mad-frog-logo.png" alt="Mad Frog">
     <div id="tabs" role="tablist" aria-label="Panel pages"></div>
     <button id="status" class="status barbtn" data-state="demo" aria-label="PC connection"><i></i><b>Demo</b></button>
     <button id="btnFull" class="barbtn ghost" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -47,28 +71,6 @@
   <div id="scrim" hidden></div>
   <aside id="sheet" hidden aria-label="Settings"></aside>
   <div id="toast" role="status" hidden></div>
-  <div id="boot" aria-hidden="true">
-  <svg class="mark" viewBox="0 0 200 200" aria-hidden="true">
-    <defs>
-      <linearGradient id="hbRing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f7"/><stop offset=".35" stop-color="#7d838a"/><stop offset=".6" stop-color="#e3e7ea"/><stop offset="1" stop-color="#565b61"/></linearGradient>
-      <radialGradient id="hbDisc" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#2c3036"/><stop offset="1" stop-color="#0d0f11"/></radialGradient>
-      <linearGradient id="hbFrog" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ed957"/><stop offset="1" stop-color="#3f9a2e"/></linearGradient>
-      <clipPath id="hbClip"><circle cx="100" cy="100" r="78"/></clipPath>
-    </defs>
-    <circle class="m-disc" cx="100" cy="100" r="78" fill="url(#hbDisc)"/>
-    <g clip-path="url(#hbClip)"><g class="m-frog">
-      <path d="M40 124c0-30 26-44 60-44s60 14 60 44c0 26-26 40-60 40s-60-14-60-40z" fill="url(#hbFrog)"/>
-      <ellipse cx="100" cy="146" rx="38" ry="15" fill="#c9efb0" opacity=".55"/>
-      <circle cx="70" cy="80" r="23" fill="url(#hbFrog)"/><circle cx="130" cy="80" r="23" fill="url(#hbFrog)"/>
-      <g class="m-eye"><circle cx="70" cy="79" r="15" fill="#f2a23a"/><ellipse cx="70" cy="79" rx="5.5" ry="9.5" fill="#14110c"/><circle cx="74.5" cy="73" r="3" fill="#fff6e0"/>
-        <circle cx="130" cy="79" r="15" fill="#f2a23a"/><ellipse cx="130" cy="79" rx="5.5" ry="9.5" fill="#14110c"/><circle cx="134.5" cy="73" r="3" fill="#fff6e0"/></g>
-      <g class="m-lid" fill="#4caa35"><circle cx="70" cy="79" r="15.5"/><circle cx="130" cy="79" r="15.5"/></g>
-      <path d="M64 124q36 22 72 0" fill="none" stroke="#173d14" stroke-width="5" stroke-linecap="round"/>
-      <circle cx="93" cy="106" r="2.4" fill="#173d14"/><circle cx="107" cy="106" r="2.4" fill="#173d14"/>
-    </g></g>
-    <circle class="m-ring" cx="100" cy="100" r="84" fill="none" stroke="url(#hbRing)" stroke-width="11" transform="rotate(-90 100 100)"/>
-    <rect class="m-led" x="82" y="169" width="36" height="7" rx="3.5"/>
-  </svg>
-  <b>Truck Deck</b><span>by Mad Frog</span>
-  </div>
+  <a id="editorLink" href="/editor.html" target="_blank" style="display:none;position:fixed;bottom:10px;right:14px;z-index:9999;padding:5px 10px;background:rgba(11,14,18,.85);border:1px solid rgba(242,100,25,.4);border-radius:6px;color:#F26419;font-size:10px;font-family:monospace;text-decoration:none;letter-spacing:.06em;" title="Abrir Layout Editor">LAYOUT EDITOR ↗</a>
 </div>
+<script>if(document.body.dataset.appMode!=="packaged"){var el=document.getElementById("editorLink");if(el)el.style.display="block";}</script>

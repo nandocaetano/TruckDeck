@@ -3,6 +3,14 @@
   'use strict';
 
   const STORAGE_KEY = 'desktruck.atomic-layout.v1';
+  // Retired duplicate/test controls are rejected on load so old local drafts and imports cannot
+  // put them back into the palette or canvas after they have been removed from the catalog.
+  const RETIRED_ASSETS = new Set([
+    'btn-rocker-v.png', 'sov_rocker_blue.png', 'sov_rocker_glossy.png',
+    'sov_round_shiny_steel.png', 'sov_sq_waffle.png', 'sov_push_worn.png',
+    'sov_push_dish.png', 'hazard_sq_blk.png', 'hazard_black.png',
+    'sov_push_hazard_on.png'
+  ]);
   const OFFICIAL_MODERN = {
     landscape: { name: 'bg-landscape.jpg', src: 'skins/modern/bg-landscape.jpg', width: 2752, height: 1536 },
     portrait: { name: 'bg-portrait.jpg', src: 'skins/modern/bg-portrait.jpg', width: 1152, height: 1728 }
@@ -57,14 +65,16 @@
   // resolver: 'modern' usa skins/modern/ | 'sov' usa skins/sov/btn/ | omitido = modern
   const ASSET_CATALOG = [
     // ── Rocker ───────────────────────────────────────────────────────────────
-    { file: 'btn-rocker-v.png',              label: 'Rocker vertical',          defaultSize: [5.5, 13], category: 'rocker', resolver: 'modern' },
     { file: 'mod_rocker_metal.png',          label: 'Rocker metal',             defaultSize: [10, 6],   category: 'rocker', resolver: 'modern' },
     { file: 'mod_rocker_beige.png',          label: 'Rocker bege',              defaultSize: [10, 6],   category: 'rocker', resolver: 'modern' },
-    { file: 'sov_rocker_blue.png',           label: 'Rocker azul',              defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
+    { file: 'mod_rocker_rounded_black.png',  label: 'Rocker preto arredondado', defaultSize: [7, 10],   category: 'rocker', resolver: 'modern' },
+    { file: 'mod_rocker_piano_black.png',    label: 'Rocker preto piano',       defaultSize: [6, 10],   category: 'rocker', resolver: 'modern' },
+    { file: 'mod_rocker_horizontal_black.png', label: 'Rocker preto horizontal',defaultSize: [10, 7],  category: 'rocker', resolver: 'modern' },
+    { file: 'mod_rocker_vertical_black.png', label: 'Rocker preto vertical',    defaultSize: [7, 11],   category: 'rocker', resolver: 'modern' },
+    { file: 'mod_rocker_bipart_black.png',   label: 'Rocker preto bipartido',   defaultSize: [7, 11],   category: 'rocker', resolver: 'modern' },
     { file: 'sov_rocker_blue_rusted.png',    label: 'Rocker azul enferrujado',  defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
     { file: 'sov_rocker_diamond_gunmetal.png', label: 'Rocker diamond gunmetal',defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
     { file: 'sov_rocker_diamond_silver.png', label: 'Rocker diamond prata',     defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
-    { file: 'sov_rocker_glossy.png',         label: 'Rocker glossy',            defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
     { file: 'sov_rocker_matte.png',          label: 'Rocker matte',             defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
     { file: 'sov_rocker_olive.png',          label: 'Rocker oliva',             defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
     { file: 'sov_rocker_red_glossy.png',     label: 'Rocker vermelho glossy',   defaultSize: [10, 6],   category: 'rocker', resolver: 'sov' },
@@ -80,7 +90,6 @@
     { file: 'sov_round_diamond_steel.png',   label: 'Round diamond aço',        defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
     { file: 'sov_round_worn_red.png',        label: 'Round desgastado vermelho',defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
     { file: 'sov_round_worn_orange.png',     label: 'Round desgastado laranja', defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
-    { file: 'sov_round_shiny_steel.png',     label: 'Round aço brilhante',      defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
     { file: 'sov_round_shiny_red.png',       label: 'Round vermelho brilhante', defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
     { file: 'sov_round_electric_off.png',    label: 'Round elétrico',           defaultSize: [7, 7],    category: 'round',  resolver: 'sov' },
     // sov_round_red_metal.png intentionally NOT listed: the file is a cropped sprite-sheet fragment (873x256, two buttons on white), not a housing. PNG kept on disk.
@@ -91,11 +100,8 @@
     { file: 'btn-square.png',                label: 'Square moderno',           defaultSize: [8, 8],    category: 'push',   resolver: 'modern' },
     { file: 'sov_sq_boss.png',               label: 'Square boss',              defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
     { file: 'sov_sq_flat.png',               label: 'Square flat',              defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
-    { file: 'sov_sq_waffle.png',             label: 'Square waffle',            defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
     { file: 'sov_sq_grid.png',               label: 'Square grid',              defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
     { file: 'sov_push.png',                  label: 'Push',                     defaultSize: [8, 8],    category: 'push',   resolver: 'sov' },
-    { file: 'sov_push_dish.png',             label: 'Push côncavo',             defaultSize: [7, 7],    category: 'push',   resolver: 'sov' },
-    { file: 'sov_push_worn.png',             label: 'Push desgastado',          defaultSize: [7, 7],    category: 'push',   resolver: 'sov' },
     { file: 'sov_push_scratched.png',        label: 'Push arranhado',           defaultSize: [7, 7],    category: 'push',   resolver: 'sov' },
     // ── Ignição ──────────────────────────────────────────────────────────────
     { file: 'sov_key_slot.png',              label: 'Slot chave',               defaultSize: [8, 10],   category: 'ignition', resolver: 'sov' },
@@ -116,14 +122,14 @@
     { file: 'sov_tog_mid.png',               label: 'Toggle meio',              defaultSize: [6, 12],   category: 'toggle', resolver: 'sov' },
     { file: 'sov_tog_down.png',              label: 'Toggle baixo',             defaultSize: [6, 12],   category: 'toggle', resolver: 'sov' },
     // ── Hazard ───────────────────────────────────────────────────────────────
-    { file: 'hazard_black.png',              label: 'Hazard preto',             defaultSize: [8, 8],    category: 'hazard', resolver: 'modern' },
-    { file: 'hazard_sq_blk.png',             label: 'Hazard quadrado',          defaultSize: [8, 8],    category: 'hazard', resolver: 'modern' },
+    { file: 'mod_push_hazard_triangle.png',  label: 'Hazard triangular',        defaultSize: [8, 8],    category: 'hazard', resolver: 'modern' },
     { file: 'sov_push_hazard.png',           label: 'Hazard push',              defaultSize: [7, 7],    category: 'hazard', resolver: 'sov' },
     { file: 'sov_push_hazard_off.png',       label: 'Hazard off',               defaultSize: [7, 7],    category: 'hazard', resolver: 'sov' },
-    { file: 'sov_push_hazard_on.png',        label: 'Hazard on',                defaultSize: [7, 7],    category: 'hazard', resolver: 'sov' },
     // ── Freio ────────────────────────────────────────────────────────────────
+    { file: 'mod_push_parking_brake.png',    label: 'Parking brake cromado',    defaultSize: [9, 7],    category: 'brake',  resolver: 'modern' },
     { file: 'sov_push_parking_brake.png',    label: 'Parking brake push',       defaultSize: [7, 7],    category: 'brake',  resolver: 'sov' },
     // ── Lâmpadas ─────────────────────────────────────────────────────────────
+    { file: 'mod_lamp_hazard_red_off.png',   label: 'Luz hazard triangular',    defaultSize: [8, 8],    category: 'lamp',   resolver: 'modern' },
     { file: 'sov_lamp_red_off.png',          label: 'Lâmpada vermelha off',     defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
     { file: 'sov_lamp_red_on.png',           label: 'Lâmpada vermelha on',      defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
     { file: 'sov_lamp_green_off.png',        label: 'Lâmpada verde off',        defaultSize: [7, 7],    category: 'lamp',   resolver: 'sov' },
@@ -233,8 +239,10 @@
   let orientation = 'landscape';
   let selection = [];
   let copiedSize = null;
+  let copiedPictogram = null;
   let clipboard = null;
   let clipboardPasteCount = 0;
+  let allButtonsClipboard = null;
   let dragState = null;
   let runtimeBackgrounds = {};
   let customAssets = [];
@@ -265,9 +273,9 @@
     return /sov_rotary_(?:dial|base|lights|wipers)/i.test(String(asset || ''))
       || /mod_rotary_(?:lights|wipers)\.png$/i.test(String(asset || ''));
   }
-  // Measured off the printed legends (0deg = 12 o'clock, clockwise positive).
-  // Lights: AUTO 0, bulb -68.2, dipped beam 179.
-  // Wipers: AUTO 91.4 (3h), normal 0.6 (12h), fast -84.8 (9h), OFF 180 (6h).
+  // Printed four-position legends (0deg = 12 o'clock, clockwise positive).
+  // Lights: OFF -90, AUTO 0, parking 90, low beam 180.
+  // Wipers: OFF -90, INT 0, normal 90, fast 180.
   // Stages stay in app.js (telemetry). The editor only stores the knob geometry.
   function modernRotaryPreset(asset) {
     const key = String(asset || '');
@@ -278,24 +286,26 @@
         pinLen: 56.4,
         pinBake: 27.3,
         states: [
+          { id: 'off', deg: -90 },
           { id: 'auto', deg: 0 },
-          { id: 'lamp', deg: -68.2 },
-          { id: 'beam', deg: 179 }
+          { id: 'parking', deg: 90 },
+          { id: 'low', deg: 180 }
         ]
       };
     }
-    // Soviet housings: same logic as the Modern ones, different art. Knob crops are 54.2% of the dial
-    // square and were photographed turned 28.6deg (measured on the files).
+    // Soviet housings: fixed rusted four-position art. The clean handle cutout points left
+    // in its source file, so -90deg is its baked angle.
     if (/sov_rotary_lights\.png$/i.test(key)) {
       return {
         functionId: 'lights',
         pinAsset: 'sov_rotary_lights_knob.png',
-        pinLen: 54.2,
-        pinBake: 28.6,
+        pinLen: 56,
+        pinBake: -90,
         states: [
-          { id: 'off', deg: -85 },
-          { id: 'parking', deg: 0 },
-          { id: 'low', deg: 93 }
+          { id: 'off', deg: -90 },
+          { id: 'auto', deg: 0 },
+          { id: 'parking', deg: 90 },
+          { id: 'low', deg: 180 }
         ]
       };
     }
@@ -303,12 +313,13 @@
       return {
         functionId: 'wipers',
         pinAsset: 'sov_rotary_wipers_knob.png',
-        pinLen: 54.2,
-        pinBake: 28.6,
+        pinLen: 56,
+        pinBake: -90,
         states: [
-          { id: 'off', deg: -88 },
-          { id: 'norm', deg: 0 },
-          { id: 'fast', deg: 92 }
+          { id: 'off', deg: -90 },
+          { id: 'int', deg: 0 },
+          { id: 'norm', deg: 90 },
+          { id: 'fast', deg: 180 }
         ]
       };
     }
@@ -319,10 +330,10 @@
         pinLen: 57.6,
         pinBake: 26.5,
         states: [
-          { id: 'auto', deg: 91.4 },
-          { id: 'norm', deg: 0.6 },
-          { id: 'fast', deg: -84.8 },
-          { id: 'off', deg: 180 }
+          { id: 'off', deg: -90 },
+          { id: 'int', deg: 0 },
+          { id: 'norm', deg: 90 },
+          { id: 'fast', deg: 180 }
         ]
       };
     }
@@ -406,29 +417,29 @@
     if (entry.resolver === 'sov') return 'skins/sov/btn/' + entry.file;
     return 'skins/modern/' + entry.file;
   }
-  // Round/rocker pieces are drawn as a static housing + a separate "<name>_key.png" disc/key
+  // Round/rocker/push pieces are drawn as a static housing + a separate "<name>_key.png" disc/key
   // (same split app.js uses at runtime). The palette thumbnail must stack both layers, otherwise
   // the housing alone looks like an empty socket. Returns null for pieces with no key layer.
-  // The regex mirrors app.js isSegRound/isSegRocker so editor and app agree on what has a key.
+  // The regex mirrors app.js isSegRound/isSegRocker/isSegPush so editor and app agree on what has a key.
   function editorKeyLayer(entry) {
     const file = String(entry && entry.file || '');
     const kind = /(?:mod_rocker_|sov_rocker_)[^/]*(?<!_key)\.png$/i.test(file)
       ? 'rocker'
-      : (/(?:mod_round_|sov_round_)[^/]*(?<!_key)\.png$/i.test(file) ? 'round' : null);
+      : (/(?:mod_round_|sov_round_)[^/]*(?<!_key)\.png$/i.test(file)
+        ? 'round'
+        : (/mod_push_[^/]*(?<!_key)\.png$/i.test(file) ? 'push' : null));
     if (!kind) return null;
     const keyFile = file.replace(/\.png$/i, '_key.png');
     return { kind, file: keyFile, src: editorAssetSrc({ resolver: /^sov_/i.test(file) ? 'sov' : 'modern', file: keyFile }) };
   }
 
   function assetImageSrc(key) {
-    // Modern rotary housings and their knob crops always live under skins/modern,
-    // even if the piece is dropped onto another board.
-    if (/^mod_rotary_/i.test(String(key || ''))) return 'skins/modern/' + key;
-    if (/^sov_rotary_(?:knob|lights_knob|wipers_knob)\.png$/i.test(String(key || ''))) return 'skins/sov/btn/' + key;
-    // Prefer the active skin's pack when a key exists in both (e.g. btn-rocker-v.png).
-    if (state.skin === 'sov_frame' && ASSETS_SOV[key]) return 'skins/sov/btn/' + key;
-    if (ASSETS_MODERN[key]) return 'skins/modern/' + key;
-    if (ASSETS_SOV[key]) return 'skins/sov/btn/' + key;
+    // Asset ownership follows the catalog entry, never the board skin. Any control type can be
+    // placed on any panel without the renderer redirecting its PNG to the active skin's folder.
+    const entry = ASSET_CATALOG.find((asset) => asset.file === key);
+    if (entry) return editorAssetSrc(entry);
+    if (/^sov_/i.test(String(key || ''))) return 'skins/sov/btn/' + key;
+    if (typeof key === 'string' && /\.png$/i.test(key)) return 'skins/modern/' + key;
     const custom = customAssets.find((asset) => asset.id === key);
     return custom ? custom.src : '';
   }
@@ -585,7 +596,9 @@
       ['landscape', 'portrait'].forEach((mode) => {
         const source = savedBoard.orientations[mode];
         if (!source) return;
-        fresh.boards[skinKey].orientations[mode].buttons = Array.isArray(source.buttons) ? source.buttons.map(normalizeButton) : [];
+        fresh.boards[skinKey].orientations[mode].buttons = Array.isArray(source.buttons)
+          ? source.buttons.filter((item) => item && !RETIRED_ASSETS.has(String(item.asset || ''))).map(normalizeButton)
+          : [];
         fresh.boards[skinKey].orientations[mode].zones = Array.isArray(source.zones) ? source.zones.map(normalizeZone) : [];
       });
     });
@@ -868,7 +881,7 @@
   const PROBLEM_FLASH_MS = 6000;
   const BOARD_LABELS = { eu_frame: 'Modern', sov_frame: 'Siga Bem / Viva México', sov_white: 'Soviet · Branca', sov_military_1: 'Soviet · Military 1', sov_military_2: 'Soviet · Military 2' };
   const PROBLEM_REASONS = { 'key-none': 'tecla sem função', 'key-invalid': 'função inexistente', 'lamp-none': 'luz sem função', 'lamp-invalid': 'indicador inexistente' };
-  const IMPLICIT_FUNCTION_ASSET = /sov_toggle_parking_brake|sov_push_parking_brake|sov_push_hazard(?:_off|_on)?(?:\.|$)|sov_rotary_(?:dial|base|lights|wipers)|mod_rotary_(?:lights|wipers)\.png$/i;
+  const IMPLICIT_FUNCTION_ASSET = /sov_toggle_parking_brake|(?:sov|mod)_push_parking_brake|sov_push_hazard(?:_off|_on)?(?:\.|$)|mod_push_hazard_triangle|mod_lamp_hazard_red_(?:off|on)|sov_rotary_(?:dial|base|lights|wipers)|mod_rotary_(?:lights|wipers)\.png$/i;
   let problemFlash = null; // { until, keys: Set('board|orientation|id') }
   let problemTimer = null;
 
@@ -1013,6 +1026,14 @@
     return (item && item.functionId && typeof FUNCTIONS !== 'undefined' && FUNCTIONS[item.functionId]) || null;
   }
 
+  function defaultFunctionForAsset(asset) {
+    const key = String(asset || '');
+    if (/mod_push_hazard_triangle\.png$/i.test(key)) return 'hazard';
+    if (/mod_lamp_hazard_red_(?:off|on)\.png$/i.test(key)) return 'hazard_alert';
+    if (/(?:sov|mod)_push_parking_brake\.png$/i.test(key)) return 'parking_brake';
+    return '';
+  }
+
   function normalizeButton(item) {
     // The lever widget was removed in 8a6706d; any board saved before that still references
     // these two assets and must land on the standard toggle (same functionId), not btn-square.
@@ -1025,7 +1046,7 @@
       id: String(item.id || uid('button')),
       asset,
       label: String(item.label || def.label),
-      functionId: String(item.functionId || (rawAsset !== item.asset ? 'parking_brake' : '')),
+      functionId: String(item.functionId || (rawAsset !== item.asset ? 'parking_brake' : defaultFunctionForAsset(asset))),
       pictogram: normalizePictogram(item.pictogram),
       pictogramHidden: Boolean(item.pictogramHidden),
       x: clamp(numOr(item.x, 10), 0, 99),
@@ -1218,8 +1239,12 @@
     $('#deleteButton').addEventListener('click', deleteSelection);
     $('#copySizeButton').addEventListener('click', copySelectedSize);
     $('#applySizeButton').addEventListener('click', applyCopiedSize);
+    $('#copyPictogramButton').addEventListener('click', copySelectedPictogram);
+    $('#applyPictogramButton').addEventListener('click', applyCopiedPictogram);
     $('#copyGroupButton').addEventListener('click', copySelectionToClipboard);
     $('#pasteGroupButton').addEventListener('click', pasteClipboard);
+    $('#copyAllButton').addEventListener('click', copyAllButtons);
+    $('#pasteAllButton').addEventListener('click', pasteAllButtons);
     $('#exportButton').addEventListener('click', exportAll);
     $('#draftSaveButton').addEventListener('click', saveDraft);
     $('#draftLoadButton').addEventListener('click', () => $('#draftInput').click());
@@ -1227,13 +1252,9 @@
     $('#checkButton').addEventListener('click', runCheck);
     $('#rescueButton').addEventListener('click', applyRescue);
     $('#rescueDiscardButton').addEventListener('click', discardRescue);
-    $('#saveLocalButton').addEventListener('click', () => {
-      writeLocal();
-      announce('Estado salvo localmente.', 'success');
-      toast('Estado salvo localmente.', 'success');
-    });
     $('#importButton').addEventListener('click', () => $('#importInput').click());
     $('#saveButton').addEventListener('click', saveNow);
+    $('#publishButton').addEventListener('click', saveNow);
     $('#importInput').addEventListener('change', importReport);
     $('#undoButton').addEventListener('click', undo);
     $('#redoButton').addEventListener('click', redo);
@@ -1246,15 +1267,7 @@
     $('#selectedFunctionId').addEventListener('change', () => { updateSelectedMetadata(); renderPictogramFields(primarySelected() && primarySelected().item); renderStage(); });
     $('#selectedNoPictogram').addEventListener('change', updateSelectedNoPictogram);
     $$('.preset-button').forEach((button) => button.addEventListener('click', () => applyPictogramPreset(button.dataset.preset)));
-    ['selectedPictoW', 'selectedPictoH', 'selectedPictoX', 'selectedPictoY', 'selectedPictoOpacity'].forEach((id) => $('#' + id).addEventListener('change', updateSelectedPictogram));
-    // Color: save on input (live), change (picker close), and explicit Aplicar — was only on change and felt unconfirmed.
-    const colorInput = $('#selectedPictoColor');
-    if (colorInput) {
-      colorInput.addEventListener('input', updateSelectedPictogram);
-      colorInput.addEventListener('change', updateSelectedPictogram);
-    }
-    const applyColorBtn = $('#applyPictoColorButton');
-    if (applyColorBtn) applyColorBtn.addEventListener('click', () => { updateSelectedPictogram(); announce('Cor do pictograma aplicada.'); });
+    ['selectedPictoW', 'selectedPictoH', 'selectedPictoX', 'selectedPictoY'].forEach((id) => $('#' + id).addEventListener('change', updateSelectedPictogram));
     const elementColorInput = $('#selectedElementColor');
     if (elementColorInput) {
       elementColorInput.addEventListener('input', applySelectedElementColor);
@@ -1418,9 +1431,13 @@
       button.dataset.package = entry.resolver === 'sov' ? 'soviet' : 'modern';
       const wide = entry.defaultSize[0] > entry.defaultSize[1] * 1.6;
       const keyLayer = editorKeyLayer(entry);
+      const keyBox = keyLayer && window.KEY_BOXES && window.KEY_BOXES[entry.file];
+      const keyStyle = keyBox
+        ? ' style="inset:auto;left:' + keyBox[0] + '%;top:' + keyBox[1] + '%;width:' + keyBox[2] + '%;height:' + keyBox[3] + '%"'
+        : '';
       // .asset-stack shrink-wraps the housing image so the key layer's % inset matches the app.
       const thumb = keyLayer
-        ? '<span class="asset-stack"><img src="' + editorAssetSrc(entry) + '" alt=""><img class="asset-key asset-key-' + keyLayer.kind + '" src="' + keyLayer.src + '" alt=""></span>'
+        ? '<span class="asset-stack"><img src="' + editorAssetSrc(entry) + '" alt=""><img class="asset-key asset-key-' + keyLayer.kind + '" src="' + keyLayer.src + '" alt=""' + keyStyle + '></span>'
         : '<img src="' + editorAssetSrc(entry) + '" alt="">';
       button.innerHTML = '<span class="asset-preview' + (wide ? ' asset-preview-wide' : '') + '">' + thumb + '</span><span><strong>' + escapeHtml(entry.label) + '</strong><small>' + escapeHtml(key) + '</small></span>';
       bindTool(button);
@@ -1858,7 +1875,8 @@
     // Swap the function dropdown between vehicle actions and lamp telemetry catalog.
     // Dials are passive gauges — no function binding (telemetry drives the needle in app.js).
     const fnSelect = $('#selectedFunctionId');
-    const prevValue = lamp ? (resolveLampFunctionId(item.functionId) || item.functionId || '') : (item.functionId || '');
+    const rawFunctionId = item.functionId || '';
+    const prevValue = lamp ? (resolveLampFunctionId(rawFunctionId) || rawFunctionId) : (/^(?:engine|electrics)$/.test(rawFunctionId) ? 'ign_combined' : rawFunctionId);
     fnSelect.innerHTML = dial
       ? '<option value="">— mostrador passivo (telemetria) —</option>'
       : (lamp ? buildLampOptionsHtml(item.asset) : buildFunctionOptionsHtml());
@@ -1918,7 +1936,7 @@
   function buildFunctionOptionsHtml() {
     if (typeof FUNCTION_LIST === 'undefined') return '<option value="">— função —</option>';
     const byCat = {};
-    FUNCTION_LIST.forEach((f) => { (byCat[f.cat] = byCat[f.cat] || []).push(f); });
+    FUNCTION_LIST.filter((f) => f.assignable !== false).forEach((f) => { (byCat[f.cat] = byCat[f.cat] || []).push(f); });
     const groups = (typeof CATEGORIES !== 'undefined' ? CATEGORIES : Object.keys(byCat).map((id) => ({ id, name: id })))
       .filter((cat) => byCat[cat.id] && byCat[cat.id].length);
     let html = '<option value="">— personalizado / nenhum —</option>';
@@ -1960,8 +1978,6 @@
     $('#selectedPictoH').value = picto.height;
     $('#selectedPictoX').value = picto.offsetX;
     $('#selectedPictoY').value = picto.offsetY;
-    $('#selectedPictoOpacity').value = picto.opacity;
-    $('#selectedPictoColor').value = picto.color || '#ffffff';
   }
 
   function renderRotaryFields(item) {
@@ -2010,13 +2026,14 @@
     const primary = primarySelected();
     if (!primary || primary.kind !== 'button' || !fnOf(primary.item)) return;
     pushHistory();
+    const current = primary.item.pictogram || defaultPictogram();
     primary.item.pictogram = normalizePictogram({
       width: $('#selectedPictoW').value,
       height: $('#selectedPictoH').value,
       offsetX: $('#selectedPictoX').value,
       offsetY: $('#selectedPictoY').value,
-      opacity: $('#selectedPictoOpacity').value,
-      color: $('#selectedPictoColor').value
+      opacity: current.opacity,
+      color: current.color
     });
     persist(); renderStage();
   }
@@ -2124,6 +2141,25 @@
     persist(); render(); announce('Tamanho aplicado a ' + targets.length + ' botão(ões).');
   }
 
+  function copySelectedPictogram() {
+    const primary = primarySelected();
+    if (!primary || primary.kind !== 'button') return;
+    const picto = normalizePictogram(primary.item.pictogram);
+    copiedPictogram = { width: picto.width, height: picto.height, offsetX: picto.offsetX, offsetY: picto.offsetY, source: primary.item.id };
+    announce('Tamanho e posição do pictograma de ' + primary.item.id + ' copiados.');
+  }
+
+  function applyCopiedPictogram() {
+    if (!copiedPictogram) { announce('Nenhum pictograma copiado ainda.'); return; }
+    pushHistory();
+    const targets = selectedItems().filter(({ kind }) => kind === 'button');
+    targets.forEach(({ item }) => {
+      const current = normalizePictogram(item.pictogram);
+      item.pictogram = normalizePictogram({ ...current, width: copiedPictogram.width, height: copiedPictogram.height, offsetX: copiedPictogram.offsetX, offsetY: copiedPictogram.offsetY });
+    });
+    persist(); render(); announce('Pictograma aplicado a ' + targets.length + ' botão(ões).');
+  }
+
   function addButton(asset, x, y) {
     const def = getAssetDef(asset);
     if (!def) return;
@@ -2174,13 +2210,27 @@
   }
 
   function clearOrientation() {
-    if (!window.confirm('Limpar botões da orientação?\n\nRemove apenas as teclas/elementos da orientação activa (' + orientation + '). O fundo permanece.')) return;
+    if (!window.confirm('Excluir todas as teclas desta orientação?\n\nAs zonas OBD e o fundo permanecem.')) return;
     pushHistory();
-    activeBoard().orientations[orientation] = { buttons: [], zones: [] };
+    currentBoard().buttons = [];
     selection = [];
     persist();
     render();
-    announce('Botões da orientação limpos.');
+    announce('Todas as teclas da orientação foram excluídas.');
+  }
+
+  function copyAllButtons() {
+    allButtonsClipboard = JSON.parse(JSON.stringify(currentBoard().buttons));
+    announce(allButtonsClipboard.length + ' tecla(s) copiada(s).');
+  }
+
+  function pasteAllButtons() {
+    if (!allButtonsClipboard) { announce('Nenhum conjunto de teclas foi copiado.'); return; }
+    if (currentBoard().buttons.length && !window.confirm('Substituir todas as teclas desta orientação pelas teclas copiadas?')) return;
+    pushHistory();
+    currentBoard().buttons = allButtonsClipboard.map((item) => normalizeButton({ ...JSON.parse(JSON.stringify(item)), id: uniqueElementId(item.id + '-all') }));
+    selection = [];
+    persist(); render(); announce(currentBoard().buttons.length + ' tecla(s) colada(s).');
   }
 
   function clearAllToBackground() {
@@ -2387,8 +2437,9 @@
       selection = [];
       persist(); renderCustomAssetTools(); renderShippedAssetTools(); render();
       clearTimeout(pushTimer);
-      announce('Saving imported layout...');
-      if (await pushToServer(buildReport())) announce('Imported and saved: ' + key + '. Tablet update sent.');
+      unsavedWork = true;
+      announce('Mapeamento importado para revisão. Use “Publicar no tablet” quando estiver pronto.', 'success');
+      toast('Importado no editor — nada foi enviado ao tablet.', 'success');
     } catch (error) {
       announce('Import failed: ' + error.message);
     } finally {

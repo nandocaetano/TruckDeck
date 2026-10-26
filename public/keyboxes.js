@@ -181,5 +181,47 @@ window.KEY_BOXES = {
   12.0,
   75.428,
   76.0
+ ],
+ "mod_push_hazard_triangle.png": [
+  16.064,
+  16.904,
+  67.871,
+  65.173
+ ],
+ "mod_push_parking_brake.png": [
+  12.987,
+  13.921,
+  74.026,
+  70.07
+ ],
+ "mod_rocker_rounded_black.png": [
+  13.076,
+  10.053,
+  73.849,
+  79.894
+ ],
+ "mod_rocker_piano_black.png": [
+  13.208,
+  9.038,
+  73.585,
+  81.924
+ ],
+ "mod_rocker_horizontal_black.png": [
+  11.02,
+  11.927,
+  77.959,
+  76.147
+ ],
+ "mod_rocker_vertical_black.png": [
+  12.969,
+  8.96,
+  74.061,
+  82.08
+ ],
+ "mod_rocker_bipart_black.png": [
+  13.932,
+  9.959,
+  72.136,
+  80.083
  ]
 };

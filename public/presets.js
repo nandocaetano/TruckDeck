@@ -83,7 +83,7 @@ function autoFillPages(usedIds, game, cols, rows, buttonType) {
   }
 
   for (const cat of CATEGORIES.filter((c) => c.game === game)) {
-    const rest = FUNCTION_LIST.filter((f) => f.cat === cat.id && !usedIds.has(f.id));
+    const rest = FUNCTION_LIST.filter((f) => f.assignable !== false && f.cat === cat.id && !usedIds.has(f.id));
     if (!rest.length) continue;
     if (!page) newPage();
     // Every category starts its own row: a heading in the middle of a line reads as if
