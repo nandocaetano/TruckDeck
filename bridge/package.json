@@ -6,7 +6,7 @@
   "bin": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build:exe": "pkg . --targets node18-win-x64 --output ../dist/TruckDeckBridge.exe"
+    "build:exe": "pkg . --targets node18-win-x64 --output ../dist/TruckDeckBridge.exe && powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; $mt=$null; $cmd=Get-Command mt.exe -ErrorAction SilentlyContinue; if($cmd){$mt=$cmd.Source}; if(-not $mt){$mt=@(Get-ChildItem -LiteralPath 'C:\\Program Files (x86)\\Windows Kits\\10\\bin' -Recurse -Filter mt.exe -ErrorAction SilentlyContinue | Where-Object { $_.Directory.Name -eq 'x64' } | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName)}; if(-not $mt){throw 'mt.exe not found. Install Microsoft.WindowsSDK.10.0.22621.'}; & $mt -nologo -manifest bridge.manifest -outputresource:'..\\dist\\TruckDeckBridge.exe;#1'; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}\""
   },
   "pkg": {
     "targets": [
