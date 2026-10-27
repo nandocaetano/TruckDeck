@@ -3084,10 +3084,13 @@
     if (!t) return ignLocal;
     if (t.engine) return 2;
     if (t.electric) return 1;
-    // Keep the locally requested ON detent until the next tap. Some ETS2 setups do not
+    // Keep the locally requested detent until the next tap. Some ETS2 setups do not
     // expose or bind the separate electrics command, so live telemetry can remain OFF
     // even though the combined key must advance to START on its second tap.
-    if (S.ignUsed && ignLocal === 1) return 1;
+    // This covers stage 2 as well: after START, telemetry needs a moment to report
+    // engine=true, and collapsing to 0 in that gap restarts the whole staged flow --
+    // the key then cycles for ever and the panel keeps blacking out.
+    if (S.ignUsed && ignLocal >= 1) return ignLocal;
     return 0;
   }
   // How a truck is started, and what the game allows:
@@ -3162,7 +3165,11 @@
     };
     const startEngine = () => {
       send('tap', keyOf('engine'));
-      modernIgnPending = false;
+      // Telemetry reports engine=true only a few hundred ms after the key lands. Releasing
+      // the lock immediately let a second tap arrive while ignState() still said 1, which
+      // sent 'engine' again -- and in ETS2 that second press stops the engine it just
+      // started. Hold the lock across that window instead.
+      setTimeout(() => { modernIgnPending = false; }, 900);
       ignLocal = 2;
       if (!S.tel || !S.tel.sdk) S.latched.engine = true;
       S.ignUsed = true;

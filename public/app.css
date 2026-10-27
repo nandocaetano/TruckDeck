@@ -2914,7 +2914,10 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 /* ---- Full screen: no top bar, panel edge to edge, one small dim button to leave ------------------------ */
 #app.fs #bar { display: none; }
 #app.fs #stage { padding: 0; margin: 0; }
-#fsExit { position: fixed; bottom: max(6px, env(safe-area-inset-bottom, 0px)); right: max(6px, env(safe-area-inset-right, 0px)); z-index: 30;
+/* Top-right, as the comment in app.js always described: the bottom-right corner is where
+   the thumb rests on a tablet, and #btnCornerFs used to sit in the very same spot, so the
+   two overlapped and the exit control was unreachable. */
+#fsExit { position: fixed; top: max(6px, env(safe-area-inset-top, 0px)); right: max(6px, env(safe-area-inset-right, 0px)); z-index: 30;
   display: flex; align-items: center; gap: 5px;
   height: 44px; padding: 8px 14px; border: 0; border-radius: 10px; background: rgba(0, 0, 0, 0.45); color: #cfd6dc; opacity: 0.6; cursor: pointer; }
 #fsExit svg { display: block; width: 18px; height: 18px; flex-shrink: 0; }
@@ -2929,6 +2932,10 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 #btnCornerFs svg { display: block; width: 100%; height: 100%; }
 #btnCornerFs:active { opacity: 0.9; }
 #app.fs #btnCornerFs { display: none; }
+/* The top bar already carries #btnFull, so this floating duplicate only cluttered the
+   corner and collided with #fsExit. Hidden rather than deleted so the behaviour can be
+   restored from CSS alone if a device ever needs it. */
+#btnCornerFs { display: none; }
 
 /* ---- Wipers: three lamp segments, one per speed ------------------------------------------------------- */
 #panel.skin .k-kbd[data-wip] .led { width: calc(var(--k) * 0.46); --d: #0b0c0d; --a: var(--d); --b: var(--d); --c: var(--d);
@@ -3588,6 +3595,11 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
 
 /* The OBD pages and the media/radio player must stay fully hidden under the boot/shutdown
    video — only the video itself (z-index: 40 above) may be visible on a black screen. */
+/* The music player is a global footer, drawn on every screen, so none of the boot rules
+   below ever reached it: the TRACK bar and its album art stayed lit through the whole
+   ignition sequence and were visible before the V8 logo even started. It belongs to the
+   woken dash, not to the boot, so it fades in with the rest at the reveal phase. */
+#panel.skin.eu-modern.ign-booting .obd-media,
 #panel.skin.eu-modern.ign-booting .obd-cell,
 #panel.skin.eu-modern.ign-booting .tell,
 #panel.skin.eu-modern.ign-shutting-down .obd-cell,
@@ -3596,6 +3608,7 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   pointer-events: none;
   transition: none;
 }
+#panel.skin.eu-modern.ign-booting[data-boot="reveal"] .obd-media,
 #panel.skin.eu-modern.ign-booting[data-boot="reveal"] .obd-cell,
 #panel.skin.eu-modern.ign-booting[data-boot="reveal"] .tell {
   opacity: 1 !important;

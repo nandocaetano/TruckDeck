@@ -517,6 +517,23 @@
     try { return localStorage.getItem('truckdeck.pin') || ''; } catch (error) { return ''; }
   }
 
+  // The bridge mints a fresh PIN whenever its data folder has none, so the value cached in
+  // localStorage goes stale as soon as the bridge is restarted from a different folder --
+  // and every save then fails with "PIN incorreto ou ausente". On loopback the bridge hands
+  // the current PIN out through /api/info (it refuses to do so for any other peer), so ask
+  // it once at startup and refresh the cache. resolvePin() re-reads localStorage on every
+  // call, so later saves pick this up without any further wiring.
+  (async () => {
+    try {
+      const res = await fetch('api/info');
+      if (!res.ok) return;
+      const info = await res.json();
+      if (info && typeof info.pin === 'string' && /^\d{4}$/.test(info.pin)) {
+        localStorage.setItem('truckdeck.pin', info.pin);
+      }
+    } catch (error) { /* offline or non-loopback: keep whatever is cached */ }
+  })();
+
   // SSOT: a board KEY present in a payload is authoritative for that board, even when
   // its buttons array is empty (an intentionally cleared panel). Only a key that is
   // completely ABSENT from the payload is considered unmapped there.
