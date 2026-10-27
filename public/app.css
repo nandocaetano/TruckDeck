@@ -3616,11 +3616,20 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   transition: opacity 400ms ease;
 }
 /* Native video chrome (play button, scrubber) must never show over the shutdown clip. */
+#panel.skin.eu-modern .obd-screens > .ign-shutdown::-webkit-media-controls-overlay-play-button,
+#panel.skin.eu-modern .obd-screens > .ign-shutdown::-webkit-media-controls-start-playback-button,
 #panel.skin.eu-modern .obd-screens > .ign-shutdown::-webkit-media-controls {
   display: none !important;
 }
-#panel.skin.eu-modern .obd-screens > .ign-boot .ign-boot-video::-webkit-media-controls {
+/* All three pseudo-elements, not just the first: the overlay play button is the big circle
+   drawn in the middle of the frame whenever the WebView has nothing to paint, and it was
+   showing up mid-ignition looking like the media player bleeding through. The old loading
+   screen suppressed all three; this rule only covered one. */
+#panel.skin.eu-modern .obd-screens > .ign-boot .ign-boot-video::-webkit-media-controls,
+#panel.skin.eu-modern .obd-screens > .ign-boot .ign-boot-video::-webkit-media-controls-overlay-play-button,
+#panel.skin.eu-modern .obd-screens > .ign-boot .ign-boot-video::-webkit-media-controls-start-playback-button {
   display: none !important;
+  -webkit-appearance: none;
 }
 video::-webkit-media-controls-start-playback-button {
   display: none !important;

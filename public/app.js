@@ -102,7 +102,13 @@
     el.className = 'ign-boot';
     el.setAttribute('aria-hidden', 'true');
     // Startup and shutdown deliberately use the same approved OBD clip.
-    el.innerHTML = '<video class="ign-boot-video" src="skins/modern/dash/shutdown_v8.mp4" muted playsinline autoplay disablepictureinpicture aria-hidden="true"></video>';
+    // poster + controlslist: without a poster the WebView paints its own placeholder -- a grey
+    // box with a play button -- for every moment it has no frame to show: before the first
+    // frame decodes, and again after the clip ends. That placeholder was appearing in the
+    // middle of the ignition sequence, looking like the music player leaking through.
+    // A 1x1 transparent GIF gives it something to draw instead, and the controls are the
+    // same ones the old loading screen already suppressed.
+    el.innerHTML = '<video class="ign-boot-video" src="skins/modern/dash/shutdown_v8.mp4" muted playsinline autoplay preload="auto" poster="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen" aria-hidden="true"></video>';
     host.appendChild(el);
     const vid = el.querySelector('video');
     try { vid.play().catch(function () {}); } catch (e) {}
@@ -142,6 +148,12 @@
     vid.playsInline = true;
     vid.autoplay = true;
     vid.setAttribute('disablepictureinpicture', '');
+    // Same reason as the boot clip: with no poster the WebView draws its own grey placeholder
+    // with a play button whenever it has no frame to show, so the shutdown animation read as
+    // "the media player symbol appeared and the animation vanished".
+    vid.setAttribute('preload', 'auto');
+    vid.setAttribute('poster', 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=');
+    vid.setAttribute('controlslist', 'nodownload noplaybackrate nofullscreen');
     vid.style.pointerEvents = 'none';
     vid.style.objectFit = 'contain';
     vid.setAttribute('aria-hidden', 'true');
