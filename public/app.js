@@ -1574,7 +1574,15 @@
     events.onmessage = (ev) => {
       let msg;
       try { msg = JSON.parse(ev.data); } catch (e) { return; }
-      if (msg.type === 'tel') { S.tel = msg; renderStatus(); updateStates(); }
+      if (msg.type === 'tel') {
+        // The SDK exposes one flag per lamp (low/high/parking) and the retarder as a step
+        // level, but catalog.js asks for 'lightsOn' and 'retarderOn', which the bridge never
+        // sends. Without them those latching buttons have no state to read and can never go
+        // back to off. Derive them here, next to the only place telemetry enters the app.
+        msg.lightsOn = !!(msg.low || msg.high || msg.parking);
+        msg.retarderOn = Number(msg.retarder || 0) > 0;
+        S.tel = msg; renderStatus(); updateStates();
+      }
       else if (msg.type === 'media') { S.media = msg; updateStates(); }
       else if (msg.type === 'pad') {
         S.lastPad = msg.btn;
@@ -3087,10 +3095,7 @@
     // Keep the locally requested detent until the next tap. Some ETS2 setups do not
     // expose or bind the separate electrics command, so live telemetry can remain OFF
     // even though the combined key must advance to START on its second tap.
-    // This covers stage 2 as well: after START, telemetry needs a moment to report
-    // engine=true, and collapsing to 0 in that gap restarts the whole staged flow --
-    // the key then cycles for ever and the panel keeps blacking out.
-    if (S.ignUsed && ignLocal >= 1) return ignLocal;
+    if (S.ignUsed && ignLocal === 1) return 1;
     return 0;
   }
   // How a truck is started, and what the game allows:
