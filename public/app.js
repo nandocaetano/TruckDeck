@@ -5564,6 +5564,12 @@
       '<div class="row"><input class="grow" type="text" id="pinInput" inputmode="numeric" maxlength="4" placeholder="PIN" value="' + esc(S.pin) + '" aria-label="PIN">' +
       '<button class="btn" data-act="pin">Connect</button></div>' +
       (window.HuntersApp ? '<button class="btn" data-act="changepc">Connect to another PC</button>' : '<button class="btn" data-act="fullscreen">Full screen</button>') +
+      // The bridge runs on the PC, so handing the tablet a 186 MB download helps nobody --
+      // and the WebView blocks external links anyway (shouldOverrideUrlLoading returns true
+      // without forwarding them to a browser). Showing the address, selectable, is what
+      // actually gets the file onto the machine that needs it.
+      '<p class="note">Bridge para PC &mdash; abra este endere\u00e7o <b>no computador</b>:<br>' +
+      '<b style="user-select:all;-webkit-user-select:all">github.com/nandocaetano/TruckDeck-releases/releases/latest</b></p>' +
       '<p class="note">Version ' + esc(window.TRUCKDECK_VERSION || 'unknown') + '</p></div>',
       (act, target, event) => {
         if (act === 'field') {
