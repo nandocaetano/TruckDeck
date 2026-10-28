@@ -3615,21 +3615,22 @@ textarea { min-height: 72px; resize: vertical; font-family: var(--font-lcd); fon
   pointer-events: auto;
   transition: opacity 400ms ease;
 }
-/* Native video chrome (play button, scrubber) must never show over the shutdown clip. */
-#panel.skin.eu-modern .obd-screens > .ign-shutdown::-webkit-media-controls-overlay-play-button,
-#panel.skin.eu-modern .obd-screens > .ign-shutdown::-webkit-media-controls-start-playback-button,
-#panel.skin.eu-modern .obd-screens > .ign-shutdown::-webkit-media-controls {
+/* Native video chrome over the ignition clips. One rule for both, because they are the same
+   clip playing the same role and were previously governed by two rules that drifted apart.
+   The overlay play button is the one that actually shows: the big circle the WebView draws
+   in the middle of the frame whenever it has nothing to paint. Android WebView honours a
+   different subset of these per version, so all three are listed, for both elements. */
+.ign-boot-video::-webkit-media-controls,
+.ign-boot-video::-webkit-media-controls-overlay-play-button,
+.ign-boot-video::-webkit-media-controls-start-playback-button,
+.ign-boot-video::-webkit-media-controls-panel,
+.ign-shutdown::-webkit-media-controls,
+.ign-shutdown::-webkit-media-controls-overlay-play-button,
+.ign-shutdown::-webkit-media-controls-start-playback-button,
+.ign-shutdown::-webkit-media-controls-panel {
   display: none !important;
-}
-/* All three pseudo-elements, not just the first: the overlay play button is the big circle
-   drawn in the middle of the frame whenever the WebView has nothing to paint, and it was
-   showing up mid-ignition looking like the media player bleeding through. The old loading
-   screen suppressed all three; this rule only covered one. */
-#panel.skin.eu-modern .obd-screens > .ign-boot .ign-boot-video::-webkit-media-controls,
-#panel.skin.eu-modern .obd-screens > .ign-boot .ign-boot-video::-webkit-media-controls-overlay-play-button,
-#panel.skin.eu-modern .obd-screens > .ign-boot .ign-boot-video::-webkit-media-controls-start-playback-button {
-  display: none !important;
-  -webkit-appearance: none;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
 }
 video::-webkit-media-controls-start-playback-button {
   display: none !important;

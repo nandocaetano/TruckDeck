@@ -94,6 +94,46 @@
     if (k < MODERN_BOOT.BULB_MS + MODERN_BOOT.SWEEP_UP_MS + MODERN_BOOT.SWEEP_DOWN_MS) return 'sweep';
     return 'reveal';
   }
+  // Startup and shutdown use the same approved OBD clip, and must be built the same way.
+  // They were previously created in two places with two different attribute sets -- one via
+  // innerHTML, one via createElement -- so every fix landed on one and missed the other.
+  // One factory now owns the contract:
+  //   poster      a 1x1 transparent GIF. Without it the WebView paints its own placeholder
+  //               (grey box, big play button) for every moment it has no frame to show:
+  //               before the first frame decodes, and again once the clip ends. That is what
+  //               looked like the media player bleeding through the ignition sequence.
+  //   controls    explicitly false, plus controlslist, plus the CSS pseudo-element rules.
+  //               Android WebView honours different ones depending on version, so all three.
+  //   muted       required for autoplay to be allowed at all.
+  const IGN_CLIP = 'skins/modern/dash/shutdown_v8.mp4';
+  const BLANK_POSTER = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+  function makeIgnVideo(className) {
+    const vid = document.createElement('video');
+    vid.className = className;
+    vid.src = IGN_CLIP;
+    vid.muted = true;
+    vid.defaultMuted = true;
+    vid.playsInline = true;
+    vid.autoplay = true;
+    vid.controls = false;
+    vid.preload = 'auto';
+    vid.poster = BLANK_POSTER;
+    vid.setAttribute('muted', '');
+    vid.setAttribute('playsinline', '');
+    vid.setAttribute('disablepictureinpicture', '');
+    vid.setAttribute('controlslist', 'nodownload noplaybackrate nofullscreen');
+    vid.setAttribute('aria-hidden', 'true');
+    vid.style.pointerEvents = 'none';
+    return vid;
+  }
+  // play() rejects when the WebView refuses autoplay. Retry once on canplay rather than
+  // leaving a frozen first frame on screen, and never let a rejection throw.
+  function playIgnVideo(vid, onFail) {
+    const attempt = () => { try { const r = vid.play(); if (r && r.catch) r.catch(function () {}); } catch (e) { /* ignore */ } };
+    vid.addEventListener('canplay', attempt, { once: true });
+    if (typeof onFail === 'function') vid.addEventListener('error', onFail, { once: true });
+    attempt();
+  }
   function ensureIgnBootOverlay() {
     if (panel.querySelector('.ign-boot')) return;
     const host = panel.querySelector('.obd-screens');
@@ -101,17 +141,10 @@
     const el = document.createElement('div');
     el.className = 'ign-boot';
     el.setAttribute('aria-hidden', 'true');
-    // Startup and shutdown deliberately use the same approved OBD clip.
-    // poster + controlslist: without a poster the WebView paints its own placeholder -- a grey
-    // box with a play button -- for every moment it has no frame to show: before the first
-    // frame decodes, and again after the clip ends. That placeholder was appearing in the
-    // middle of the ignition sequence, looking like the music player leaking through.
-    // A 1x1 transparent GIF gives it something to draw instead, and the controls are the
-    // same ones the old loading screen already suppressed.
-    el.innerHTML = '<video class="ign-boot-video" src="skins/modern/dash/shutdown_v8.mp4" muted playsinline autoplay preload="auto" poster="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" disablepictureinpicture controlslist="nodownload noplaybackrate nofullscreen" aria-hidden="true"></video>';
+    const vid = makeIgnVideo('ign-boot-video');
+    el.appendChild(vid);
     host.appendChild(el);
-    const vid = el.querySelector('video');
-    try { vid.play().catch(function () {}); } catch (e) {}
+    playIgnVideo(vid);
   }
   function startModernBoot() {
     if (page().skin !== 'eu_frame') return;
@@ -141,26 +174,12 @@
     panel.classList.add('ign-shutting-down');
     const host = panel.querySelector('.obd-screens');
     if (!host || host.querySelector('.ign-shutdown')) return;
-    const vid = document.createElement('video');
-    vid.className = 'ign-shutdown';
-    vid.src = 'skins/modern/dash/shutdown_v8.mp4';
-    vid.muted = true;
-    vid.playsInline = true;
-    vid.autoplay = true;
-    vid.setAttribute('disablepictureinpicture', '');
-    // Same reason as the boot clip: with no poster the WebView draws its own grey placeholder
-    // with a play button whenever it has no frame to show, so the shutdown animation read as
-    // "the media player symbol appeared and the animation vanished".
-    vid.setAttribute('preload', 'auto');
-    vid.setAttribute('poster', 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=');
-    vid.setAttribute('controlslist', 'nodownload noplaybackrate nofullscreen');
-    vid.style.pointerEvents = 'none';
+    const vid = makeIgnVideo('ign-shutdown');
     vid.style.objectFit = 'contain';
-    vid.setAttribute('aria-hidden', 'true');
     vid.addEventListener('ended', stopModernShutdown);
-    vid.addEventListener('error', stopModernShutdown);
     host.appendChild(vid);
-    try { vid.play().catch(function () {}); } catch (e) {}
+    // On failure clear the overlay instead of leaving a black rectangle over the dash.
+    playIgnVideo(vid, stopModernShutdown);
   }
   function tickModernBoot() {
     if (page().skin !== 'eu_frame') { if (modernBoot.phase !== 'off') stopModernBoot('off'); return; }
