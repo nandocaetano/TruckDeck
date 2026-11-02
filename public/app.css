@@ -1,3 +1,11 @@
+@font-face { font-family: "Barlow"; src: url("fonts/barlow-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("fonts/barlow-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("fonts/barlow-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Share Tech Mono"; src: url("fonts/share-tech-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: "Oswald"; src: url("fonts/oswald-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: "Oswald"; src: url("fonts/oswald-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
 @font-face { font-family: "Roboto Condensed"; src: url("fonts/roboto-condensed-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
@@ -591,7 +599,15 @@
   font: 700 .68em/1.15 var(--font-legend);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+/* Title that does not fit: fade the right edge instead of an ellipsis (the text scrolls, see setTrackMarquee). */
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-track.mq-over {
+  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
+#app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-track-in {
+  display: inline-block;
+  will-change: transform;
 }
 #app[data-style="eu_frame"] #panel.skin.eu-modern .w.sk.k-modern.k-rtext.modern-utility .omp-artist {
   color: var(--obd-cyan);
