@@ -1443,7 +1443,9 @@
         return clamp(Number(local.index) || 0, 0, states.length - 1);
       }
       if (local && local.index != null) delete S.rotLocal[w.id];
-      const stage = tel === 1 ? clamp(Number(S.wipLvl) || 1, 1, 3) : 0;
+      // No telemetry yet (boot / demo / bridge lost) -> rest on INT (stage 1), the panel's default.
+      // Once the game reports, its on/off bit wins: off -> 0, on -> the app's own speed count.
+      const stage = tel === 1 ? clamp(Number(S.wipLvl) || 1, 1, 3) : (tel === null ? 1 : 0);
       let best = -1;
       for (let i = 0; i < states.length; i += 1) {
         const st = states[i].stage;
@@ -3024,7 +3026,7 @@
         const ptMedia = layout().lang === 'pt';
         const ompTrack = node.querySelector('.omp-track');
         const trackLabel = (ptMedia ? 'FAIXA: ' : 'TRACK: ') + (trackTxt || '\u2014');
-        if (ompTrack && ompTrack.textContent !== trackLabel) ompTrack.textContent = trackLabel;
+        if (ompTrack) setTrackMarquee(ompTrack, trackLabel);
         const ompArtist = node.querySelector('.omp-artist');
         const artistLabel = artistTxt ? (ptMedia ? 'ARTISTA: ' : 'ARTIST: ') + artistTxt : '';
         if (ompArtist && ompArtist.textContent !== artistLabel) ompArtist.textContent = artistLabel;
@@ -4017,6 +4019,45 @@
     if (html !== obcLast) { obcEl.innerHTML = html; obcLast = html; }
   }
 
+  // ---- OBD music title marquee -------------------------------------------------------------
+  // The title rests still; every ~9s, if it does not fit the box, it scrolls once to the end,
+  // pauses, and glides back. Text that fits never animates. Uses the Web Animations API so the
+  // timing can depend on the measured overflow (CSS keyframes cannot).
+  function setTrackMarquee(box, label) {
+    let inner = box.firstElementChild;
+    if (!inner || !inner.classList.contains('omp-track-in')) {
+      box.textContent = '';
+      inner = document.createElement('span');
+      inner.className = 'omp-track-in';
+      box.appendChild(inner);
+    }
+    const changed = inner.textContent !== label;
+    if (changed) inner.textContent = label;
+    // Re-measure only when the text changed or every 2s (width can change with layout/resize),
+    // so a 60fps state refresh does not force a layout each frame.
+    const now = performance.now();
+    if (!changed && now - (box._mqAt || 0) < 2000) return;
+    box._mqAt = now;
+    const dist = Math.ceil(inner.scrollWidth - box.clientWidth);
+    const wanted = dist > 2 ? dist : 0;
+    if (!changed && box._mqDist === wanted) return;
+    box._mqDist = wanted;
+    if (box._mqAnim) { box._mqAnim.cancel(); box._mqAnim = null; }
+    box.classList.toggle('mq-over', wanted > 0);
+    if (!wanted || typeof inner.animate !== 'function') return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const REST = 9000, END = 1200, BACK = 700;            // ms at start, ms at end, ms to glide back
+    const travel = Math.max(1200, wanted / 0.035);         // ~35 px/s reading speed
+    const total = REST + travel + END + BACK;
+    const x = '-' + wanted + 'px';
+    box._mqAnim = inner.animate([
+      { transform: 'translateX(0)', offset: 0 },
+      { transform: 'translateX(0)', offset: REST / total, easing: 'linear' },
+      { transform: 'translateX(' + x + ')', offset: (REST + travel) / total },
+      { transform: 'translateX(' + x + ')', offset: (REST + travel + END) / total, easing: 'ease-in-out' },
+      { transform: 'translateX(0)', offset: 1 }
+    ], { duration: total, iterations: Infinity });
+  }
   // ---- Music player ------------------------------------------------------------------------
   const MEDIA_KEYS = [['media_prev', 'prev'], ['media_play', 'playpause'], ['media_next', 'next'], ['vol_down', 'voldown'], ['vol_up', 'volup']];
   // Slim global footer player (Fernando's "Modo Mídia" layout): just Prev/Play/Next —
