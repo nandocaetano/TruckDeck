@@ -9,3 +9,6 @@
 - After editing, report the SHA-256 hash of every changed file.
 - Never fake execution. If a command was not actually run, say so.
 - If a path or instruction is ambiguous, stop and ask.
+- Memory system: read docs/agents/README.md at the start of every session, in the order it lists. Treat only [VERIFIED] facts in docs/agents/STATE.md as true. Never edit docs/agents/ (append to your own task's Report only).
+- Long-term memory (the Obsidian vault, E:\Truck deck) is outside the repo and operational agents do NOT access it. Any background you need is pasted in your task file's Context section; if it is missing, STOP and ask. Never read or write the vault.
+- Search with exclusions for *.bak*, *.pre-* and "app - Copia.js"; never read app.js, app.css or editor.js whole (grep -n, then at most 200 lines).

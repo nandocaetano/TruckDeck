@@ -50,3 +50,28 @@ public/layout.generated.css
 
 # boot logo segments (generated assets, not source)
 public/skins/modern/dash/boot_logo_segments/
+
+# Maestri orchestrator state (generated roles with random UUIDs; canonical defs live in docs/agents/roles/)
+.maestri/
+
+# build artifacts (regenerate, not source)
+*.apk
+TruckDeckBridge.zip
+
+# scratch/working directory (local only)
+_work/
+
+# draft design assets (not yet integrated)
+Botoes redondos/
+
+# agent orchestration infra — local only, never versioned
+docs/
+.agents/
+.claude/
+
+# skill sync lockfile — local tooling, not product source
+skills-lock.json
+
+# stray manual backups with suffix after extension (not caught by *.bak)
+*.bak-*
+*.bak.*
