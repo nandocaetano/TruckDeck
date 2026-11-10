@@ -11,6 +11,8 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -60,12 +62,11 @@ import java.util.regex.Pattern;
 public class MainActivity extends Activity {
 
     private static final String CONNECT_PAGE = "file:///android_asset/connect.html";
-    private static final String BRIDGE_DOWNLOAD_URL = "https://github.com/nandocaetano/TruckDeck-releases/releases/latest/download/TruckDeckBridge.zip";
+    private static final String BRIDGE_DOWNLOAD_URL = "https://github.com/nandocaetano/TruckDeck-releases/releases/latest";
     private static final int BRIDGE_PORT = 8765;
     // What the bridge answers on /api/info; used to tell it apart from any other web server.
     private static final String BRIDGE_MARK = "truckdeck";
     // host or host:port, nothing else: this string ends up inside a URL we load
-    private static final Pattern HOST = Pattern.compile("^[A-Za-z0-9.\\-]{1,253}(:[0-9]{1,5})?$");
     private static final Pattern PIN = Pattern.compile("^[0-9]{4}$");
 
     private WebView web;
@@ -73,6 +74,8 @@ public class MainActivity extends Activity {
     private boolean onConnectPage = true;
     // Authority (host:port) of the PC we are showing, to keep navigation from leaving it.
     private String bridgeAuthority = "";
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    private Runnable panelWatchdog;
     private FrameLayout setupOverlay;
     private Object setupBackCallback;
     private android.graphics.Bitmap setupLogo;
@@ -123,6 +126,11 @@ public class MainActivity extends Activity {
                 // page with a reason instead of the browser's own error screen.
                 if (request.isForMainFrame() && !onConnectPage) showConnect("unreachable");
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                cancelPanelWatchdog();
+            }
         });
 
         // Connect immediately after the one-time setup. The panel served by the bridge owns
@@ -140,6 +148,17 @@ public class MainActivity extends Activity {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(BRIDGE_DOWNLOAD_URL)));
         } catch (ActivityNotFoundException e) {
             Toast.makeText(this, "No app can open the download link", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void shareBridgeLink() {
+        try {
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("text/plain");
+            send.putExtra(Intent.EXTRA_TEXT, BRIDGE_DOWNLOAD_URL);
+            startActivity(Intent.createChooser(send, "Share bridge link"));
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "No app can share the bridge link", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -188,7 +207,7 @@ public class MainActivity extends Activity {
         content.addView(title, titleParams);
 
         TextView steps = new TextView(this);
-        steps.setText("1. Download and run TruckDeckBridge.exe on your Windows PC\n\n"
+        steps.setText("1. Open the bridge download page, download the ZIP, and run Start TruckDeck Bridge.bat on your Windows PC\n\n"
                 + "2. Allow it through Windows Firewall when prompted\n\n"
                 + "3. Open this app — it will find the bridge automatically");
         steps.setTextColor(Color.WHITE);
@@ -202,9 +221,13 @@ public class MainActivity extends Activity {
         stepsParams.bottomMargin = dp(12);
         content.addView(steps, stepsParams);
 
-        Button download = simpleButton("Download Bridge for PC");
+        Button download = simpleButton("Open bridge download page");
         download.setOnClickListener(v -> openBridgeDownload());
         content.addView(download);
+
+        Button share = simpleButton("Share link");
+        share.setOnClickListener(v -> shareBridgeLink());
+        content.addView(share);
 
         Button continueButton = simpleButton("I already have it — Continue");
         continueButton.setOnClickListener(v -> dismissSetup());
@@ -268,9 +291,13 @@ public class MainActivity extends Activity {
         help.setElevation(dp(6));
         help.setOnClickListener(v -> new AlertDialog.Builder(this)
                 .setTitle("TruckDeck Help")
-                .setItems(new String[]{"Download Bridge again", "Dismiss"}, (dialog, which) -> {
+                .setItems(new String[]{"Download Bridge again", "Share link", "Change PC address", "Dismiss"}, (dialog, which) -> {
                     if (which == 0) openBridgeDownload();
-                    else dialog.dismiss();
+                    else if (which == 1) shareBridgeLink();
+                    else if (which == 2) {
+                        new AppBridge().changePc();
+                        dialog.dismiss();
+                    } else dialog.dismiss();
                 })
                 .show());
 
@@ -285,24 +312,74 @@ public class MainActivity extends Activity {
         if (isFinishing() || isDestroyed()) return;
         String host = prefs.getString("host", "");
         String pin = prefs.getString("pin", "");
-        if (HOST.matcher(host).matches() && PIN.matcher(pin).matches()) openPanel(host, pin);
+        if (isValidHost(host) && PIN.matcher(pin).matches()) openPanel(host, pin);
         else showConnect("");
     }
 
     private void showConnect(String reason) {
+        cancelPanelWatchdog();
         onConnectPage = true;
         bridgeAuthority = "";
         web.loadUrl(CONNECT_PAGE + (reason.isEmpty() ? "" : "?reason=" + reason));
     }
 
     private void openPanel(String host, String pin) {
+        cancelPanelWatchdog();
+        if (!isValidHost(host) || !PIN.matcher(pin).matches()) {
+            showConnect("");
+            return;
+        }
         onConnectPage = false;
         bridgeAuthority = host.contains(":") ? host : host + ":" + BRIDGE_PORT;
         // The panel reads the PIN from the address once, stores it and cleans the address.
         // client=app self-identifies the WebView as the packaged mobile client: the TCP peer
         // address alone is unreliable (e.g. the emulator's 10.0.2.2 alias resolves to 127.0.0.1
         // on the host, which the bridge would otherwise read as "PC browser" = unrestricted mode).
+        panelWatchdog = () -> {
+            if (!onConnectPage) showConnect("unreachable");
+        };
+        uiHandler.postDelayed(panelWatchdog, 15000);
         web.loadUrl("http://" + bridgeAuthority + "/?pin=" + pin + "&client=app");
+    }
+
+    private void cancelPanelWatchdog() {
+        if (panelWatchdog != null) {
+            uiHandler.removeCallbacks(panelWatchdog);
+            panelWatchdog = null;
+        }
+    }
+
+    private static boolean isValidHost(String value) {
+        if (value == null) return false;
+        String h = value.trim();
+        if (h.isEmpty() || h.matches(".*[\\/@?#\\s].*")) return false;
+        int colon = h.lastIndexOf(':');
+        if (colon >= 0) {
+            if (colon != h.indexOf(':')) return false;
+            String port = h.substring(colon + 1);
+            h = h.substring(0, colon);
+            try {
+                int p = Integer.parseInt(port);
+                if (port.isEmpty() || p < 1 || p > 65535) return false;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+        if (h.matches("\\d+(\\.\\d+){3}")) {
+            try {
+                for (String octet : h.split("\\.")) if (Integer.parseInt(octet) > 255) return false;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+            return true;
+        }
+        if (h.length() > 253) return false;
+        String[] labels = h.split("\\.", -1);
+        if (labels.length == 0 || !labels[labels.length - 1].matches(".*[A-Za-z].*")) return false;
+        for (String label : labels) {
+            if (!label.matches("[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?")) return false;
+        }
+        return true;
     }
 
     // ---- Immersive full screen ------------------------------------------------------------
@@ -429,7 +506,7 @@ public class MainActivity extends Activity {
         public boolean connect(String host, String pin) {
             final String h = host == null ? "" : host.trim();
             final String p = pin == null ? "" : pin.trim();
-            if (!HOST.matcher(h).matches() || !PIN.matcher(p).matches()) return false;
+            if (!isValidHost(h) || !PIN.matcher(p).matches()) return false;
             prefs.edit().putString("host", h).putString("pin", p).apply();
             runOnUiThread(() -> openPanel(h, p));
             return true;
@@ -437,7 +514,10 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void scan() {
-            if (!onConnectPage) return; // only the connect page may probe the network
+            if (!onConnectPage) {
+                web.evaluateJavascript("onScanDone(null)", null);
+                return;
+            }
             startScan();
         }
 

@@ -49,7 +49,7 @@
   .brand small { display: block; color: var(--dim); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
   h1 { margin: 0; font-size: 26px; line-height: 1.08; letter-spacing: 0; text-wrap: balance; }
   p { margin: 0; color: var(--dim); }
-  ol { margin: 0; padding-left: 20px; color: var(--dim); display: flex; flex-direction: column; gap: 6px; }
+  ol { margin: 0; padding: 0 64px 64px 20px; color: var(--dim); display: flex; flex-direction: column; gap: 6px; }
   ol b, p b { color: var(--fg); font-weight: 600; }
   code { font-family: ui-monospace, Menlo, Consolas, monospace; color: var(--fg); background: rgba(255, 255, 255, 0.07); padding: 1px 6px; border-radius: 4px; }
   form {
@@ -77,6 +77,7 @@
   }
   input:focus { outline: 2px solid var(--accent); outline-offset: 1px; box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45), 0 0 0 5px var(--glow); }
   .row { display: flex; gap: 10px; }
+  form > .row:last-of-type { padding: 0 64px 64px 0; }
   .row > * { flex: 1 1 0; min-width: 0; }
   button {
     min-height: 50px;
@@ -164,6 +165,31 @@
 
   function say(text, bad) { msg.textContent = text; msg.className = bad ? 'bad' : ''; }
 
+  function validHost(value) {
+    var h = value.trim();
+    if (!h || /[\/@?#\s]/.test(h)) return false;
+    var colon = h.lastIndexOf(':');
+    var port = '';
+    if (colon >= 0) {
+      if (colon !== h.indexOf(':')) return false;
+      port = h.slice(colon + 1);
+      h = h.slice(0, colon);
+      if (!/^\d+$/.test(port) || Number(port) < 1 || Number(port) > 65535) return false;
+    }
+    if (/^\d+(\.\d+){3}$/.test(h)) {
+      var octets = h.split('.');
+      for (var i = 0; i < octets.length; i++) if (Number(octets[i]) > 255) return false;
+      return true;
+    }
+    if (h.length > 253) return false;
+    var labels = h.split('.');
+    if (!labels.length || !/[A-Za-z]/.test(labels[labels.length - 1])) return false;
+    for (var j = 0; j < labels.length; j++) {
+      if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(labels[j])) return false;
+    }
+    return true;
+  }
+
   // Fill in what worked last time, so reconnecting is one tap.
   if (app) {
     try { var s = JSON.parse(app.saved()); host.value = s.host || ''; pin.value = s.pin || ''; } catch (e) { /* first run */ }
@@ -172,12 +198,16 @@
 
   document.getElementById('form').addEventListener('submit', function (ev) {
     ev.preventDefault();
-    var h = host.value.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
-    if (!/^[A-Za-z0-9.\-]+(:[0-9]{1,5})?$/.test(h)) { say(T.badHost, true); return; }
+    say('', false);
+    var h = host.value.trim();
+    if (!validHost(h)) { say(T.badHost, true); return; }
     if (!/^[0-9]{4}$/.test(pin.value.trim())) { say(T.badPin, true); return; }
     if (!app) { say(T.browser, true); return; }
     app.connect(h, pin.value.trim());
   });
+
+  host.addEventListener('input', function () { say('', false); });
+  pin.addEventListener('input', function () { say('', false); });
 
   find.addEventListener('click', function () {
     if (!app) { say(T.browser, true); return; }
