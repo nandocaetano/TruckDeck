@@ -131,6 +131,7 @@ async function ensureScsPlugin() {
       'Euro Truck Simulator 2', 'bin', 'win_x64', 'plugins');
     const pluginsDllPath = path.join(pluginsFolder, 'scs-telemetry.dll');
     if (fs.existsSync(pluginsDllPath)) {
+      pluginFound = true;
       console.log('[plugin] scs-telemetry.dll found. OK.');
       return;
     }
@@ -156,6 +157,7 @@ async function ensureScsPlugin() {
     try {
       fs.mkdirSync(pluginsFolder, { recursive: true });
       fs.copyFileSync(downloadedDll, pluginsDllPath);
+      pluginFound = true;
       console.log('[plugin] scs-telemetry.dll installed successfully.');
       return;
     } catch (copyError) {
@@ -187,6 +189,7 @@ async function ensureScsPlugin() {
     }
 
     if (fs.existsSync(pluginsDllPath)) {
+      pluginFound = true;
       console.log('[plugin] scs-telemetry.dll installed successfully.');
     } else {
       console.log('[plugin] ERROR: could not install scs-telemetry.dll. Please copy it manually to: '
@@ -232,7 +235,7 @@ function migrateAtomicLayout(data) {
 // Board-scoped saves preserve every other mapping from the latest disk state.
 function mergeAtomicBoard(previous, report) {
   const key = report.boardKey;
-  if (!['eu_frame', 'sov_frame', 'sov_white', 'sov_military_1', 'sov_military_2'].includes(key)) throw new Error('bad boardKey');
+  if (!['eu_frame', 'sov_frame', 'sov_white', 'sov_military_1', 'sov_military_2', 'nordic_frame'].includes(key)) throw new Error('bad boardKey');
   const board = report.boards && report.boards[key];
   if (!board || !board.orientations) throw new Error('missing board');
   for (const mode of ['landscape', 'portrait']) {
@@ -260,7 +263,9 @@ function mergeAtomicBoard(previous, report) {
   return {
     ...previous, schema: report.schema,
     boards: { ...(previous && previous.boards), [key]: board },
-    customAssets: Array.from(assets.values())
+    customAssets: Array.from(assets.values()),
+    ...(typeof report.sovBg === 'string' && { sovBg: report.sovBg }),
+    ...(typeof report.nordicBg === 'string' && { nordicBg: report.nordicBg })
   };
 }
 
@@ -343,6 +348,7 @@ if (!/^\d{4}$/.test(config.pin || '')) {
 // ---- Input helper process ---------------------------------------------------------------
 let helper = null;
 let helperReady = false;
+let pluginFound = false;
 let lastTelemetry = { type: 'tel', sdk: false };
 let lastMedia = { type: 'media', running: false, playing: false, artist: '', track: '' };
 let lastHelperError = '';
@@ -652,6 +658,9 @@ function serveStatic(urlPath, res, isLoopback, isAppClient) {
     } else if (packaged && path.basename(file) === 'editor.html') {
       data = Buffer.from(data.toString('utf8').replace('data-editor-mode="full"', 'data-editor-mode="packaged"'));
     }
+    if (PACKAGED && path.basename(file) === 'editor.html') {
+      data = Buffer.from(data.toString('utf8').replace(/<body\b/, '<body data-build="release"'));
+    }
     res.writeHead(200, {
       'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
       // the app changes while it is being tuned: never serve stale JS, and never let the WebView's
@@ -660,6 +669,17 @@ function serveStatic(urlPath, res, isLoopback, isAppClient) {
     });
     res.end(data);
   });
+}
+
+function isLoopbackAddress(address) {
+  return address === '127.0.0.1'
+    || address === '::1'
+    || address === '::ffff:127.0.0.1';
+}
+
+function isAllowedHost(req, port) {
+  return req.headers.host === 'localhost:' + port
+    || req.headers.host === '127.0.0.1:' + port;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -673,10 +693,50 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(400); res.end(); return;
   }
 
+  if (route === '/bridge.html' || route === '/bridge.css' || route === '/bridge.js') {
+    if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }
+    if (!isLoopbackAddress(req.socket.remoteAddress || '')) { res.writeHead(403); res.end(); return; }
+    if (!isAllowedHost(req, PORT)) { res.writeHead(403); res.end(); return; }
+    serveStatic(route, res, true, false);
+    return;
+  }
+
+  if (route === '/api/bridge-status') {
+    if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }
+    if (!isLoopbackAddress(req.socket.remoteAddress || '')) { res.writeHead(403); res.end(); return; }
+    if (!isAllowedHost(req, PORT)) { res.writeHead(403); res.end(); return; }
+    const addresses = lanAddresses();
+    json(res, 200, {
+      app: 'truckdeck-bridge',
+      version: 1,
+      port: PORT,
+      addresses: { primary: addresses[0] || null, others: addresses.slice(1) },
+      plugin: { found: pluginFound },
+      helper: { ready: helperReady },
+      game: { receiving: !!lastTelemetry.sdk },
+      clients: sseClients.size,
+      controls: Array.from(padDevs.values()).map((control) => ({
+        dev: String(control.dev == null ? '' : control.dev),
+        name: String(control.name || ''),
+        vid: Number.isFinite(Number(control.vid)) ? Number(control.vid) : null,
+        pid: Number.isFinite(Number(control.pid)) ? Number(control.pid) : null,
+      })),
+    });
+    return;
+  }
+
+  if (route === '/api/bridge-pin') {
+    if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }
+    if (!isLoopbackAddress(req.socket.remoteAddress || '')) { res.writeHead(403); res.end(); return; }
+    if (!isAllowedHost(req, PORT)) { res.writeHead(403); res.end(); return; }
+    json(res, 200, { pin: config.pin });
+    return;
+  }
+
   if (!route.startsWith('/api/')) {
     if (req.method !== 'GET') { res.writeHead(405); res.end(); return; }
     const staticPeer = req.socket.remoteAddress || '';
-    const staticIsLoopback = staticPeer === '127.0.0.1' || staticPeer === '::1' || staticPeer === '::ffff:127.0.0.1';
+    const staticIsLoopback = isLoopbackAddress(staticPeer);
     const staticIsAppClient = url.searchParams.get('client') === 'app';
     let decodedRoute;
     try { decodedRoute = decodeURIComponent(route); }
@@ -869,6 +929,7 @@ const server = http.createServer(async (req, res) => {
             + boardButtonCount(o.boards.sov_white)
             + boardButtonCount(o.boards.sov_military_1)
             + boardButtonCount(o.boards.sov_military_2)
+            + boardButtonCount(o.boards.nordic_frame)
             // Legacy boards (pre decouple / pre shared-military) still count if present on disk.
             + boardButtonCount(o.boards.sov_military)
             + boardButtonCount(o.boards.sov_military1)
@@ -956,7 +1017,7 @@ async function startServer() {
   await ensureScsPlugin();
   server.listen(PORT, '0.0.0.0', () => {
   console.log('');
-  console.log('  Hunters Truck Sim Button Box - PC bridge is running.');
+    console.log('  TruckDeck Bridge is running.');
   console.log('');
   const ips = lanAddresses();
   console.log('  In the app on your tablet or phone (same network as this PC), type:');
@@ -988,6 +1049,14 @@ async function startServer() {
   }
   console.log('  Keep this window open while you play.');
   console.log('');
+  if (process.platform === 'win32' && process.env.TRUCKDECK_NO_BROWSER !== '1') {
+    const browser = spawn('cmd.exe', ['/c', 'start', '', 'http://localhost:' + PORT + '/bridge.html'], {
+      detached: true,
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+    browser.unref();
+  }
   startHelper();
   });
 }

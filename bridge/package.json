@@ -6,8 +6,7 @@
   "bin": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build:exe": "pkg . --targets node18-win-x64 --output ../dist/TruckDeckBridge.exe && node embed-admin-manifest.mjs && powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; New-Item -ItemType Directory -Force -Path '../dist/public' | Out-Null; Copy-Item -Recurse -Force '../public/*' '../dist/public/'; Copy-Item -Force 'input-helper.ps1' '../dist/'; Copy-Item -Force 'InputHelper.cs' '../dist/'; Copy-Item -Force 'Start TruckDeck Bridge.bat' '../dist/'\"",
-    "verify:manifest": "node -e \"const s=require('fs').readFileSync('../dist/TruckDeckBridge.exe','latin1');const m=s.match(/requestedExecutionLevel level=\\\\\"(\\\\w+)\\\\\"/);console.log('manifest level:', m?m[1]:'NONE');process.exit(m&&m[1]==='requireAdministrator'?0:1)\""
+    "build:exe": "pkg . --targets node18-win-x64 --output ../dist/TruckDeckBridge.exe && powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; New-Item -ItemType Directory -Force -Path '../dist/public' | Out-Null; Copy-Item -Recurse -Force '../public/*' '../dist/public/'; Copy-Item -Force 'input-helper.ps1' '../dist/'; Copy-Item -Force 'InputHelper.cs' '../dist/'; Copy-Item -Force 'Start TruckDeck Bridge.bat' '../dist/'\""
   },
   "pkg": {
     "targets": [

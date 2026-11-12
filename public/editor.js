@@ -2,7 +2,22 @@
 (function () {
   'use strict';
 
+  (function () {
+    var h = location.hostname;
+    if (h !== 'localhost' && h !== '127.0.0.1') {
+      var banner = document.getElementById('td-tablet-banner');
+      if (banner) {
+        var lang = (/^pt/i.test(navigator.language || '')) ? 'pt' : 'en';
+        banner.textContent = lang === 'pt'
+          ? 'Abra o editor pelo botão do TruckDeck Bridge no PC.'
+          : 'Open the editor using the TruckDeck Bridge button on your PC.';
+        banner.hidden = false;
+      }
+    }
+  })();
+
   const STORAGE_KEY = 'desktruck.atomic-layout.v1';
+  const UI_LEVEL_KEY = 'truckdeck.ui-level';
   // Retired duplicate/test controls are rejected on load so old local drafts and imports cannot
   // put them back into the palette or canvas after they have been removed from the catalog.
   const RETIRED_ASSETS = new Set([
@@ -33,8 +48,8 @@
     military1: 'military1', mil1: 'military1', military2: 'military2', mil2: 'military2'
   };
   function normalizeSovBg(sovBg) {
-    const raw = String(sovBg == null ? 'white' : sovBg).trim();
-    if (!raw) return 'white';
+    const raw = String(sovBg == null ? 'military1' : sovBg).trim();
+    if (!raw) return 'military1';
     const key = raw.toLowerCase().replace(/\\+/g, '/').split('/').pop();
     const bare = key.replace(/\.(jpe?g|png|webp)$/i, '');
     const hit = SOV_BG_ALIASES[key] || SOV_BG_ALIASES[bare]
@@ -49,14 +64,7 @@
     return SOV_BG_VARIANTS.includes(bare) ? bare : 'white';
   }
   function officialOf(mode) {
-    if (state.skin === 'sov_frame') {
-      const variant = normalizeSovBg(state.sovBg);
-      const name = 'bg-' + variant + '-' + mode + '.jpg';
-      return mode === 'landscape'
-        ? { name: name, src: 'skins/sov/bg/' + name, width: 2752, height: 1536 }
-        : { name: name, src: 'skins/sov/bg/' + name, width: 1536, height: 2752 };
-    }
-    return OFFICIAL_MODERN[mode];
+    return skinDef(state.skin).official(mode, state);
   }
   // ─── ASSET CATALOG ────────────────────────────────────────────────────────
   // Fonte única de todos os assets do editor atômico.
@@ -398,7 +406,7 @@
     return label;
   }
   function packageIdForSkin(skin) {
-    return skin === 'sov_frame' ? 'soviet' : 'modern';
+    return skinDef(skin).themeClass;
   }
   function normalizeElementColor(raw) {
     if (raw == null || raw === '') return undefined;
@@ -460,7 +468,8 @@
     return {
       schema: 'desktruck.atomic-layout/v1',
       skin: 'eu_frame',
-      sovBg: 'white',
+      sovBg: 'military1',
+      nordicBg: 'default',
       gridStep: 1,
       snap: true,
       guides: true,
@@ -472,7 +481,8 @@
         // Military 1 and Military 2 are independent boards (decoupled 2026-10-19 —
         // editing one must never touch the other's layout).
         sov_military_1: freshBoard(),
-        sov_military_2: freshBoard()
+        sov_military_2: freshBoard(),
+        nordic_frame: freshBoard()
       }
     };
   }
@@ -483,6 +493,85 @@
     if (v === 'military2') return 'sov_military_2';
     // sigabem | vivamexico | 380 | 378 → shared Siga Bem / Viva México skeleton
     return 'sov_frame';
+  }
+  // One row per Nordic finish. boardKey is the storage key for that finish.
+  // A new finish is a new row. This task ships the single default plate.
+  const NORDIC_VARIANTS = [
+    { id: 'default', boardKey: 'nordic_frame', label: 'Padrão' }
+  ];
+  function normalizeNordicBg(nordicBg) {
+    const raw = String(nordicBg == null ? '' : nordicBg).trim().toLowerCase();
+    const hit = NORDIC_VARIANTS.find((variant) => variant.id === raw);
+    return hit ? hit.id : NORDIC_VARIANTS[0].id;
+  }
+  function nordicBoardKey(nordicBg) {
+    const id = normalizeNordicBg(nordicBg);
+    const row = NORDIC_VARIANTS.find((variant) => variant.id === id) || NORDIC_VARIANTS[0];
+    return row.boardKey;
+  }
+  const SKIN_DEFS = {
+    eu_frame: {
+      themeClass: 'modern',
+      brand: 'DESKTRUCK / MODERN',
+      bgPackageLabel: 'Fundo Moderno',
+      hasVariants: false,
+      statusText: "Tema Modern — empty plate + rockers.",
+      official: function (mode) { return OFFICIAL_MODERN[mode]; },
+      boardKeyOf: function () { return 'eu_frame'; }
+    },
+    sov_frame: {
+      themeClass: 'soviet',
+      brand: 'DESKTRUCK / SOVIET',
+      bgPackageLabel: 'Fundo Soviético',
+      hasVariants: true,
+      statusText: "Tema Soviético — empty plate + widgets PNG.",
+      official: function (mode, st) {
+        const variant = normalizeSovBg(st.sovBg);
+        const name = 'bg-' + variant + '-' + mode + '.jpg';
+        return mode === 'landscape'
+          ? { name: name, src: 'skins/sov/bg/' + name, width: 2752, height: 1536 }
+          : { name: name, src: 'skins/sov/bg/' + name, width: 1536, height: 2752 };
+      },
+      boardKeyOf: function (st) { return sovBoardKey(st.sovBg); }
+    },
+    nordic_frame: {
+      themeClass: 'nordic',
+      brand: 'DESKTRUCK / NÓRDICO MODERNO',
+      bgPackageLabel: 'Fundo Nórdico Moderno',
+      hasVariants: true,
+      statusText: 'Tema Nórdico Moderno — empty plate.',
+      official: function (mode, st) {
+        const variant = normalizeNordicBg(st && st.nordicBg);
+        // Placeholder until the real plates land. The file is not in the repo yet.
+        const name = 'TBD-nordic-' + variant + '-' + mode + '.jpg';
+        return mode === 'portrait'
+          ? { name: name, src: 'skins/nordic/bg/' + name, width: 1536, height: 2752 }
+          : { name: name, src: 'skins/nordic/bg/' + name, width: 2752, height: 1536 };
+      },
+      boardKeyOf: function (st) { return nordicBoardKey(st.nordicBg); }
+    }
+  };
+
+  function skinDef(skin) {
+    return SKIN_DEFS[skin] || SKIN_DEFS.eu_frame;
+  }
+
+  // Storage key -> top skin. The five legacy keys reproduce the old importReport chain.
+  // A Nordic storage key sets nordicBg and leaves sovBg alone.
+  function skinFromBoardKey(key, reportSovBg) {
+    const bg = normalizeSovBg(reportSovBg);
+    if (key === 'sov_frame' || key === 'sov_white' || key === 'sov_military_1' || key === 'sov_military_2') {
+      const sovBg = sovBoardKey(bg) === key ? bg
+        : key === 'sov_white' ? 'white'
+        : key === 'sov_military_1' ? 'military1'
+        : key === 'sov_military_2' ? 'military2' : 'sigabem';
+      return { skin: 'sov_frame', sovBg: sovBg };
+    }
+    if (key === 'eu_frame') return { skin: 'eu_frame', sovBg: 'sigabem' };
+    const nordicHit = NORDIC_VARIANTS.find((variant) => variant.boardKey === key);
+    if (nordicHit) return { skin: 'nordic_frame', nordicBg: nordicHit.id };
+    if (Object.prototype.hasOwnProperty.call(SKIN_DEFS, key)) return { skin: key };
+    return { skin: 'eu_frame', sovBg: 'sigabem' };
   }
 
   function defaultZones(mode) {
@@ -530,6 +619,15 @@
       const info = await res.json();
       if (info && typeof info.pin === 'string' && /^\d{4}$/.test(info.pin)) {
         localStorage.setItem('truckdeck.pin', info.pin);
+      } else {
+        var pinBanner = document.getElementById('td-tablet-banner');
+        if (pinBanner && pinBanner.hidden) {
+          var pinLang = (/^pt/i.test(navigator.language || '')) ? 'pt' : 'en';
+          pinBanner.textContent = pinLang === 'pt'
+            ? 'PIN não configurado. Abra o TruckDeck Bridge e configure o PIN.'
+            : 'PIN not configured. Open TruckDeck Bridge and set the PIN.';
+          pinBanner.hidden = false;
+        }
       }
     } catch (error) { /* offline or non-loopback: keep whatever is cached */ }
   })();
@@ -537,7 +635,7 @@
   // SSOT: a board KEY present in a payload is authoritative for that board, even when
   // its buttons array is empty (an intentionally cleared panel). Only a key that is
   // completely ABSENT from the payload is considered unmapped there.
-  const BOARD_KEYS = ['eu_frame', 'sov_frame', 'sov_white', 'sov_military_1', 'sov_military_2'];
+  const BOARD_KEYS = ['eu_frame', 'sov_frame', 'sov_white', 'sov_military_1', 'sov_military_2', 'nordic_frame'];
 
   function boardForKey(payload, key) {
     if (!payload) return null;
@@ -590,8 +688,9 @@
   function applyPayload(saved) {
     const fresh = initialState();
     if (!saved || saved.schema !== fresh.schema) return fresh;
-    fresh.skin = saved.skin === 'sov_frame' ? 'sov_frame' : 'eu_frame';
+    fresh.skin = Object.prototype.hasOwnProperty.call(SKIN_DEFS, saved.skin) ? saved.skin : 'eu_frame';
     fresh.sovBg = normalizeSovBg(saved.sovBg);
+    fresh.nordicBg = normalizeNordicBg(saved.nordicBg);
     customAssets = Array.isArray(saved.customAssets)
       ? saved.customAssets.filter((item) => item && typeof item.id === 'string' && typeof item.src === 'string').map((item) => ({
         id: item.id,
@@ -803,7 +902,7 @@
   // localStorage layout would simply re-trigger the rescue offer on the next load.
   function discardRescue() {
     if (!rescuePayload) return;
-    const ok = window.confirm('Descartar o trabalho local não publicado?\n\nIsto apaga a cópia guardada neste navegador. Se quiser guardá-la antes, clique em "Recuperar", depois em "Salvar rascunho".');
+    const ok = window.confirm(window.editorT('Descartar o trabalho local não salvo no tablet?\n\nIsto apaga a cópia guardada neste navegador. Se quiser guardá-la antes, clique em "Recuperar", depois em "Salvar rascunho".'));
     if (!ok) return;
     rescuePayload = null;
     try { localStorage.removeItem(RESCUE_KEY); } catch (error) { /* ignore */ }
@@ -820,7 +919,7 @@
     try { localStorage.removeItem(RESCUE_KEY); } catch (error) { /* ignore */ }
     rescuePayload = null;
     refreshRescueButton();
-    toast('Trabalho local recuperado (' + count + ' painel/painéis). Ctrl+Z desfaz. Ainda não foi publicado.', 'success');
+    toast('Trabalho local recuperado (' + count + ' painel/painéis). Ctrl+Z desfaz. Ainda não foi salvo no tablet.', 'success');
     announce('Trabalho local recuperado.', 'success');
   }
   function saveDraft() {
@@ -986,28 +1085,35 @@
     if (pending.length) {
       showProblems(pending);
       await nextPaint();
-      const proceed = window.confirm('Esta tela tem ' + summarizeProblems(pending) + ':\n\n' + describeProblems(pending) + '\n\nPublicar no tablet mesmo assim?');
+      const proceed = window.confirm(window.editorT('Esta tela tem ') + summarizeProblems(pending) + ':\n\n' + describeProblems(pending) + '\n\n' + window.editorT('Salvar no tablet mesmo assim?'));
       if (!proceed) {
-        toast('Publicação cancelada. Corrija o que está em vermelho.', 'error');
-        announce('Publicação cancelada: há teclas ou luzes sem função.', 'error');
+        toast('Envio cancelado. Corrija o que está em vermelho.', 'error');
+        announce('Envio cancelado: há teclas ou luzes sem função.', 'error');
         return;
       }
     }
     clearTimeout(pushTimer);
     writeLocal();
     const btn = $('#saveButton');
+    const pub = $('#publishButton');
     if (btn) btn.disabled = true;
+    if (pub) { pub.disabled = true; pub.classList.add('is-saving'); }
     announce('A salvar...', 'pending');
     toast('A salvar...', 'pending');
     const result = await pushToServer();
     if (btn) btn.disabled = false;
+    if (pub) { pub.disabled = false; pub.classList.remove('is-saving'); }
     if (result.ok) {
       unsavedWork = false;
-      announce('Painel Publicado!', 'success');
-      toast('Painel Publicado!', 'success');
+      announce('Painel salvo no tablet!', 'success');
+      toast('Painel salvo no tablet!', 'success');
+      if (pub) { pub.classList.add('is-saved'); setTimeout(() => pub.classList.remove('is-saved'), 2000); }
+      updateStepsBar(4);
+      setTimeout(() => updateStepsBar(selection.length > 0 ? 3 : 2), 2000);
     } else {
       announce(result.message, 'error');
       toast(result.message, 'error');
+      if (pub) { pub.classList.add('is-error'); setTimeout(() => pub.classList.remove('is-error'), 4000); }
     }
   }
 
@@ -1165,8 +1271,7 @@
   }
 
   function activeBoardKey() {
-    if (state.skin === 'sov_frame') return sovBoardKey(state.sovBg);
-    return state.skin;
+    return skinDef(state.skin).boardKeyOf(state);
   }
   function activeBoard() {
     const key = activeBoardKey();
@@ -1211,6 +1316,43 @@
   }
 
   function bindControls() {
+    // Editor menus: 300ms hover-delay + 120ms fade, Esc, click-outside (tablet)
+    $$('.editor-menu').forEach((menu) => {
+      let leaveTimer = null;
+      menu.addEventListener('mouseenter', () => {
+        clearTimeout(leaveTimer);
+        leaveTimer = null;
+        menu.classList.remove('is-closing');
+      });
+      menu.addEventListener('mouseleave', () => {
+        if (!menu.hasAttribute('open')) return;
+        leaveTimer = setTimeout(() => {
+          menu.classList.add('is-closing');
+          setTimeout(() => { menu.removeAttribute('open'); menu.classList.remove('is-closing'); }, 120);
+        }, 300);
+      });
+      // Opening this menu closes others instantly
+      menu.querySelector('summary').addEventListener('click', () => {
+        $$('.editor-menu').forEach((other) => {
+          if (other !== menu && other.hasAttribute('open')) {
+            other.classList.remove('is-closing');
+            other.removeAttribute('open');
+          }
+        });
+      });
+    });
+    // Click outside (capture) — tablet has no mouse
+    document.addEventListener('click', (ev) => {
+      if (!ev.target.closest('.editor-menu')) {
+        $$('.editor-menu[open]').forEach((m) => { m.classList.remove('is-closing'); m.removeAttribute('open'); });
+      }
+    }, true);
+    // Escape closes open menu
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape') {
+        $$('.editor-menu[open]').forEach((m) => { m.classList.remove('is-closing'); m.removeAttribute('open'); });
+      }
+    });
     $$('.orientation-button').forEach((button) => button.addEventListener('click', () => setOrientation(button.dataset.orientation)));
     $$('.skin-button').forEach((button) => button.addEventListener('click', () => setSkin(button.dataset.skin)));
     const sovSelect = $('#sovBgSelect');
@@ -1373,7 +1515,7 @@
   }
 
   function removeCustomAsset(id) {
-    if (!window.confirm('Remover este ativo personalizado da paleta? Botões já posicionados com ele continuam a existir, mas sem a imagem na paleta.')) return;
+    if (!window.confirm(window.editorT('Remover este ativo personalizado da paleta? Botões já posicionados com ele continuam a existir, mas sem a imagem na paleta.'))) return;
     pushHistory();
     customAssets = customAssets.filter((asset) => asset.id !== id);
     persist(); renderCustomAssetTools(); announce('Ativo personalizado removido da paleta.');
@@ -1391,14 +1533,14 @@
   // save. Each skin already owns its own board (see freshBoard() above), so no data crosses
   // over just by looking at the other tab.
   function setSkin(next) {
-    const skin = next === 'sov_frame' ? 'sov_frame' : 'eu_frame';
+    const skin = Object.prototype.hasOwnProperty.call(SKIN_DEFS, next) ? next : 'eu_frame';
     if (state.skin === skin) return;
     state.skin = skin;
     state.sovBg = normalizeSovBg(state.sovBg);
     selection = [];
     renderShippedAssetTools();
     render();
-    announce(skin === 'sov_frame' ? 'Tema Soviético — empty plate + widgets PNG.' : 'Tema Modern — empty plate + rockers.');
+    announce(skinDef(skin).statusText);
   }
 
   function setSovBg(variant) {
@@ -1499,10 +1641,10 @@
     $('#backgroundName').textContent = runtimeBackgrounds[orientation] ? 'imagem local' : bg.name;
     $('#backgroundPath').textContent = runtimeBackgrounds[orientation] ? 'preview temporário' : bg.src;
     const bgPackage = $('#backgroundPackageLabel');
-    if (bgPackage) bgPackage.textContent = state.skin === 'sov_frame' ? 'Fundo Soviético' : 'Fundo Moderno';
+    if (bgPackage) bgPackage.textContent = skinDef(state.skin).bgPackageLabel;
     $('#workspaceTitle').innerHTML = (orientation === 'landscape' ? 'Landscape' : 'Portrait') + ' <span>· ' + bg.width + ' × ' + bg.height + '</span>';
-    const brand = $('.brand .eyebrow');
-    if (brand) brand.textContent = state.skin === 'sov_frame' ? 'DESKTRUCK / SOVIET' : 'DESKTRUCK / MODERN';
+    const brand = $('.brand-eyebrow');
+    if (brand) brand.textContent = skinDef(state.skin).brand;
     $$('.skin-button').forEach((button) => button.classList.toggle('is-active', button.dataset.skin === state.skin));
     const sovRow = $('#sovBgRow');
     if (sovRow) sovRow.hidden = state.skin !== 'sov_frame';
@@ -1518,6 +1660,70 @@
     renderInspector();
     renderLayers();
     $('#selectionSummary').textContent = selection.length + ' selecionado' + (selection.length === 1 ? '' : 's');
+    updateStepsBar(selection.length > 0 ? 3 : 2);
+  }
+
+  function renderObdZonePreview(node, skin) {
+    if (skin === 'eu_frame') {
+      // Modern OBD — mimics .obd-body: title bar + 3 data cells + 5-page dots
+      const screen = document.createElement('div');
+      screen.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:#010203;color:#d9f4ff;font-family:monospace;font-size:10px;overflow:hidden;box-sizing:border-box;pointer-events:none;';
+      screen.innerHTML =
+        '<div style="display:flex;justify-content:space-between;padding:3% 5%;border-bottom:1px solid rgba(217,244,255,.18);font-size:.7em;flex-shrink:0;">' +
+          '<span style="opacity:.6">PRESSURE</span><span style="opacity:.4">00:00</span>' +
+        '</div>' +
+        '<div style="display:flex;flex:1;gap:3%;padding:4% 5%;align-items:center;">' +
+          '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5%;border:1px solid rgba(217,244,255,.22);border-radius:3px;padding:4% 2%;">' +
+            '<b style="font-size:.85em">--</b><small style="opacity:.5;font-size:.6em">psi</small></div>' +
+          '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5%;border:1px solid rgba(217,244,255,.22);border-radius:3px;padding:4% 2%;">' +
+            '<b style="font-size:.85em">--</b><small style="opacity:.5;font-size:.6em">psi</small></div>' +
+          '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5%;border:1px solid rgba(217,244,255,.22);border-radius:3px;padding:4% 2%;">' +
+            '<b style="font-size:.85em">--</b><small style="opacity:.5;font-size:.6em">bar</small></div>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:center;gap:5%;padding:2% 4% 3%;flex-shrink:0;">' +
+          '<i style="width:8%;aspect-ratio:1;border-radius:50%;background:#d9f4ff;opacity:.9;display:block"></i>' +
+          '<i style="width:8%;aspect-ratio:1;border-radius:50%;background:#d9f4ff;opacity:.28;display:block"></i>' +
+          '<i style="width:8%;aspect-ratio:1;border-radius:50%;background:#d9f4ff;opacity:.28;display:block"></i>' +
+          '<i style="width:8%;aspect-ratio:1;border-radius:50%;background:#d9f4ff;opacity:.28;display:block"></i>' +
+          '<i style="width:8%;aspect-ratio:1;border-radius:50%;background:#d9f4ff;opacity:.28;display:block"></i>' +
+        '</div>';
+      node.appendChild(screen);
+      return;
+    }
+    if (skin === 'sov_frame') {
+      // Soviet VFD — mimics .vf-glass: dark panel + phosphor-green segment readouts
+      const screen = document.createElement('div');
+      screen.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;background:#050706;color:#39ff14;font-family:monospace;font-size:10px;overflow:hidden;box-sizing:border-box;padding:5%;pointer-events:none;';
+      screen.innerHTML =
+        '<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4%;border:1px solid rgba(57,255,20,.2);border-radius:2px;padding:4%;background:#030503;">' +
+          '<div style="border:1px solid rgba(57,255,20,.35);border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;">' +
+            '<b style="font-size:.85em;text-shadow:0 0 6px #39ff14">--</b><small style="opacity:.55;font-size:.6em">SPD</small></div>' +
+          '<div style="border:1px solid rgba(57,255,20,.35);border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;">' +
+            '<b style="font-size:.85em;text-shadow:0 0 6px #39ff14">--</b><small style="opacity:.55;font-size:.6em">GEAR</small></div>' +
+          '<div style="border:1px solid rgba(57,255,20,.35);border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;">' +
+            '<b style="font-size:.85em;text-shadow:0 0 6px #39ff14">--</b><small style="opacity:.55;font-size:.6em">FUEL</small></div>' +
+          '<div style="border:1px solid rgba(57,255,20,.35);border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;">' +
+            '<b style="font-size:.85em;text-shadow:0 0 6px #39ff14">--</b><small style="opacity:.55;font-size:.6em">TIME</small></div>' +
+        '</div>';
+      node.appendChild(screen);
+      return;
+    }
+    // Default / nordic_frame: keep existing preview (5 circles + info box)
+    const screen = document.createElement('obd-screen');
+    screen.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:2%;width:100%;height:100%;padding:2%;box-sizing:border-box;';
+    const gauges = document.createElement('obd-gauges');
+    gauges.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;grid-template-areas:"fuel speed air-aux" "air-pri speed air-sec";gap:3%;min-width:0;min-height:0;';
+    ['fuel', 'air-aux', 'speed', 'air-pri', 'air-sec'].forEach((field) => {
+      const gauge = document.createElement('div');
+      gauge.dataset.gauge = field;
+      gauge.style.cssText = 'grid-area:' + field + ';min-width:0;min-height:0;border:1px solid currentColor;border-radius:50%;opacity:.72;';
+      gauges.appendChild(gauge);
+    });
+    const info = document.createElement('obd-info');
+    info.dataset.reserved = 'telemetry';
+    info.style.cssText = 'min-width:0;min-height:0;border:1px dashed currentColor;opacity:.45;';
+    screen.append(gauges, info);
+    node.appendChild(screen);
   }
 
   function renderStage() {
@@ -1635,7 +1841,8 @@
           node.appendChild(labelEl);
         }
       } else {
-        node.textContent = item.label;
+        if (item.type === 'dash-obd') renderObdZonePreview(node, state.skin);
+        else node.textContent = item.label;
       }
       if (isSelected(kind, item.id)) {
         const caption = document.createElement('span');
@@ -1908,7 +2115,7 @@
     }
     fnSelect.disabled = kind !== 'button' || dial;
     const fnLabel = $('#functionFieldLabel');
-    if (fnLabel) fnLabel.textContent = dial ? 'Telemetria (automática)' : lamp ? 'Indicador de telemetria' : 'Função (catálogo)';
+    if (fnLabel) fnLabel.textContent = dial ? 'Telemetria (automática)' : lamp ? 'Indicador de telemetria' : 'O que esta tecla faz?';
     const lampHint = $('#lampHint');
     if (lampHint) lampHint.hidden = !lamp;
     $('#selectedLabel').value = item.label || '';
@@ -2227,7 +2434,7 @@
   }
 
   function clearOrientation() {
-    if (!window.confirm('Excluir todas as teclas desta orientação?\n\nAs zonas OBD e o fundo permanecem.')) return;
+    if (!window.confirm(window.editorT('Excluir todas as teclas desta orientação?\n\nAs zonas OBD e o fundo permanecem.'))) return;
     pushHistory();
     currentBoard().buttons = [];
     selection = [];
@@ -2243,7 +2450,7 @@
 
   function pasteAllButtons() {
     if (!allButtonsClipboard) { announce('Nenhum conjunto de teclas foi copiado.'); return; }
-    if (currentBoard().buttons.length && !window.confirm('Substituir todas as teclas desta orientação pelas teclas copiadas?')) return;
+    if (currentBoard().buttons.length && !window.confirm(window.editorT('Substituir todas as teclas desta orientação pelas teclas copiadas?'))) return;
     pushHistory();
     currentBoard().buttons = allButtonsClipboard.map((item) => normalizeButton({ ...JSON.parse(JSON.stringify(item)), id: uniqueElementId(item.id + '-all') }));
     selection = [];
@@ -2251,7 +2458,7 @@
   }
 
   function clearAllToBackground() {
-    if (!window.confirm('Limpar tudo até o background?\n\nRemove todos os elementos desta orientação e restaura o fundo oficial limpo.')) return;
+    if (!window.confirm(window.editorT('Limpar tudo até o background?\n\nRemove todos os elementos desta orientação e restaura o fundo oficial limpo.'))) return;
     pushHistory();
     activeBoard().orientations[orientation] = { buttons: [], zones: [] };
     delete runtimeBackgrounds[orientation];
@@ -2436,12 +2643,10 @@
       });
       pushHistory();
       customAssets = Array.from(assets.values());
-      state.skin = key === 'eu_frame' ? 'eu_frame' : 'sov_frame';
-      const bg = normalizeSovBg(report.sovBg);
-      state.sovBg = sovBoardKey(bg) === key ? bg
-        : key === 'sov_white' ? 'white'
-        : key === 'sov_military_1' ? 'military1'
-        : key === 'sov_military_2' ? 'military2' : 'sigabem';
+      const mapped = skinFromBoardKey(key, report.sovBg);
+      state.skin = mapped.skin;
+      if (mapped.sovBg !== undefined) state.sovBg = mapped.sovBg;
+      if (mapped.nordicBg !== undefined) state.nordicBg = mapped.nordicBg;
       // Geometry is flat on disk; the editor retains its DOM sizing field names.
       const orientations = {};
       for (const mode of ['landscape', 'portrait']) {
@@ -2455,7 +2660,7 @@
       persist(); renderCustomAssetTools(); renderShippedAssetTools(); render();
       clearTimeout(pushTimer);
       unsavedWork = true;
-      announce('Mapeamento importado para revisão. Use “Publicar no tablet” quando estiver pronto.', 'success');
+      announce('Mapeamento importado para revisão. Use “Salvar no tablet” quando estiver pronto.', 'success');
       toast('Importado no editor — nada foi enviado ao tablet.', 'success');
     } catch (error) {
       announce('Import failed: ' + error.message);
@@ -2464,6 +2669,22 @@
       importing = false;
       $('#importButton').disabled = false;
     }
+  }
+
+  function updateStepsBar(step) {
+    const bar = $('#stepsBar');
+    if (!bar) return;
+    bar.querySelectorAll('.step[data-step]').forEach((el) => {
+      el.classList.toggle('is-active', Number(el.dataset.step) === step);
+    });
+  }
+
+  function setUiLevel(level) {
+    const l = level === 'basic' ? 'basic' : 'advanced';
+    document.body.dataset.uiLevel = l;
+    const btn = $('#toggleModeButton');
+    if (btn) btn.textContent = l === 'basic' ? 'Avançado' : 'Básico';
+    try { localStorage.setItem(UI_LEVEL_KEY, l); } catch (e) { /* ignore */ }
   }
 
   function announce(message, state) {
@@ -2507,7 +2728,15 @@
     const serverPayload = await loadServerPayload();
     if (!serverPayload) return;
     const { payload: merged } = mergeBoardsPerKey(serverPayload, loadLocalPayload());
+    const prevSkin = state.skin;
+    const prevSovBg = state.sovBg;
+    const prevNordicBg = state.nordicBg;
+    const prevOrientation = orientation;
     state = applyPayload(merged);
+    state.skin = prevSkin;
+    state.sovBg = prevSovBg;
+    state.nordicBg = prevNordicBg;
+    orientation = prevOrientation;
     activePackageId = packageIdForSkin(state.skin);
     selection = [];
     persist();
@@ -2536,6 +2765,14 @@
     refreshRescueButton();
     if (needsSeedPush) { needsSeedPush = false; schedulePush(); }
     openEvents();
+    // UI level: default "basic" in packaged mode, "advanced" otherwise
+    const savedLevel = (() => { try { return localStorage.getItem(UI_LEVEL_KEY); } catch (e) { return null; } })();
+    const defaultLevel = document.body.dataset.editorMode === 'packaged' ? 'basic' : 'advanced';
+    setUiLevel(savedLevel || defaultLevel);
+    const toggleBtn = $('#toggleModeButton');
+    if (toggleBtn) toggleBtn.addEventListener('click', () => {
+      setUiLevel(document.body.dataset.uiLevel === 'basic' ? 'advanced' : 'basic');
+    });
   }
 
   bootstrap();

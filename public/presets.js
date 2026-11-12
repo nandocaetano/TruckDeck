@@ -32,8 +32,7 @@ const STYLE_DEFS = {
   old_scania: { classic: true, units: 'kmh' },
   old_brazil: { classic: true, units: 'kmh', lang: 'pt' },
   old_volvo: { classic: true, units: 'kmh' },
-  scania_frame: { classic: false, units: 'kmh' },
-  scania25_frame: { classic: false, units: 'kmh' },
+  nordic_frame: { classic: false, units: 'kmh' },
 };
 
 // What is remembered between panels on this device.
@@ -58,8 +57,7 @@ const PRESETS = [
   { id: 'old_volvo', name: 'Classic Nordic · Grey', note: 'Grey 1980s dash, sober keys, retarder, km/h' },
   { id: 'eu_frame', name: 'Modern', note: 'New method: empty frame + keys drawn by the app' },
   { id: 'sov_frame', name: 'Soviet', note: 'Worn enamel plate, real switches and lamps, green segment display, km/h' },
-  { id: 'scania_frame', name: 'S/R 2016', note: 'Painel analógico S/R 2016 com computador de bordo e comandos completos' },
-  { id: 'scania25_frame', name: 'Digital 2025', note: 'Clean digital frame with live telemetry, information screens and top command row' },
+  { id: 'nordic_frame', name: 'Nórdico Moderno', note: 'Empty plate. Keys are drawn by the app.' },
 ];
 
 // Flow every catalog function not yet on the panel onto extra grid pages, one engraved plate

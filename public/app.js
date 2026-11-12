@@ -344,8 +344,8 @@
     military2: 'military2', mil2: 'military2', military_2: 'military2'
   };
   function normalizeSovBg(sovBg) {
-    const raw = String(sovBg == null ? 'white' : sovBg).trim();
-    if (!raw) return 'white';
+    const raw = String(sovBg == null ? 'military1' : sovBg).trim();
+    if (!raw) return 'military1';
     const key = raw.toLowerCase().replace(/\\+/g, '/').split('/').pop();
     const bare = key.replace(/\.(jpe?g|png|webp)$/i, '');
     const hit = SOV_BG_ALIASES[key] || SOV_BG_ALIASES[bare] || SOV_BG_ALIASES[bare.replace(/[-_\s]+/g, '')]
@@ -827,6 +827,9 @@
   }
 
   let saveTimer = null;
+  let saveRevision = 0;
+  let confirmedSaveRevision = 0;
+  let saveChain = Promise.resolve();
   const PICTO_DEVICE_KEYS = ['pictoLight', 'pictoCustom', 'pictoHazard', 'pictoOpacity', 'pictoGlow'];
   function readDevicePictoPrefs() {
     try { return JSON.parse(lsGet('truckdeck.pictoPrefs') || '{}'); } catch (e) { return {}; }
@@ -848,11 +851,22 @@
     applyPrefs();
     const text = JSON.stringify(S.store);
     lsSet('truckdeck.store', text);
+    const revision = ++saveRevision;
     if (S.bridge !== 'ok') return;
     // Debounced: dragging a widget across the grid should not hammer the PC with writes.
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      fetch('api/layouts', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Pin': S.pin }, body: serverStoreText() }).catch(() => {});
+      saveTimer = null;
+      const body = serverStoreText();
+      // Keep layout writes ordered. Otherwise an older in-flight PUT can arrive after a
+      // newer pictogram edit and put the old page.over back on disk.
+      saveChain = saveChain.catch(() => {}).then(() => fetch('api/layouts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Pin': S.pin },
+        body,
+      })).then((res) => {
+        if (res && res.ok) confirmedSaveRevision = Math.max(confirmedSaveRevision, revision);
+      }).catch(() => {});
     }, 600);
   }
 
@@ -881,7 +895,7 @@
     ['roboto', 'Roboto Condensed'],
     ['oswald', 'Oswald'],
   ];
-  const PICTO_LIGHT_COLORS = { white: '#f2f5f7', amber: '#be801e', green: '#267e47' };
+  const PICTO_LIGHT_COLORS = { white: '#eae7dd', amber: '#be801e', green: '#267e47' };
   function normalizePictoLight(value) {
     return ['white', 'amber', 'green', 'custom'].includes(value) ? value : 'white';
   }
@@ -984,7 +998,7 @@
     panel.style.setProperty('--picto-core', litCore(lightColor));
     panel.style.setProperty('--picto-hazard-core', litCore(hazardColor));
     panel.style.setProperty('--picto-opacity', String(opacity));
-    panel.style.setProperty('--picto-core-opacity', String(0.72 + opacity * 0.28));
+    panel.style.setProperty('--picto-core-opacity', String(opacity));
     panel.style.setProperty('--picto-halo-opacity', String(glow === 0 ? 0 : 0.24 + glow * 0.46));
     panel.style.setProperty('--picto-filter', pictoFilter(lightColor));
     panel.style.setProperty('--picto-hazard-filter', pictoFilter(hazardColor));
@@ -1010,7 +1024,7 @@
   // picture. Frame panels (empty plate + keys drawn by the app) normally ship a capture of the
   // finished panel: skins/<id>-<cut>v.jpg, listed here with its aspect ratio. Modern uses its
   // canonical background pair instead; a cut with no capture borrows the landscape one.
-  const PREVIEWS = { eu_frame: { T: 2752 / 1536, P: 1152 / 1728 }, sov_frame: { T: 2752 / 1536, P: 1536 / 2752 }, scania25_frame: { T: 1.792 } };
+  const PREVIEWS = { eu_frame: { T: 2752 / 1536, P: 1152 / 1728 }, sov_frame: { T: 2752 / 1536, P: 1536 / 2752 }, nordic_frame: { T: 2752 / 1536, P: 1536 / 2752 } };
   function sovBgOf(l) {
     // Always normalize so aliases (380/378, SigaBem, …) resolve before the whitelist.
     return normalizeSovBg((l && l.sovBg) || 'white');
@@ -1026,13 +1040,17 @@
       const variant = sovBgOf(layoutRef || layout());
       return SKIN_PATH + 'sov/bg/bg-' + variant + '-' + (cut === 'P' ? 'portrait' : 'landscape') + '.jpg';
     }
+    if (skinId === 'nordic_frame') {
+      // Same placeholder the editor paints. The file is not in the repo yet.
+      return SKIN_PATH + 'nordic/bg/TBD-nordic-default-' + (cut === 'P' ? 'portrait' : 'landscape') + '.jpg';
+    }
     return SKIN_PATH + skinId + '-' + cut + (hideNames ? 'n' : '') + '.jpg';
   };
   const previewOf = (skinId, cut, layoutRef) => {
     const pv = PREVIEWS[skinId];
     if (pv) {
       const c = pv[cut] ? cut : 'T';
-      const usePlate = skinId === 'eu_frame' || skinId === 'sov_frame';
+      const usePlate = skinId === 'eu_frame' || skinId === 'sov_frame' || skinId === 'nordic_frame';
       return { src: usePlate ? panelAsset(skinId, c, false, layoutRef) : SKIN_PATH + skinId + '-' + c + 'v.jpg', ar: pv[c] };
     }
     return { src: panelAsset(skinId, cut, false, layoutRef), ar: SKINS[skinId][cut].ar };
@@ -1060,6 +1078,10 @@
   // loading. White / Militar empty-plate boards ALWAYS take the atomic path — even with
   // buttons:[] — so factory spr/sgauge never inherit onto a clean enamel plate.
   function atomicApplies(pg) {
+    if (pg.skin === 'nordic_frame') {
+      const board = boardFor(pg.skin);
+      return !!(board && board.orientations);
+    }
     if (pg.skin !== 'eu_frame' && pg.skin !== 'sov_frame') return false;
     if (pg.skin === 'eu_frame') {
       const board = boardFor(pg.skin);
@@ -1147,8 +1169,8 @@
   const PACKAGED = document.body.dataset.appMode === 'packaged';
   const DEMO_LIGHTS = !PACKAGED && new URLSearchParams(location.search).get('demoLights') === '1';
 
-  // The four built-in panels every installation starts with (two on a packaged client).
-  const SHIPPED_PRESETS = PACKAGED ? ['eu_frame', 'sov_frame'] : ['eu_frame', 'sov_frame', 'scania_frame', 'scania25_frame'];
+  // The built-in frame panels every installation starts with (two on a packaged client).
+  const SHIPPED_PRESETS = PACKAGED ? ['eu_frame', 'sov_frame'] : ['eu_frame', 'sov_frame', 'nordic_frame'];
   function defaultDashboards(setup) {
     return SHIPPED_PRESETS.map((id) => createLayoutFromPreset(id, autoSize(), setup));
   }
@@ -1158,7 +1180,6 @@
   function ensureShippedPanels() {
     const have = new Set(S.store.layouts.map((l) => l.preset));
     let added = 0;
-    let renamed = 0;
     for (const id of SHIPPED_PRESETS) {
       if (!have.has(id)) {
         const l = createLayoutFromPreset(id, autoSize(), loadSetup());
@@ -1169,17 +1190,13 @@
         added += 1;
       }
     }
-    const srPanel = S.store.layouts.find((l) => l.preset === 'scania_frame');
-    if (srPanel && /scania/i.test(srPanel.name || '')) { srPanel.name = 'S/R 2016'; renamed = 1; }
-    const digitalPanel = S.store.layouts.find((l) => l.preset === 'scania25_frame');
-    if (digitalPanel && /scania/i.test(digitalPanel.name || '')) { digitalPanel.name = 'Digital 2025'; renamed = 1; }
-    return added + renamed;
+    return added;
   }
 
   // Packaged (phone/tablet) clients only ship eu_frame/sov_frame; a store saved before that
-  // gate existed, or synced from a PC that still has the retired panels, can carry
-  // scania_frame/scania25_frame (and any other preset outside SHIPPED_PRESETS) into
-  // localStorage. Strip those out here so they never reach ADD A PANEL or the page list.
+  // gate existed, or synced from a PC that still has retired panels, can carry any preset
+  // outside SHIPPED_PRESETS into localStorage. Strip those out here so they never reach
+  // ADD A PANEL or the page list.
   function pruneUnshippedPresets() {
     if (!PACKAGED) return 0;
     const before = S.store.layouts.length;
@@ -1724,12 +1741,15 @@
       // board alone - this only ever replaces it with a validly-schemed payload from the PC.
       const atomicChanged = atomicRes && atomicRes.status === 200
         && applyAtomicLayoutPayload(atomicRes.body);
+      const preserveLocalStore = saveRevision > confirmedSaveRevision;
       if (validStore(res.body)) {
         // The PC copy wins: it is what every device shares — but a panel switch made on this
         // tablet while the bridge was lost is the user's most-recent intent, so preserve it
         // if that panel ID exists in the incoming store.
         const localActiveId = S.store && S.store.activeId;
-        S.store = res.body;
+        if (!preserveLocalStore) {
+          S.store = res.body;
+        }
         if (localActiveId && localActiveId !== S.store.activeId) {
           const panelExists = Array.isArray(S.store.layouts) && S.store.layouts.some(l => l.id === localActiveId);
           if (panelExists) S.store.activeId = localActiveId;
@@ -1740,7 +1760,7 @@
         const migrated = ensurePrefs();
         // PC store may point at a non-Modern panel; re-prefer atomic board after sync.
         preferAtomicModern();
-        // The PC's layouts.json still carries retired presets (scania_frame, scania25_frame);
+        // The PC's layouts.json can still carry presets outside the shipped list;
         // boot() already prunes them once, but connect() just overwrote S.store wholesale, so
         // the packaged client must re-prune here or those panels leak back in on every sync.
         pruneUnshippedPresets();
@@ -1779,14 +1799,7 @@
 
   // ---- Analog dials -------------------------------------------------------------------------
   // Per-skin gauge overrides: only the fields that differ from the generic defaults.
-  // Scania S-series: tachometer reads 0-25 (×100), eco zone 1000-1400, red zone 2100-2500.
-  // Air warning threshold aligned with SDK airPressureWarning (65 psi).
-  const GAUGE_OVERRIDES = {
-    scania_frame: {
-      rpm:  { max: 2500, bands: [[1000, 1400, 'eco'], [2100, 2500, 'red']] },
-      air:  { bands: [[0, 65, 'red']] },
-    },
-  };
+  const GAUGE_OVERRIDES = {};
 
   // One generic dial: 270 degrees of sweep starting bottom-left, like a mechanical VDO-style
   // instrument. Each field only supplies its scale; per-skin overrides refine it.
@@ -4353,10 +4366,7 @@
     panel.dataset.labelFont = layout().labelFont || 'barlow';
     panel.classList.toggle('skin', !!skin);
     panel.classList.toggle('eu-modern', !!skin && p.skin === 'eu_frame');
-    panel.classList.toggle('scania-sr', !!skin && p.skin === 'scania_frame');
-    panel.classList.toggle('scania-portrait', !!skin && p.skin === 'scania_frame' && p.size === 'phone');
     _scanIgnPowered = null;
-    panel.classList.toggle('sc25-box', !!skin && p.skin === 'scania25_frame' && p.size === 'phone');
     // "n" pictures are the same panels with the key names cleared
     panel.style.backgroundImage = skin
       ? 'url("' + panelAsset(p.skin, skinCut(p), layout().names === 'hide' && !skin.frame) + '")'
@@ -4389,37 +4399,9 @@
     const n = parseInt(hex.slice(1), 16), ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
     return '#' + ch.map((c) => { const v = Math.round(k >= 0 ? c + (255 - c) * k : c * (1 + k)); return clamp(v, 0, 255).toString(16).padStart(2, '0'); }).join('');
   }
-  function applySc25Colors(skinId, size) {
+  function applySc25Colors() {
     const names = ['--print', '--sc25-bg', '--sc25-bg2', '--sc25-bg3', '--sc25-accent', '--scania-accent', '--scania-needle', '--scania-needle-glint', '--scania-odo', '--scania-obc-ink', '--scania-obc-glow', '--scania-backlight', '--scania-face-center'];
-    if (skinId === 'scania_frame') {
-      const theme = SC25.THEMES && SC25.THEMES[normalizeScaniaTheme(layout().scania && layout().scania.theme)];
-      if (!theme) return;
-      panel.style.setProperty('--scania-accent', theme.accent);
-      panel.style.setProperty('--scania-needle', theme.needle || theme.accent);
-      panel.style.setProperty('--scania-needle-glint', theme.glint || theme.accent);
-      panel.style.setProperty('--scania-odo', theme.odo || theme.accent);
-      panel.style.setProperty('--scania-obc-ink', theme.ink || theme.accent);
-      panel.style.setProperty('--scania-obc-glow', theme.glow);
-      panel.style.setProperty('--scania-backlight', theme.backlight || '#080b0f');
-      panel.style.setProperty('--scania-face-center', theme.face || '#171a1e');
-      panel.style.setProperty('--accent', theme.accent);
-      panel.style.setProperty('--glow', theme.glow);
-      panel.style.setProperty('--blinkc', theme.accent);
-      return;
-    }
-    if (skinId !== 'scania25_frame') { names.forEach((n) => panel.style.removeProperty(n)); return; }
-    const c = layout().sc25 || {};
-    const theme = SC25.THEMES && SC25.THEMES[normalizeSc25Theme(c.theme)];
-    if (!theme) return;
-    if (size === 'phone') panel.style.removeProperty('--sc25-accent');
-    else panel.style.setProperty('--sc25-accent', theme.accent);
-    panel.style.setProperty('--accent', theme.accent);
-    panel.style.setProperty('--glow', theme.glow);
-    panel.style.setProperty('--blinkc', theme.accent);
-    const hex = (v) => (/^#[0-9a-f]{6}$/i.test(v || '') ? v : null);
-    const ink = hex(c.print), bg = hex(c.bg);
-    if (ink) panel.style.setProperty('--print', ink);
-    if (bg) { panel.style.setProperty('--sc25-bg', bg); panel.style.setProperty('--sc25-bg2', shade(bg, .35)); panel.style.setProperty('--sc25-bg3', shade(bg, -.4)); }
+    names.forEach((n) => panel.style.removeProperty(n));
   }
   function normalizeSc25Theme(key) {
     const legacy = { orange:'yellow', red:'pink', cyan:'blue' };
@@ -4537,21 +4519,9 @@
     updateObc();
     updateExtras();
     updatePictoLightsState();
-    const _isScaniaSR = page().skin === 'scania_frame';
     const _isModern = page().skin === 'eu_frame';
-    if (_isScaniaSR) {
-      const _powered = !deadNow();
-      if (_scanIgnPowered === false && _powered) {
-        S.bulbUntil = Date.now() + 1300;
-        panel.classList.add('scania-starting');
-        setTimeout(() => { panel.classList.remove('scania-starting'); updateStates(); }, 1100);
-      }
-      _scanIgnPowered = _powered;
-      panel.classList.toggle('scania-powered', _powered);
-    } else {
-      _scanIgnPowered = null;
-      panel.classList.remove('scania-starting', 'scania-powered');
-    }
+    _scanIgnPowered = null;
+    panel.classList.remove('scania-starting', 'scania-powered');
     // Modern digital cluster: rising edge of electrics → boot sequence (logo/bulbs/sweep/reveal).
     if (_isModern) {
       const _powered = ignState() > 0;
@@ -4956,8 +4926,7 @@
   function chooseSc25Theme(theme) {
     if (!SC25.THEMES || !SC25.THEMES[theme]) return;
     const l = layout();
-    const isScania = page().skin === 'scania_frame';
-    const state = isScania ? (l.scania = l.scania || {}) : (l.sc25 = l.sc25 || {});
+    const state = (l.sc25 = l.sc25 || {});
     state.theme = theme;
     save();
     // Update the existing frame in place; keep its layout and controls exactly where they are.
@@ -5409,6 +5378,28 @@
     const f = fnOf(w);
     const custom = f.id === 'custom';
     const changed = !!(page().over || {})[skinCut(page()) + ':' + w.id];
+    const defaultPicto = { width: 32, height: 32, offsetX: 34, offsetY: 34, opacity: 0.92 };
+    const normalizeSkinPicto = (raw) => {
+      const source = raw && typeof raw === 'object' ? raw : {};
+      const out = {
+        width: clamp(Number.isFinite(Number(source.width)) ? Number(source.width) : defaultPicto.width, 5, 150),
+        height: clamp(Number.isFinite(Number(source.height)) ? Number(source.height) : defaultPicto.height, 5, 150),
+        offsetX: clamp(Number.isFinite(Number(source.offsetX)) ? Number(source.offsetX) : defaultPicto.offsetX, -50, 150),
+        offsetY: clamp(Number.isFinite(Number(source.offsetY)) ? Number(source.offsetY) : defaultPicto.offsetY, -50, 150),
+        opacity: clamp(Number.isFinite(Number(source.opacity)) ? Number(source.opacity) : defaultPicto.opacity, 0, 1)
+      };
+      if (/^#[0-9A-Fa-f]{6}$/.test(String(source.color || '')) && String(source.color).toLowerCase() !== '#ffffff') {
+        out.color = String(source.color).toLowerCase();
+      }
+      return out;
+    };
+    const picto = normalizeSkinPicto(w.pictogram);
+    const applyPicto = (patch) => {
+      const next = Object.assign({}, picto, patch);
+      if (next.color === '#ffffff') delete next.color;
+      setOver(w, { pictogram: normalizeSkinPicto(next) });
+      renderPanel(); S.sel = w.id; updateStates(); openSkinProps(w);
+    };
     let body = '<div class="group"><h3>Function</h3><div class="row"><b class="grow">' + esc(custom ? 'Custom key' : f.name) + '</b>' +
       '<button class="btn small" data-act="change-fn">Change</button></div>';
     if (custom) {
@@ -5422,7 +5413,15 @@
         (f.bind ? '. This action has no default key in the game: assign it once under Key setup.' : ', the game default.') + '</p>' +
         '<button class="btn" data-act="keys">Key setup</button>';
     }
-    body += '</div>' + (changed ? '<button class="btn" data-act="default">Restore this button</button>' : '') +
+    body += '</div>' +
+      '<div class="group"><h3>Pictogram</h3>' +
+      '<div class="row"><div class="sizer"><span>X</span><div class="stepper"><button class="btn" data-act="picto" data-d="x-">←</button><b>' + picto.offsetX + '</b><button class="btn" data-act="picto" data-d="x+">→</button></div></div>' +
+      '<div class="sizer"><span>Y</span><div class="stepper"><button class="btn" data-act="picto" data-d="y-">↑</button><b>' + picto.offsetY + '</b><button class="btn" data-act="picto" data-d="y+">↓</button></div></div></div>' +
+      '<div class="row"><div class="sizer"><span>Width</span><div class="stepper"><button class="btn" data-act="picto" data-d="w-">−</button><b>' + picto.width + '</b><button class="btn" data-act="picto" data-d="w+">+</button></div></div>' +
+      '<div class="sizer"><span>Height</span><div class="stepper"><button class="btn" data-act="picto" data-d="h-">−</button><b>' + picto.height + '</b><button class="btn" data-act="picto" data-d="h+">+</button></div></div></div>' +
+      '<label class="field"><span>Color</span><input type="color" data-field="pictoColor" data-commit="true" value="' + esc(picto.color || '#ffffff') + '"></label>' +
+      '<label class="check"><input type="checkbox" data-field="pictogramHidden"' + (w.pictogramHidden ? ' checked' : '') + '> Hide pictogram</label></div>' +
+      (changed ? '<button class="btn" data-act="default">Restore this button</button>' : '') +
       '<p class="note">' + (page().skin === 'eu_frame'
         ? 'In Edit mode, drag this button to move it. Its function and position are saved separately for portrait and landscape.'
         : 'The picture of the panel is fixed. Keys that are not on it go on an extra page: Page › New page.') + '</p>';
@@ -5431,7 +5430,17 @@
         const key = target.dataset.field;
         if (key === 'keys:mod' || key === 'keys:key') setOver(w, { keys: readCombo(target) });
         else if (key === 'behaviour') setOver(w, { latch: target.value === 'latch', mode: target.value === 'hold' ? 'hold' : 'tap' });
+        else if (key === 'pictoColor') applyPicto({ color: target.value });
+        else if (key === 'pictogramHidden') {
+          setOver(w, { pictogramHidden: target.checked });
+          renderPanel(); S.sel = w.id; updateStates(); openSkinProps(w);
+        }
         updateStates();
+      } else if (act === 'picto') {
+        const d = target.dataset.d;
+        const delta = d.endsWith('+') ? 1 : -1;
+        const field = d[0] === 'x' ? 'offsetX' : d[0] === 'y' ? 'offsetY' : d[0] === 'w' ? 'width' : 'height';
+        applyPicto({ [field]: picto[field] + delta });
       } else if (act === 'change-fn') {
         openPicker('Choose function', (fnId) => {
           if (PASSIVE.has(fnId)) { toast('A painted key can only take a key function.'); return; }
@@ -5560,6 +5569,7 @@
               { id: 'sigabem',    label: 'Siga Bem'   },
               { id: 'military1',  label: 'Military 1' },
               { id: 'military2',  label: 'Military 2' },
+              { id: 'vivamexico', label: 'Viva México'   },
             ];
             var cur = sovBgOf(l);
             return '<div class="sov-bg-picker"><span class="sov-bg-picker-title">Fundo do painel</span>' +
@@ -5614,12 +5624,6 @@
       (l.locked ? '<p class="note"><b>' + esc(l.name) + '</b> is a built-in panel: its keys cannot be changed. Use it as a model to get a copy you can edit freely.</p>' +
       '<button class="btn primary" data-act="duplicate">Use as a model (editable copy)</button>'
         : '<label class="field"><span>Name</span><input type="text" data-field="name" value="' + esc(l.name) + '"></label>') +
-      (skinId === 'scania25_frame' ? '<h3>Panel colours</h3>' +
-        '<label class="field"><span>Cluster backlight</span><select data-field="sc25:theme">' + options([['orange', 'Orange'], ['red', 'Red'], ['blue', 'Blue'], ['cyan', 'Cyan'], ['purple', 'Purple'], ['white', 'White']], (l.sc25 && l.sc25.theme) || 'orange') + '</select></label>' +
-        '<div class="row"><label class="field grow"><span>Key legend</span><input type="color" data-field="sc25:print" value="' + ((l.sc25 && l.sc25.print) || '#e8ecf0') + '"></label>' +
-        '<label class="field grow"><span>Panel</span><input type="color" data-field="sc25:bg" value="' + ((l.sc25 && l.sc25.bg) || '#0a0c10') + '"></label></div>' +
-        '<button class="btn" data-act="sc25home">Cluster back to screen 1</button><button class="btn" data-act="sc25learn">' + (S.padLearn ? 'Press the controller button now...' : 'Learn a controller button') + '</button>' +
-        '<p class="note">' + (S.dashAuto ? 'Sync: automatic. ' : '') + 'Learned controller button: ' + ((l.sc25 && l.sc25.padBtn !== undefined && l.sc25.padBtn !== '') ? l.sc25.padBtn : 'none') + '. Last button seen: ' + (S.lastPad === undefined ? 'none yet' : S.lastPad) + '.</p>' : '') +
       (skinId === 'sov_frame' ? '<label class="field"><span>Soviet background</span><select data-field="sovBg">' + options([
         ['white', 'Branca / Esmaltada'], ['military1', 'Military 1'], ['military2', 'Military 2'], ['sigabem', 'Siga Bem'], ['vivamexico', 'Viva México'],
       ], sovBgOf(l)) + '</select></label>' +
@@ -6242,12 +6246,6 @@
     ensureShippedPanels();
     pruneUnshippedPresets();
     ensurePrefs();
-    // The standalone development preview is for the cluster currently being tuned.
-    // Keep the installed app's saved panel selection untouched.
-    if (/\/dist\/preview\.html$/i.test(location.pathname.replace(/\\/g, '/'))) {
-      const srPreview = S.store.layouts.find((l) => l.preset === 'scania_frame');
-      if (srPreview) { S.store.activeId = srPreview.id; S.page = 0; }
-    }
     preferAtomicModern();
     lsSet('truckdeck.store', JSON.stringify(S.store));
     renderAll();

@@ -5,9 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Desktruck · Layout Editor atómico</title>
   <link rel="stylesheet" href="editor.css?v=2026-10-25-0030">
+  <style>
+    body[data-build="release"] [data-skin="nordic_frame"],
+    body[data-build="release"] #exportButton,
+    body[data-build="release"] .background-upload-button,
+    body[data-build="release"] .custom-asset-button {
+      display: none !important;
+    }
+  </style>
 </head>
 <body data-editor-mode="full">
   <div id="publishToast" class="publish-toast" hidden role="alert" aria-live="assertive"></div>
+  <div id="td-tablet-banner" hidden style="background:#1a2035;color:#94a3b8;font-size:12px;padding:6px 16px;text-align:center;border-bottom:1px solid #2d3748;"></div>
   <header class="topbar">
     <div class="brand">
       <img class="brand-logo" width="36" height="36" src="brand/mad-frog-logo.png" alt="TruckDeck">
@@ -21,6 +30,7 @@
       <div class="switch-group" role="group" aria-label="Tema">
         <button type="button" class="skin-button is-active" data-skin="eu_frame">Modern</button>
         <button type="button" class="skin-button" data-skin="sov_frame">Soviet</button>
+        <button type="button" class="skin-button" data-skin="nordic_frame">Nórdico Moderno</button>
       </div>
       <div class="switch-group" role="group" aria-label="Orientação">
         <button type="button" class="orientation-button is-active" data-orientation="landscape">Landscape</button>
@@ -37,12 +47,16 @@
     </div>
 
     <div class="topbar-actions">
+      <div class="language-toggle" role="group" aria-label="Idioma">
+        <button type="button" class="button button-ghost is-active" data-editor-lang="en" aria-pressed="true">EN</button>
+        <button type="button" class="button button-ghost" data-editor-lang="pt" aria-pressed="false">PT</button>
+      </div>
       <button type="button" class="button button-accent" id="rescueButton" hidden title="Havia trabalho não publicado neste navegador que o servidor ia sobrescrever. Clique para trazê-lo de volta (Ctrl+Z desfaz).">Recuperar trabalho local</button>
       <button type="button" class="button button-ghost" id="rescueDiscardButton" hidden title="Apaga a cópia local antiga deste navegador (pede confirmação)">Descartar</button>
       <details class="topbar-more editor-menu">
         <summary class="button button-ghost">Arquivo</summary>
         <div class="topbar-menu">
-          <button type="button" class="button button-ghost" id="saveButton" title="Salvar no tablet via bridge (Ctrl/⌘+S)">Salvar</button>
+          <button type="button" class="button button-ghost" id="saveButton" title="Salvar agora (Ctrl/⌘+S)">Salvar agora</button>
           <button type="button" class="button button-ghost" id="exportButton" title="Baixa o painel atual (JSON + CSS)">Baixar painel atual</button>
           <button type="button" class="button button-ghost" id="draftSaveButton" title="Baixa TODOS os painéis em um arquivo JSON">Baixar todos os painéis</button>
           <button type="button" class="button button-ghost" id="importButton">Importar</button>
@@ -64,18 +78,29 @@
           <button type="button" class="button button-ghost" id="checkButton">Verificar painéis</button>
         </div>
       </details>
-      <button type="button" class="button button-primary button-publish" id="publishButton" title="Atalho para salvar no tablet">Publicar</button>
+      <button type="button" class="button button-ghost" id="toggleModeButton" title="Alternar entre modo Básico e Avançado">Básico</button>
+      <button type="button" class="button button-primary button-publish" id="publishButton" title="Salvar no tablet (Ctrl/⌘+S)">Salvar no tablet</button>
       <input id="draftInput" type="file" accept="application/json,.json" hidden>
       <input id="importInput" type="file" accept="application/json,.json" hidden>
     </div>
   </header>
 
+  <nav id="stepsBar" class="steps-bar" aria-label="Passos">
+    <span class="step" data-step="1">① Escolha o painel</span>
+    <span class="step-sep">›</span>
+    <span class="step" data-step="2">② Toque numa tecla</span>
+    <span class="step-sep">›</span>
+    <span class="step" data-step="3">③ Configure</span>
+    <span class="step-sep">›</span>
+    <span class="step" data-step="4">④ Salvar no tablet</span>
+  </nav>
+
   <main class="editor-layout">
     <aside class="toolbox panel">
       <div class="panel-heading toolbox-heading">
         <div class="heading-meta">
-          <span class="panel-tag">01 / RECURSOS</span>
-          <h2>Paleta</h2>
+          <span class="panel-tag">01 / TECLAS</span>
+          <h2>Teclas</h2>
         </div>
         <button class="drawer-toggle" type="button" aria-controls="assetList" aria-expanded="false">Adicionar tecla</button>
         <span class="pill">drag &amp; drop</span>
@@ -144,7 +169,7 @@
       </section>
 
       <section class="tool-section toolbox-footer">
-        <p class="helper-text">Clique num ativo para o adicionar ao centro. Arraste-o para posicionar. Ctrl/⌘ + clique seleciona vários botões (grupo) — arraste para mover o grupo todo. Ctrl/⌘+C copia o grupo selecionado, Ctrl/⌘+V cola-o deslocado para reposicionar.</p>
+        <p class="helper-text">Clique para adicionar ao centro. Arraste para posicionar. Ctrl/⌘+clique seleciona vários.</p>
       </section>
     </aside>
 
@@ -207,9 +232,10 @@
         </div>
         <fieldset>
           <legend>Identidade / função</legend>
-          <label class="field"><span>ID do layout</span><input id="selectedId" type="text" spellcheck="false" autocomplete="off"></label>
-          <label class="field" id="functionField"><span id="functionFieldLabel">Função (catálogo)</span><select id="selectedFunctionId"></select></label>
+          <label class="field" id="functionField"><span id="functionFieldLabel">O que esta tecla faz?</span><select id="selectedFunctionId"></select></label>
           <p class="field-note" id="lampHint" hidden>Lâmpada = indicador passivo de telemetria. Não envia comando de veículo.</p>
+          <label class="field"><span>Texto na tecla</span><input id="selectedLabel" type="text" placeholder="Personalizada (ex: PARKING) — senão usa o nome do pictograma" autocomplete="off"></label>
+          <label class="field"><span>ID do layout</span><input id="selectedId" type="text" spellcheck="false" autocomplete="off"></label>
           <label class="checkbox-field" id="noPictogramField" hidden><input id="selectedNoPictogram" type="checkbox"><span>Nenhum / sem pictograma (asset já tem texto ou legenda impressa de fábrica)</span></label>
           <div class="coordinate-grid" id="elementTintRow">
             <label class="field"><span>Cor do elemento</span><input id="selectedElementColor" type="color" value="#ffffff" title="Tint / overlay no asset selecionado"></label>
@@ -224,7 +250,6 @@
             <p class="field-note">Deixe vazio para usar o preset da fun&ccedil;&atilde;o (Luzes / Limpa-vidros). O est&aacute;gio de telemetria &eacute; a ordem das linhas. &Iacute;cones: nomes do cat&aacute;logo; nome desconhecido n&atilde;o desenha nada.</p>
             <button type="button" class="button button-small button-accent" id="applyRotaryButton">Aplicar posi&ccedil;&otilde;es</button>
           </div>
-          <label class="field"><span>Etiqueta de Texto</span><input id="selectedLabel" type="text" placeholder="Personalizada (ex: PARKING) — senão usa o nome do pictograma" autocomplete="off"></label>
         </fieldset>
         <fieldset>
           <legend>Posição atómica</legend>
@@ -266,7 +291,7 @@
           <button type="button" class="button button-small" id="copySizeButton">Copiar tecla</button>
           <button type="button" class="button button-small button-accent" id="applySizeButton">Aplicar tecla</button>
         </div>
-        <div class="inspector-actions"><button type="button" class="text-button danger" id="deleteButton">Remover selecionado</button><span class="field-note">Duplo clique copia as dimensões.</span></div>
+        <div class="inspector-actions"><button type="button" class="text-button danger" id="deleteButton">Remover</button><span class="field-note">Duplo clique copia as dimensões.</span></div>
       </form>
     </aside>
   </main>
@@ -278,6 +303,7 @@
 
   <script src="catalog.js?v=2026-10-25-0030"></script>
   <script src="keyboxes.js?v=2026-10-25-0030"></script>
+  <script src="editor-i18n.js?v=2026-11-04-0001"></script>
   <script src="editor.js?v=2026-10-25-0030"></script>
 </body>
 </html>

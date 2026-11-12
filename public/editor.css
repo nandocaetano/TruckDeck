@@ -146,17 +146,20 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .topbar-more[open] > summary { border-color: var(--accent); background: var(--surface2); }
 .topbar-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: 100%;
   right: 0;
   width: 210px;
   display: grid;
   gap: 5px;
-  padding: 8px;
+  padding: 16px 8px 8px; /* top padding bridges the visual gap without leaving <details> */
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
+  opacity: 1;
+  transition: opacity 120ms ease;
 }
+.editor-menu.is-closing .topbar-menu { opacity: 0; pointer-events: none; }
 .topbar-menu .button { width: 100%; text-align: left; }
 .editor-menu .topbar-menu { min-width: 230px; }
 .editor-menu .danger { color: var(--danger); }
@@ -189,8 +192,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .button-sm, .button-small { padding: 5px 9px; font-size: 11px; }
 .button-accent { border-color: var(--teal); color: var(--teal); background: transparent; }
 .button-accent:hover:not(:disabled) { background: var(--teal-bg); }
-.button-publish { letter-spacing: .01em; }
+.button-publish { letter-spacing: .01em; transition: background .2s, opacity .2s; }
 .button-publish:disabled { opacity: .6; cursor: wait; transform: none; }
+.button-publish.is-saving { opacity: .65; cursor: wait; }
+.button-publish.is-saved  { background: var(--success, #16a34a) !important; }
+.button-publish.is-error  { background: var(--danger, #dc2626) !important; }
 .text-button { padding: 0; border: 0; background: none; color: var(--teal); cursor: pointer; font-size: 10px; }
 .text-button:hover { text-decoration: underline; }
 .text-button.danger { color: var(--danger); }
@@ -203,7 +209,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   grid-template-columns: 268px minmax(540px, 1fr) 280px;
   gap: 8px;
   padding: 8px;
-  min-height: calc(100vh - 60px - 36px);
+  min-height: calc(100vh - 60px - 28px - 36px);
 }
 
 /* =========================================================
@@ -1085,3 +1091,51 @@ code { color: var(--teal); font-family: 'Geist Mono', monospace; }
   color: #000;
   border-color: transparent;
 }
+
+/* --- Barra de passos ----------------------------------------------------- */
+.steps-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 16px;
+  background: var(--surface2, #1a2035);
+  border-bottom: 1px solid var(--line, #2d3748);
+  font-size: 11px;
+  color: var(--muted, #64748b);
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+.steps-bar .step {
+  padding: 2px 7px;
+  border-radius: 3px;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+}
+.steps-bar .step.is-active { color: #fff; background: var(--accent, #3b82f6); }
+.steps-bar .step-sep { opacity: .3; flex-shrink: 0; }
+
+/* --- Modo Básico (data-ui-level="basic") --------------------------------- */
+/* Topbar: oculta menus Arquivo/Editar/Ferramentas */
+body[data-ui-level="basic"] .topbar-more.editor-menu { display: none !important; }
+
+/* Prancheta: oculta grid step, bloquear teclas, copiar/colar grupo */
+body[data-ui-level="basic"] .compact-field { display: none !important; }
+body[data-ui-level="basic"] label:has(#lockKeysToggle) { display: none !important; }
+body[data-ui-level="basic"] #copyGroupButton { display: none !important; }
+body[data-ui-level="basic"] #pasteGroupButton { display: none !important; }
+
+/* Inspector: oculta cabeçalho e lista de camadas */
+body[data-ui-level="basic"] .inspector-heading { display: none !important; }
+body[data-ui-level="basic"] .layers-list { display: none !important; }
+
+/* Inspector form: oculta ID, sem pictograma, cor, rotary, unidade,
+   ajuste fino, copiar/aplicar pictograma, copiar/aplicar tecla */
+body[data-ui-level="basic"] label.field:has(#selectedId) { display: none !important; }
+body[data-ui-level="basic"] #noPictogramField { display: none !important; }
+body[data-ui-level="basic"] #elementTintRow { display: none !important; }
+body[data-ui-level="basic"] #rotaryFields { display: none !important; }
+body[data-ui-level="basic"] .unit-row { display: none !important; }
+body[data-ui-level="basic"] #pictogramFields details.fine-tune { display: none !important; }
+body[data-ui-level="basic"] .size-actions:has(#copyPictogramButton) { display: none !important; }
+body[data-ui-level="basic"] .size-actions:has(#copySizeButton) { display: none !important; }

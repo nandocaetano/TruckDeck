@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TruckDeck Bridge</title>
+  <link rel="stylesheet" href="/bridge.css">
+</head>
+<body>
+  <main class="bridge-shell">
+    <header class="bridge-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">TD</div>
+        <div>
+          <p class="eyebrow">TruckDeck</p>
+          <h1 data-i18n="title">TruckDeck Bridge</h1>
+        </div>
+      </div>
+      <div class="language-toggle" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="pt" aria-pressed="false">PT</button>
+      </div>
+    </header>
+
+    <section class="card address-card" aria-labelledby="address-title">
+      <div class="section-heading">
+        <p class="eyebrow" data-i18n="connection">Connection</p>
+        <h2 id="address-title" data-i18n="recommendedAddress">Recommended PC address</h2>
+      </div>
+      <strong id="primary-address" class="primary-value">—</strong>
+      <div class="address-meta">
+        <span data-i18n="port">Port</span>
+        <strong id="bridge-port">—</strong>
+      </div>
+      <div id="other-addresses" class="other-addresses" hidden>
+        <span data-i18n="otherAddresses">Other addresses</span>
+        <ul id="other-address-list"></ul>
+      </div>
+    </section>
+
+    <section class="card pin-card" aria-labelledby="pin-title">
+      <div class="section-heading">
+        <p class="eyebrow" data-i18n="security">Security</p>
+        <h2 id="pin-title" data-i18n="pinTitle">Bridge PIN</h2>
+      </div>
+      <div class="pin-row">
+        <code id="pin-value" aria-live="polite">••••</code>
+        <button type="button" id="show-pin" data-i18n="show">Show</button>
+        <button type="button" id="copy-pin" data-i18n="copy">Copy</button>
+      </div>
+    </section>
+
+    <section class="status-grid" aria-label="Bridge status">
+      <article class="card status-card">
+        <span id="telemetry-light" class="status-light" aria-hidden="true"></span>
+        <div>
+          <p class="eyebrow" data-i18n="telemetryPlugin">Telemetry plugin</p>
+          <strong id="telemetry-status" data-i18n="checking">Checking...</strong>
+        </div>
+      </article>
+      <article class="card status-card">
+        <span id="game-light" class="status-light" aria-hidden="true"></span>
+        <div>
+          <p class="eyebrow" data-i18n="game">Game</p>
+          <strong id="game-status" data-i18n="checking">Checking...</strong>
+        </div>
+      </article>
+      <article class="card status-card count-card">
+        <strong id="client-count">0</strong>
+        <p class="eyebrow" data-i18n="connectedDevices">Connected devices</p>
+      </article>
+    </section>
+
+    <section class="card controls-card" aria-labelledby="controls-title">
+      <div class="section-heading">
+        <p class="eyebrow" data-i18n="hardware">Hardware</p>
+        <h2 id="controls-title" data-i18n="controlsTitle">Detected controls</h2>
+      </div>
+      <ul id="controls-list" class="controls-list">
+        <li data-i18n="noControls">No controls detected yet.</li>
+      </ul>
+    </section>
+
+    <section class="actions">
+      <button type="button" id="open-editor" class="primary-button" data-i18n="openEditor">Open layout editor</button>
+    </section>
+
+    <aside class="notice-card">
+      <p data-i18n="networkWarning">A guest Wi-Fi network or repeater may isolate this PC from your tablet.</p>
+      <p data-i18n="keepOpen">Keep this window open while you play.</p>
+    </aside>
+
+    <p id="connection-error" class="error-message" role="status" hidden></p>
+  </main>
+  <script src="/bridge.js"></script>
+</body>
+</html>
